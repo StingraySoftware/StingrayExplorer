@@ -48,9 +48,9 @@ layout = pn.template.FastGridTemplate(
     # config= (TemplateConfig): Contains configuration options similar to pn.config but applied to the current Template only. (Currently only css_files is supported) But css_files are now deprecated.
     busy_indicator=busy_indicator,
     # For configuring the grid
-    cols={"lg": 20, "md": 20, "sm": 20, "xs": 20, "xxs": 20},
+    cols={"lg": 20, "md": 20, "sm": 20, "xs": 10, "xxs": 10},
     breakpoints={"lg": 1200, "md": 996, "sm": 768, "xs": 480, "xxs": 0},
-    row_height=100,
+    row_height=10,
     dimensions={"minW": 0, "maxW": float("inf"), "minH": 0, "maxH": float("inf")},
     prevent_collision=False,
     save_layout=True,
@@ -82,6 +82,11 @@ layout = pn.template.FastGridTemplate(
     base_url="/",
     base_target="_self",
 )
+
+# layout.main[0:5, 0:20] = heading
+
+# layout.main[:25, 0:12] = main
+# layout.main[25:26, :10] = footer
 
 # Serve the layout
 layout.servable()
