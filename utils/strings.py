@@ -1,16 +1,13 @@
 ## This section contains the textual strings used in the explorer.py
 
-HOME_HEADING_STRING = """<div>
+HOME_HEADING_STRING = """
 <h1>Welcome to the Stingray Explorer Dashboard</h1>
-</div>"""
+"""
 
-
-## This section contains the textual strings used in the explorer.py
-
-WELCOME_MESSAGE = """
+WELCOME_MESSAGE_STRING = """
 <div>
     <p>This dashboard is designed to provide a comprehensive toolset for X-ray astronomy data analysis. Here are the main features:</p>
-    <ul style='text-align: left;'>
+    <ul>
         <li><b>Quicklook with Stingray:</b><ul><li> Don't want to dabble around too much and generate plots fast and easy, this is the way.</li></ul></li>
         <li><b>Working with Event Data:</b> 
             <ul>
@@ -65,3 +62,10 @@ WELCOME_MESSAGE = """
     <p>We hope you find this dashboard useful for your research!</p>
 </div>
 """
+
+FOOTER_STRING = """
+    <div>
+        <p>Stingray Explorer Dashboard</p>
+        <p>&copy; 2021 Kartik Mandar</p>
+    </div>
+    """
