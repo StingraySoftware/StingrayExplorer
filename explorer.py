@@ -1,8 +1,9 @@
 import panel as pn
 from utils.strings import HOME_HEADING_STRING, WELCOME_MESSAGE_STRING, FOOTER_STRING
-from utils.dashboardClasses import MainHeader, MainArea, OutputBox, WarningBox, BokehPlotsContainer, HelpBox, Footer
-from bokeh.plotting import figure  # Importing figure from Bokeh
+from modules.Home.Home import home_header, home_main_area
+from utils.dashboardClasses import OutputBox, WarningBox, BokehPlotsContainer, HelpBox, Footer
 from utils.sidebar import create_sidebar
+from bokeh.plotting import figure  # Importing figure from Bokeh
 
 # Initialize panel extension
 pn.extension()
@@ -12,97 +13,19 @@ busy_indicator = pn.indicators.BooleanStatus(
     value=True, color="warning", width=30, height=30
 )
 
-# Create a text input widget for the header
-heading_input = pn.widgets.TextInput(
-    name="Heading", value="Light Curve Analysis Dashboard"
-)
+# Create the header
+header = home_header
 
-
-# # Create header
-# home_heading = pn.pane.HTML(
-#     HOME_HEADING_STRING,
-#     stylesheets=["../assets/stylesheets/explorer.css"],
-#     css_classes=["home-heading"],
-# )
-
-# Create different types of content for the tabs
-tab1_content = pn.pane.Markdown("# Welcome to Tab 1\nThis is the content for Tab 1.")
-tab2_content = pn.pane.HTML("<h1>Welcome to Tab 2</h1><p>This is some HTML content.</p>")
-
-# Example plot using Bokeh
-p = figure(width=400, height=400)
-p.circle([1, 2, 3, 4, 5], [6, 7, 2, 4, 5], size=15, color="navy", alpha=0.5)
-tab3_content = pn.pane.Bokeh(p)
-
-# Example with widgets
-tab4_content = pn.Column(
-    pn.widgets.FloatSlider(name='Slider', start=0, end=10, value=5),
-    pn.widgets.Checkbox(name='Checkbox', value=True),
-)
-
-tabs_content = {
-    "hi": tab1_content,
-    "Tab 2": tab2_content,
-    "Tab 3": tab3_content,
-    "Tab 4": tab4_content,
-    "alflakj": tab3_content,
-}
-
-main_area = MainArea(tabs_content=tabs_content)
+# Create the main area
+main_area = home_main_area
 
 # Create the output box and warning box
 output_box = OutputBox(output_content="This is the output content")
 warning_box = WarningBox(warning_content="This is the warning content")
 
-# Define custom actions for buttons
-def start_action(event):
-    print("Start button clicked")
 
 
-def stop_action(event):
-    print("Stop button clicked")
 
-
-def reset_action(event):
-    print("Reset button clicked")
-
-
-def pause_action(event):
-    print("Pause button clicked")
-
-
-def resume_action(event):
-    print("Resume button clicked")
-
-
-# Create instances of the parameterized classes
-header = MainHeader(
-    heading=heading_input,
-    button_1_name="Start",
-    button_1_action=start_action,
-    button_2_name="Stop",
-    button_2_action=stop_action,
-    button_3_name="Reset",
-    button_3_action=reset_action,
-    button_4_name="Pause",
-    button_4_action=pause_action,
-    button_5_name="Resume",
-    button_5_action=resume_action,
-    button_6_name="yoyo",
-    button_6_action=resume_action,
-    button_7_name="yoyo",
-    button_7_action=resume_action,
-    button_8_name="yoyo",
-    button_8_action=resume_action,
-    # button_9_name="yoyo",
-    # button_9_action=resume_action,
-    # button_10_name="yoyo",
-    # button_10_action=resume_action,
-    # button_11_name="yoyo",
-    # button_11_action=resume_action,
-    # button_12_name="yoyo",
-    # button_12_action=resume_action,
-)
 
 # Create a welcome message
 welcome_message = pn.pane.HTML(
