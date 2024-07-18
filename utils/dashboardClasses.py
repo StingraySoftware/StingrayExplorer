@@ -47,7 +47,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_1_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_1_action,
@@ -58,7 +58,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_2_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_2_action,
@@ -69,7 +69,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_3_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_3_action,
@@ -80,7 +80,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_4_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_4_action,
@@ -91,7 +91,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_5_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_5_action,
@@ -102,7 +102,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_6_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_6_action,
@@ -113,7 +113,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_7_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_7_action,
@@ -124,7 +124,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_8_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_8_action,
@@ -135,7 +135,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_9_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_9_action,
@@ -146,7 +146,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_10_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_10_action,
@@ -157,7 +157,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_11_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_11_action,
@@ -168,7 +168,7 @@ class MainHeader(pn.viewable.Viewer):
                 pn.widgets.Button(
                     name=self.button_12_name,
                     button_type="primary",
-                    width=100,
+                    width=70,
                     height=30,
                     margin=(5, 5),
                     on_click=self.button_12_action,
@@ -397,80 +397,3 @@ class Footer(pn.viewable.Viewer):
         return footer
 
 
-class Sidebar(pn.viewable.Viewer):
-    main = param.Parameter(doc="Main content area to update")
-    header = param.Parameter(doc="Header content area to update")
-    footer = param.Parameter(doc="Footer content area to update")
-    outputs = param.Parameter(doc="Output content area to update")
-    warning = param.Parameter(doc="Warning content area to update")
-    help = param.Parameter(doc="Help content area to update")
-
-    def __init__(self, **params):
-        super().__init__(**params)
-
-        self.load_data_button = pn.widgets.Button(
-            name="Load Data", button_type="warning", 
-        )
-
-        self.menu_items_quicklook_stingray = [
-            ("Light Curve", "QuickLookLightCurve"),
-            ("Powerspectra", "QuickLookPowerspectra"),
-            ("CrossCorrelation", "QuickLookCrossCorrelation"),
-        ]
-
-        self.quicklook_stingray_button = pn.widgets.MenuButton(
-            name="Quicklook",
-            items=self.menu_items_quicklook_stingray,
-            button_type="primary",
-        )
-
-        self.load_data_button.on_click(self.load_data)
-        self.quicklook_stingray_button.on_click(self.handle_quicklook_button_selection)
-
-    def load_data(self, event):
-        self.main[:] = [pn.pane.Markdown("### Data Ingestion Tabs\n\nDummy content for data ingestion.")]
-        self.header[:] = [pn.pane.Markdown("# Data Ingestion Loaded")]
-        self.footer[:] = [pn.pane.Markdown("### Footer Updated with Data Ingestion")]
-        self.outputs[:] = [pn.pane.Markdown("### Output Updated with Data Ingestion")]
-        self.warning[:] = [pn.pane.Markdown("### Warning Updated with Data Ingestion")]
-        self.help[:] = [pn.pane.Markdown("### Help Updated with Data Ingestion")]
-
-    def handle_quicklook_button_selection(self, event):
-        clicked = event.item
-        if clicked == "QuickLookLightCurve":
-            self.main[:] = [pn.pane.Markdown("### QuickLook Light Curve\n\nDummy content for light curve.")]
-            self.header[:] = [pn.pane.Markdown("# QuickLook Light Curve")]
-            self.footer[:] = [pn.pane.Markdown("### Footer Updated with Light Curve")]
-            self.outputs[:] = [pn.pane.Markdown("### Output Updated with Light Curve")]
-            self.warning[:] = [pn.pane.Markdown("### Warning Updated with Light Curve")]
-            self.help[:] = [pn.pane.Markdown("### Help Updated with Light Curve")]
-        elif clicked == "QuickLookPowerspectra":
-            self.main[:] = [pn.pane.Markdown("### Powerspectra\n\nDummy content for Powerspectra.")]
-            self.header[:] = [pn.pane.Markdown("# QuickLook Powerspectra")]
-            self.footer[:] = [pn.pane.Markdown("### Footer Updated with Powerspectra")]
-            self.outputs[:] = [pn.pane.Markdown("### Output Updated with Powerspectra")]
-            self.warning[:] = [pn.pane.Markdown("### Warning Updated with Powerspectra")]
-            self.help[:] = [pn.pane.Markdown("### Help Updated with Powerspectra")]
-        elif clicked == "QuickLookCrossCorrelation":
-            self.main[:] = [pn.pane.Markdown("### CrossCorrelation\n\nDummy content for CrossCorrelation.")]
-            self.header[:] = [pn.pane.Markdown("# QuickLook CrossCorrelation")]
-            self.footer[:] = [pn.pane.Markdown("### Footer Updated with CrossCorrelation")]
-            self.outputs[:] = [pn.pane.Markdown("### Output Updated with CrossCorrelation")]
-            self.warning[:] = [pn.pane.Markdown("### Warning Updated with CrossCorrelation")]
-            self.help[:] = [pn.pane.Markdown("### Help Updated with CrossCorrelation")]
-        else:
-            self.main[:] = [pn.pane.Markdown(f"### {clicked}\n\nContent not found.")]
-            self.header[:] = [pn.pane.Markdown(f"# {clicked}")]
-            self.footer[:] = [pn.pane.Markdown(f"### Footer Updated with {clicked}")]
-            self.outputs[:] = [pn.pane.Markdown(f"### Output Updated with {clicked}")]
-            self.warning[:] = [pn.pane.Markdown(f"### Warning Updated with {clicked}")]
-            self.help[:] = [pn.pane.Markdown(f"### Help Updated with {clicked}")]
-
-    def __panel__(self):
-        sidebar = pn.Column(
-            pn.pane.Markdown("# Navigation"),
-            self.load_data_button,
-            self.quicklook_stingray_button,
-            sizing_mode="stretch_both"
-        )
-        return sidebar

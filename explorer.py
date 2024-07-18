@@ -1,11 +1,11 @@
 import panel as pn
 from utils.strings import HOME_HEADING_STRING, WELCOME_MESSAGE_STRING, FOOTER_STRING
-from utils.dashboardClasses import MainHeader, MainArea, OutputBox, WarningBox, BokehPlotsContainer, HelpBox, Footer, Sidebar
+from utils.dashboardClasses import MainHeader, MainArea, OutputBox, WarningBox, BokehPlotsContainer, HelpBox, Footer
 from bokeh.plotting import figure  # Importing figure from Bokeh
-
+from utils.sidebar import create_sidebar
 
 # Initialize panel extension
-pn.extension('gridstack')
+pn.extension()
 
 # Create a boolean status indicator
 busy_indicator = pn.indicators.BooleanStatus(
@@ -18,12 +18,12 @@ heading_input = pn.widgets.TextInput(
 )
 
 
-# Create header
-home_heading = pn.pane.HTML(
-    HOME_HEADING_STRING,
-    stylesheets=["../assets/stylesheets/explorer.css"],
-    css_classes=["home-heading"],
-)
+# # Create header
+# home_heading = pn.pane.HTML(
+#     HOME_HEADING_STRING,
+#     stylesheets=["../assets/stylesheets/explorer.css"],
+#     css_classes=["home-heading"],
+# )
 
 # Create different types of content for the tabs
 tab1_content = pn.pane.Markdown("# Welcome to Tab 1\nThis is the content for Tab 1.")
@@ -169,23 +169,13 @@ footer = Footer(
     icons=icon_buttons
 )
 
-# Create the sidebar
-sidebar = Sidebar(
-    main=main_area,
-    header=header,
-    footer=footer,
-    outputs=output_box,
-    warning=warning_box,
-    help=help_box
-)
+sidebar = create_sidebar(main_area, header, footer, output_box, warning_box, help_box)
 
-
-# # Create a footer
-# footer = pn.pane.Markdown(FOOTER_STRING)
 
 # Create a FastGridTemplate layout
 layout = pn.template.FastGridTemplate(
     # Basic Panel layout components
+    main=[],
     header="Next-Generation Spectral Timing Made Easy",
     sidebar=[sidebar],
     modal=True,
@@ -195,7 +185,7 @@ layout = pn.template.FastGridTemplate(
     logo="./assets/images/stingray_explorer.png",
     title="Stingray Explorer",
     favicon="./assets/images/stingray_explorer.png",
-    sidebar_footer="Sidebar Footer",
+    # sidebar_footer="Sidebar Footer",
     # config= (TemplateConfig): Contains configuration options similar to pn.config but applied to the current Template only. (Currently only css_files is supported) But css_files are now deprecated.
     busy_indicator=busy_indicator,
     # For configuring the grid
@@ -241,11 +231,6 @@ layout.main[25:45, 8:12] = warning_box
 layout.main[45:85, 0:12] = bokeh_plots_container
 layout.main[85:120, 0:12] = help_box
 layout.main[120:150, 0:12] = footer
-
-# layout.main[0:5, 0:20] = heading
-
-# layout.main[:25, 0:12] = main
-# layout.main[25:26, :10] = footer
 
 # Serve the layout
 layout.servable()
