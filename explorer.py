@@ -1,9 +1,8 @@
 import panel as pn
 from utils.strings import HOME_HEADING_STRING, WELCOME_MESSAGE_STRING, FOOTER_STRING
-from modules.Home.Home import home_header, home_main_area
-from utils.dashboardClasses import OutputBox, WarningBox, BokehPlotsContainer, HelpBox, Footer
+from modules.Home.HomeContent import create_home_bokeh_plots_container, create_home_footer, create_home_header, create_home_help_box, create_home_main_area, create_home_output_box, create_home_warning_box
 from utils.sidebar import create_sidebar
-from bokeh.plotting import figure  # Importing figure from Bokeh
+
 
 # Initialize panel extension
 pn.extension()
@@ -14,83 +13,25 @@ busy_indicator = pn.indicators.BooleanStatus(
 )
 
 # Create the header
-header = home_header
+header = create_home_header()
 
 # Create the main area
-main_area = home_main_area
+main_area = create_home_main_area()
 
-# Create the output box and warning box
-output_box = OutputBox(output_content="This is the output content")
-warning_box = WarningBox(warning_content="This is the warning content")
+# Create the output box
+output_box = create_home_output_box()
 
+# Create the warning box
+warning_box = create_home_warning_box()
 
+# Create the plots container
+bokeh_plots_container = create_home_bokeh_plots_container()
 
+# Create the help box
+help_box = create_home_help_box()
 
-
-# Create a welcome message
-welcome_message = pn.pane.HTML(
-    WELCOME_MESSAGE_STRING,
-    stylesheets=["../assets/stylesheets/explorer.css"],
-)
-
-# Create Bokeh plots
-p1 = figure(title="Scatter Plot")
-p1.scatter([1, 2, 3], [4, 5, 6])
-
-p2 = figure(title="Line Plot")
-p2.line([1, 2, 3], [4, 5, 6])
-
-p3 = figure(title="Bar Plot")
-p3.vbar(x=[1, 2, 3], top=[4, 5, 6], width=0.5)
-
-# Create Bokeh plots container
-bokeh_plots_container = BokehPlotsContainer(
-    flexbox_contents=[p1, p2, p3],
-    titles=["Scatter Plot", "Line Plot", "Bar Plot"],
-    sizes=[(200, 200), (200, 200), (300, 300)]
-)
-
-# Create HelpBox
-help_content = """
-## Help Section
-This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.
-This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.
-This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.
-
-vThis section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.
-
-vThis section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.vThis section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.
-arkdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.vThis section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.
-arkdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.vThis section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.
-arkdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.vThis section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.
-arkdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.This section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.vThis section provides help and documentation for using the dashboard. You can include any markdown content here to assist users.
-"""
-help_box = HelpBox(help_content=help_content, title="Help Section")
-
-
-# Define icon buttons
-icon_buttons = [
-    pn.widgets.Button(name="Icon 1", button_type="default"),
-    pn.widgets.Button(name="Icon 2", button_type="default"),
-    pn.widgets.Button(name="Icon 3", button_type="default"),
-    pn.widgets.Button(name="Icon 4", button_type="default"),
-    pn.widgets.Button(name="Icon 5", button_type="default")
-]
-
-footer_content = "© 2024 Stingray. All rights reserved."
-additional_links = [
-    "[Privacy Policy](https://example.com)",
-    "[Terms of Service](https://example.com)",
-    "[Contact Us](https://example.com)",
-    "[Support](https://example.com)",
-    "[About Us](https://example.com)"
-]
-
-footer = Footer(
-    main_content=footer_content,
-    additional_links=additional_links,
-    icons=icon_buttons
-)
+# Create the footer
+footer = create_home_footer()
 
 sidebar = create_sidebar(main_area, header, footer, output_box, warning_box, help_box)
 
@@ -147,10 +88,10 @@ layout = pn.template.FastGridTemplate(
     base_target="_self",
 )
 
-layout.main[0:8, 0:12] = header
-layout.main[8:45, 0:8] = main_area
-layout.main[8:25, 8:12] = output_box
-layout.main[25:45, 8:12] = warning_box
+layout.main[0:10, 0:12] = header
+layout.main[10:45, 0:8] = main_area
+layout.main[10:26, 8:12] = output_box
+layout.main[26:45, 8:12] = warning_box
 layout.main[45:85, 0:12] = bokeh_plots_container
 layout.main[85:120, 0:12] = help_box
 layout.main[120:150, 0:12] = footer
