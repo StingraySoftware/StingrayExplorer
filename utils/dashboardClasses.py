@@ -4,6 +4,12 @@ from typing import List, Tuple
 
 
 class MainHeader(pn.viewable.Viewer):
+    """
+    MainHeader class represents the header section of the dashboard.
+    It includes a heading, subheading, and a series of buttons with configurable actions.
+    """
+
+    # Parameters for the header and subheading text
     heading: str = param.String(
         default="Default Heading", doc="The heading text", allow_refs=True
     )
@@ -11,6 +17,7 @@ class MainHeader(pn.viewable.Viewer):
         default="Default Subheading", doc="The subheading text", allow_refs=True
     )
 
+    # Parameters for the names of up to 12 buttons
     button_1_name: str = param.String(
         default="Button 1", doc="Name for Button 1", allow_refs=True
     )
@@ -48,6 +55,7 @@ class MainHeader(pn.viewable.Viewer):
         default="Button 12", doc="Name for Button 12", allow_refs=True
     )
 
+    # Parameters for the actions associated with each button
     button_1_action = param.Parameter(doc="Action for Button 1")
     button_2_action = param.Parameter(doc="Action for Button 2")
     button_3_action = param.Parameter(doc="Action for Button 3")
@@ -62,9 +70,16 @@ class MainHeader(pn.viewable.Viewer):
     button_12_action = param.Parameter(doc="Action for Button 12")
 
     def __init__(self, **params):
+        """
+        Initializes the MainHeader class with the provided parameters.
+        """
         super().__init__(**params)
 
     def __panel__(self):
+        """
+        Returns the Panel layout for the header, including the heading, subheading, and buttons.
+        """
+        # Create HTML panes for heading and subheading
         heading_pane = pn.pane.HTML(
             pn.bind(lambda heading: f"<h1>{heading}</h1>", self.param.heading)
         )
@@ -73,6 +88,7 @@ class MainHeader(pn.viewable.Viewer):
             pn.bind(lambda subheading: f"<h4>{subheading}</h4>", self.param.subheading)
         )
 
+        # Create buttons based on the provided names and actions
         buttons = []
         if self.button_1_name and self.button_1_action:
             buttons.append(
@@ -207,6 +223,7 @@ class MainHeader(pn.viewable.Viewer):
                 )
             )
 
+        # Create the layout for the header
         layout = pn.Row(
             pn.Column(heading_pane, subheading_pane),
             pn.FlexBox(
@@ -221,6 +238,11 @@ class MainHeader(pn.viewable.Viewer):
 
 
 class MainArea(pn.viewable.Viewer):
+    """
+    MainArea class represents the main content area of the dashboard, containing multiple tabs.
+    """
+
+    # Parameter for the content of the tabs, as a dictionary with tab names as keys and content as values
     tabs_content: dict = param.Dict(
         default={},
         doc="Dictionary with tab names as keys and content as values",
@@ -228,9 +250,15 @@ class MainArea(pn.viewable.Viewer):
     )
 
     def __init__(self, **params):
+        """
+        Initializes the MainArea class with the provided parameters.
+        """
         super().__init__(**params)
 
     def __panel__(self):
+        """
+        Returns the Panel layout for the main area, which includes tabs with their respective content.
+        """
         tabs = pn.Tabs()
         for tab_name, content in self.tabs_content.items():
             tabs.append((tab_name, content))
@@ -245,14 +273,25 @@ class MainArea(pn.viewable.Viewer):
 
 
 class OutputBox(pn.viewable.Viewer):
+    """
+    OutputBox class represents a box to display output content.
+    """
+
+    # Parameter for the content to display in the output box
     output_content: str = param.String(
         default="", doc="Content to display in the output box", allow_refs=True
     )
 
     def __init__(self, **params):
+        """
+        Initializes the OutputBox class with the provided parameters.
+        """
         super().__init__(**params)
 
     def __panel__(self):
+        """
+        Returns the Panel layout for the output box, including a heading and the content.
+        """
         heading = pn.pane.Markdown("## Output")
         output_box = pn.widgets.TextAreaInput(
             name="",
@@ -265,14 +304,25 @@ class OutputBox(pn.viewable.Viewer):
 
 
 class WarningBox(pn.viewable.Viewer):
+    """
+    WarningBox class represents a box to display warning content.
+    """
+
+    # Parameter for the content to display in the warning box
     warning_content: str = param.String(
         default="", doc="Content to display in the warning box", allow_refs=True
     )
 
     def __init__(self, **params):
+        """
+        Initializes the WarningBox class with the provided parameters.
+        """
         super().__init__(**params)
 
     def __panel__(self):
+        """
+        Returns the Panel layout for the warning box, including a heading and the content.
+        """
         heading = pn.pane.Markdown("## Warning")
         warning_box = pn.widgets.TextAreaInput(
             name="",
@@ -285,6 +335,11 @@ class WarningBox(pn.viewable.Viewer):
 
 
 class BokehPlotsContainer(pn.viewable.Viewer):
+    """
+    BokehPlotsContainer class represents a container for displaying multiple Bokeh plots.
+    """
+
+    # Parameters for the contents, titles, and sizes of the FlexBox containers
     flexbox_contents: List[pn.viewable.Viewer] = param.List(
         default=[], doc="Contents for FlexBox containers", allow_refs=True
     )
@@ -298,9 +353,15 @@ class BokehPlotsContainer(pn.viewable.Viewer):
     )
 
     def __init__(self, **params):
+        """
+        Initializes the BokehPlotsContainer class with the provided parameters.
+        """
         super().__init__(**params)
 
     def __panel__(self):
+        """
+        Returns the Panel layout for the Bokeh plots container, including the plots with their respective titles and sizes.
+        """
         flexbox_container = pn.FlexBox(
             align_items="center", justify_content="flex-start", flex_wrap="wrap"
         )
@@ -331,6 +392,11 @@ class BokehPlotsContainer(pn.viewable.Viewer):
 
 
 class HelpBox(pn.viewable.Viewer):
+    """
+    HelpBox class represents a box to display help or documentation content.
+    """
+
+    # Parameters for the title and content of the help box
     title: str = param.String(
         default="Help", doc="Title for the help box", allow_refs=True
     )
@@ -339,15 +405,27 @@ class HelpBox(pn.viewable.Viewer):
     )
 
     def __init__(self, **params):
+        """
+        Initializes the HelpBox class with the provided parameters.
+        """
         super().__init__(**params)
 
     def __panel__(self):
+        """
+        Returns the Panel layout for the help box, including a heading and Markdown content.
+        """
         heading = pn.pane.Markdown(f"## {self.title}")
         help_markdown = pn.pane.Markdown(self.help_content, sizing_mode="stretch_both")
         return pn.Column(heading, help_markdown, sizing_mode="stretch_both")
 
 
 class Footer(pn.viewable.Viewer):
+    """
+    Footer class represents the footer section of the dashboard.
+    It includes the main content, additional links, and icon buttons.
+    """
+
+    # Parameters for the main content, additional links, and icons in the footer
     main_content: str = param.String(
         default="", doc="Main content to display in the footer", allow_refs=True
     )
@@ -359,9 +437,15 @@ class Footer(pn.viewable.Viewer):
     )
 
     def __init__(self, **params):
+        """
+        Initializes the Footer class with the provided parameters.
+        """
         super().__init__(**params)
 
     def __panel__(self):
+        """
+        Returns the Panel layout for the footer, including logo, name, links, icons, and contact information.
+        """
         logo = pn.pane.PNG(
             "../assets/images/stingray_explorer.png",
             width=100,
