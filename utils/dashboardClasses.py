@@ -1,218 +1,53 @@
 import panel as pn
 import param
+from typing import List, Tuple
 
 
 class MainHeader(pn.viewable.Viewer):
-    heading = param.String(
+    heading: str = param.String(
         default="Default Heading", doc="The heading text", allow_refs=True
     )
-    subheading = param.String(
+    subheading: str = param.String(
         default="Default Subheading", doc="The subheading text", allow_refs=True
     )
 
-    button_1_name = param.String(default="Button 1", doc="Name for Button 1")
-    button_2_name = param.String(default="Button 2", doc="Name for Button 2")
-    button_3_name = param.String(default="Button 3", doc="Name for Button 3")
-    button_4_name = param.String(default="Button 4", doc="Name for Button 4")
-    button_5_name = param.String(default="Button 5", doc="Name for Button 5")
-    button_6_name = param.String(default="Button 6", doc="Name for Button 6")
-    button_7_name = param.String(default="Button 7", doc="Name for Button 7")
-    button_8_name = param.String(default="Button 8", doc="Name for Button 8")
-    button_9_name = param.String(default="Button 9", doc="Name for Button 9")
-    button_10_name = param.String(default="Button 10", doc="Name for Button 10")
-    button_11_name = param.String(default="Button 11", doc="Name for Button 11")
-    button_12_name = param.String(default="Button 12", doc="Name for Button 12")
-
-    button_1_action = param.Parameter(doc="Action for Button 1")
-    button_2_action = param.Parameter(doc="Action for Button 2")
-    button_3_action = param.Parameter(doc="Action for Button 3")
-    button_4_action = param.Parameter(doc="Action for Button 4")
-    button_5_action = param.Parameter(doc="Action for Button 5")
-    button_6_action = param.Parameter(doc="Action for Button 6")
-    button_7_action = param.Parameter(doc="Action for Button 7")
-    button_8_action = param.Parameter(doc="Action for Button 8")
-    button_9_action = param.Parameter(doc="Action for Button 9")
-    button_10_action = param.Parameter(doc="Action for Button 10")
-    button_11_action = param.Parameter(doc="Action for Button 11")
-    button_12_action = param.Parameter(doc="Action for Button 12")
-
-    def __init__(self, **params):
-        super().__init__(**params)
-
-    def __panel__(self):
-        heading_pane = pn.pane.HTML(
-            pn.bind(lambda heading: f"<h1>{heading}</h1>", self.param.heading)
-        )
-        
-        subheading_pane = pn.pane.HTML(
-            pn.bind(lambda subheading: f"<h2>{subheading}</h2>", self.param.subheading)
-        )
-
-        buttons = []
-        if self.button_1_name and self.button_1_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_1_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_1_action,
-                )
-            )
-        if self.button_2_name and self.button_2_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_2_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_2_action,
-                )
-            )
-        if self.button_3_name and self.button_3_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_3_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_3_action,
-                )
-            )
-        if self.button_4_name and self.button_4_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_4_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_4_action,
-                )
-            )
-        if self.button_5_name and self.button_5_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_5_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_5_action,
-                )
-            )
-        if self.button_6_name and self.button_6_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_6_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_6_action,
-                )
-            )
-        if self.button_7_name and self.button_7_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_7_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_7_action,
-                )
-            )
-        if self.button_8_name and self.button_8_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_8_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_8_action,
-                )
-            )
-        if self.button_9_name and self.button_9_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_9_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_9_action,
-                )
-            )
-        if self.button_10_name and self.button_10_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_10_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_10_action,
-                )
-            )
-        if self.button_11_name and self.button_11_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_11_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_11_action,
-                )
-            )
-        if self.button_12_name and self.button_12_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_12_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_12_action,
-                )
-            )
-
-        layout = pn.Row(
-            pn.Column(
-                heading_pane,
-                subheading_pane
-            ),
-            pn.FlexBox(
-                *buttons,
-                align_items="center",
-                justify_content="end",
-                flex_wrap="wrap",
-            ),
-        )
-
-        return layout
-    heading = param.String(
-        default="Default Heading", doc="The heading text", allow_refs=True
+    button_1_name: str = param.String(
+        default="Button 1", doc="Name for Button 1", allow_refs=True
+    )
+    button_2_name: str = param.String(
+        default="Button 2", doc="Name for Button 2", allow_refs=True
+    )
+    button_3_name: str = param.String(
+        default="Button 3", doc="Name for Button 3", allow_refs=True
+    )
+    button_4_name: str = param.String(
+        default="Button 4", doc="Name for Button 4", allow_refs=True
+    )
+    button_5_name: str = param.String(
+        default="Button 5", doc="Name for Button 5", allow_refs=True
+    )
+    button_6_name: str = param.String(
+        default="Button 6", doc="Name for Button 6", allow_refs=True
+    )
+    button_7_name: str = param.String(
+        default="Button 7", doc="Name for Button 7", allow_refs=True
+    )
+    button_8_name: str = param.String(
+        default="Button 8", doc="Name for Button 8", allow_refs=True
+    )
+    button_9_name: str = param.String(
+        default="Button 9", doc="Name for Button 9", allow_refs=True
+    )
+    button_10_name: str = param.String(
+        default="Button 10", doc="Name for Button 10", allow_refs=True
+    )
+    button_11_name: str = param.String(
+        default="Button 11", doc="Name for Button 11", allow_refs=True
+    )
+    button_12_name: str = param.String(
+        default="Button 12", doc="Name for Button 12", allow_refs=True
     )
 
-    button_1_name = param.String(default="Button 1", doc="Name for Button 1")
-    button_2_name = param.String(default="Button 2", doc="Name for Button 2")
-    button_3_name = param.String(default="Button 3", doc="Name for Button 3")
-    button_4_name = param.String(default="Button 4", doc="Name for Button 4")
-    button_5_name = param.String(default="Button 5", doc="Name for Button 5")
-    button_6_name = param.String(default="Button 6", doc="Name for Button 6")
-    button_7_name = param.String(default="Button 7", doc="Name for Button 7")
-    button_8_name = param.String(default="Button 8", doc="Name for Button 8")
-    button_9_name = param.String(default="Button 9", doc="Name for Button 9")
-    button_10_name = param.String(default="Button 10", doc="Name for Button 10")
-    button_11_name = param.String(default="Button 11", doc="Name for Button 11")
-    button_12_name = param.String(default="Button 12", doc="Name for Button 12")
-
     button_1_action = param.Parameter(doc="Action for Button 1")
     button_2_action = param.Parameter(doc="Action for Button 2")
     button_3_action = param.Parameter(doc="Action for Button 3")
@@ -232,6 +67,10 @@ class MainHeader(pn.viewable.Viewer):
     def __panel__(self):
         heading_pane = pn.pane.HTML(
             pn.bind(lambda heading: f"<h1>{heading}</h1>", self.param.heading)
+        )
+
+        subheading_pane = pn.pane.HTML(
+            pn.bind(lambda subheading: f"<h4>{subheading}</h4>", self.param.subheading)
         )
 
         buttons = []
@@ -369,7 +208,7 @@ class MainHeader(pn.viewable.Viewer):
             )
 
         layout = pn.Row(
-            heading_pane,
+            pn.Column(heading_pane, subheading_pane),
             pn.FlexBox(
                 *buttons,
                 align_items="center",
@@ -382,8 +221,10 @@ class MainHeader(pn.viewable.Viewer):
 
 
 class MainArea(pn.viewable.Viewer):
-    tabs_content = param.Dict(
-        default={}, doc="Dictionary with tab names as keys and content as values"
+    tabs_content: dict = param.Dict(
+        default={},
+        doc="Dictionary with tab names as keys and content as values",
+        allow_refs=True,
     )
 
     def __init__(self, **params):
@@ -404,8 +245,8 @@ class MainArea(pn.viewable.Viewer):
 
 
 class OutputBox(pn.viewable.Viewer):
-    output_content = param.String(
-        default="", doc="Content to display in the output box"
+    output_content: str = param.String(
+        default="", doc="Content to display in the output box", allow_refs=True
     )
 
     def __init__(self, **params):
@@ -424,8 +265,8 @@ class OutputBox(pn.viewable.Viewer):
 
 
 class WarningBox(pn.viewable.Viewer):
-    warning_content = param.String(
-        default="", doc="Content to display in the warning box"
+    warning_content: str = param.String(
+        default="", doc="Content to display in the warning box", allow_refs=True
     )
 
     def __init__(self, **params):
@@ -444,10 +285,16 @@ class WarningBox(pn.viewable.Viewer):
 
 
 class BokehPlotsContainer(pn.viewable.Viewer):
-    flexbox_contents = param.List(default=[], doc="Contents for FlexBox containers")
-    titles = param.List(default=[], doc="Titles for FlexBox containers")
-    sizes = param.List(
-        default=[], doc="Sizes for FlexBox containers as (height, width)"
+    flexbox_contents: List[pn.viewable.Viewer] = param.List(
+        default=[], doc="Contents for FlexBox containers", allow_refs=True
+    )
+    titles: List[str] = param.List(
+        default=[], doc="Titles for FlexBox containers", allow_refs=True
+    )
+    sizes: List[Tuple[int, int]] = param.List(
+        default=[],
+        doc="Sizes for FlexBox containers as (height, width)",
+        allow_refs=True,
     )
 
     def __init__(self, **params):
@@ -484,8 +331,12 @@ class BokehPlotsContainer(pn.viewable.Viewer):
 
 
 class HelpBox(pn.viewable.Viewer):
-    title = param.String(default="Help", doc="Title for the help box")
-    help_content = param.String(default="", doc="Markdown content for the help box")
+    title: str = param.String(
+        default="Help", doc="Title for the help box", allow_refs=True
+    )
+    help_content: str = param.String(
+        default="", doc="Markdown content for the help box", allow_refs=True
+    )
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -497,9 +348,15 @@ class HelpBox(pn.viewable.Viewer):
 
 
 class Footer(pn.viewable.Viewer):
-    main_content = param.String(default="", doc="Main content to display in the footer")
-    additional_links = param.List(default=[], doc="List of additional links as markdown strings")
-    icons = param.List(default=[], doc="List of icon buttons")
+    main_content: str = param.String(
+        default="", doc="Main content to display in the footer", allow_refs=True
+    )
+    additional_links: List[str] = param.List(
+        default=[], doc="List of additional links as markdown strings", allow_refs=True
+    )
+    icons: List[pn.viewable.Viewer] = param.List(
+        default=[], doc="List of icon buttons", allow_refs=True
+    )
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -509,7 +366,7 @@ class Footer(pn.viewable.Viewer):
             "../assets/images/stingray_explorer.png",
             width=100,
             height=100,
-            align="center"
+            align="center",
         )
         name = pn.pane.Markdown("Stingray Explorer", align="center")
 
@@ -518,7 +375,7 @@ class Footer(pn.viewable.Viewer):
             name,
             flex_direction="column",
             justify_content="center",
-            align_items="center"
+            align_items="center",
         )
 
         links = [pn.pane.Markdown(link) for link in self.additional_links]
@@ -527,14 +384,14 @@ class Footer(pn.viewable.Viewer):
             *links,
             flex_direction="column",
             justify_content="center",
-            align_items="center"
+            align_items="center",
         )
 
         icons_pane = pn.FlexBox(
             *self.icons,
             flex_direction="column",
             justify_content="center",
-            align_items="center"
+            align_items="center",
         )
 
         contact_us_pane = pn.FlexBox(
@@ -542,7 +399,7 @@ class Footer(pn.viewable.Viewer):
             pn.pane.Markdown("Phone: (123) 456-7890"),
             flex_direction="row",
             justify_content="center",
-            align_items="center"
+            align_items="center",
         )
 
         copyright_pane = pn.pane.Markdown(
@@ -558,23 +415,20 @@ class Footer(pn.viewable.Viewer):
             flex_direction="row",
             justify_content="space-between",
             align_items="center",
-            
         )
-        
+
         pane2 = pn.FlexBox(
             contact_us_pane,
             flex_direction="column",
             justify_content="center",
             align_items="center",
-            
         )
-        
+
         pane3 = pn.FlexBox(
             copyright_pane,
             flex_direction="row",
             justify_content="center",
             align_items="center",
-           
         )
 
         footer = pn.FlexBox(
@@ -584,9 +438,6 @@ class Footer(pn.viewable.Viewer):
             flex_direction="row",
             justify_content="center",
             align_items="center",
-    
         )
 
         return footer
-
-
