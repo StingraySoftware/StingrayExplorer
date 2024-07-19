@@ -224,8 +224,13 @@ class MainHeader(pn.viewable.Viewer):
             )
 
         # Create the layout for the header
+        layout_items = [heading_pane]
+        if self.subheading and self.subheading != "Default Subheading":
+            layout_items.append(subheading_pane)
+
+        # Create the layout for the header
         layout = pn.Row(
-            pn.Column(heading_pane, subheading_pane),
+            pn.Column(*layout_items),
             pn.FlexBox(
                 *buttons,
                 align_items="center",
@@ -235,6 +240,8 @@ class MainHeader(pn.viewable.Viewer):
         )
 
         return layout
+        
+
 
 
 class MainArea(pn.viewable.Viewer):
@@ -259,7 +266,7 @@ class MainArea(pn.viewable.Viewer):
         """
         Returns the Panel layout for the main area, which includes tabs with their respective content.
         """
-        tabs = pn.Tabs()
+        tabs = pn.Tabs(dynamic=True)
         for tab_name, content in self.tabs_content.items():
             tabs.append((tab_name, content))
 
@@ -292,7 +299,7 @@ class OutputBox(pn.viewable.Viewer):
         """
         Returns the Panel layout for the output box, including a heading and the content.
         """
-        heading = pn.pane.Markdown("## Output")
+        heading = pn.pane.Markdown("<h2> Output </h2>")
         output_box = pn.widgets.TextAreaInput(
             name="",
             value=self.output_content,
@@ -301,6 +308,7 @@ class OutputBox(pn.viewable.Viewer):
             sizing_mode="stretch_both",
         )
         return pn.Column(heading, output_box, sizing_mode="stretch_both")
+
 
 
 class WarningBox(pn.viewable.Viewer):
@@ -323,7 +331,7 @@ class WarningBox(pn.viewable.Viewer):
         """
         Returns the Panel layout for the warning box, including a heading and the content.
         """
-        heading = pn.pane.Markdown("## Warning")
+        heading = pn.pane.Markdown("<h2> Warning</h2>")
         warning_box = pn.widgets.TextAreaInput(
             name="",
             value=self.warning_content,
@@ -372,7 +380,7 @@ class BokehPlotsContainer(pn.viewable.Viewer):
             else:
                 title = f"FlexBox {idx+1}"
 
-            heading = pn.pane.Markdown(f"## {title}", align="center")
+            heading = pn.pane.Markdown(f"<h2> {title} </h2>", align="center")
             flexbox = pn.Column(
                 heading,
                 content,
@@ -414,7 +422,7 @@ class HelpBox(pn.viewable.Viewer):
         """
         Returns the Panel layout for the help box, including a heading and Markdown content.
         """
-        heading = pn.pane.Markdown(f"## {self.title}")
+        heading = pn.pane.Markdown(f"<h2> {self.title}</h2>")
         help_markdown = pn.pane.Markdown(self.help_content, sizing_mode="stretch_both")
         return pn.Column(heading, help_markdown, sizing_mode="stretch_both")
 
@@ -479,8 +487,8 @@ class Footer(pn.viewable.Viewer):
         )
 
         contact_us_pane = pn.FlexBox(
-            pn.pane.Markdown("Email: contact@example.com"),
-            pn.pane.Markdown("Phone: (123) 456-7890"),
+            pn.pane.Markdown("Email: kartik4321mandar@gmail.com"),
+            pn.pane.Markdown("Slack: @kartikmandar"),
             flex_direction="row",
             justify_content="center",
             align_items="center",
@@ -525,3 +533,5 @@ class Footer(pn.viewable.Viewer):
         )
 
         return footer
+
+
