@@ -1,42 +1,48 @@
 # homecontent.py
 
 import panel as pn
-from utils.dashboardClasses import MainHeader, MainArea, OutputBox, WarningBox, BokehPlotsContainer, HelpBox, Footer
+from utils.DashboardClasses import MainHeader, MainArea, OutputBox, WarningBox, BokehPlotsContainer, HelpBox, Footer
 from bokeh.plotting import figure
+from utils.strings import HOME_HEADER_STRING, WELCOME_MESSAGE_STRING, FOOTER_STRING, STINGRAY_TAB_STRING, HOLOVIZ_TAB_STRING, DASHBOARD_TAB_STRING, OUTPUT_BOX_STRING, WARNING_BOX_STRING, HELP_BOX_STRING
 
 def create_home_header():
     home_heading_input = pn.widgets.TextInput(name="Heading", value="Welcome to Stingray Explorer")
-    home_subheading_input = pn.widgets.TextInput(name="Subheading", value="Where power meets comfort")
-    return MainHeader(heading=home_heading_input, subheading=home_subheading_input)
+    home_subheading_input = pn.widgets.TextInput(name="Subheading", value="Stingray GUI using HoloViz")
+
+    button = pn.widgets.Button(name="Change Heading", button_type="primary")
+    def change_heading(event):
+        home_heading_input.value = "New Heading"
+        home_subheading_input.value = "New Subheading"
+    button.on_click(change_heading)
+
+    
+    return MainHeader(heading=home_heading_input, subheading=home_subheading_input, button_1_name="button", button_1_action=change_heading)
 
 def create_home_main_area():
-    tab1_content = pn.pane.Markdown("# Example Tab 1\nThis is the content for Tab 1.")
-    tab2_content = pn.pane.HTML("<h1>Welcome to Tab 2</h1><p>This is some HTML content.</p>")
-    p = figure(width=400, height=400)
-    p.circle([1, 2, 3, 4, 5], [6, 7, 2, 4, 5], size=15, color="navy", alpha=0.5)
-    tab3_content = pn.pane.Bokeh(p)
-    tab4_content = pn.Column(pn.widgets.FloatSlider(name='Slider', start=0, end=10, value=5), pn.widgets.Checkbox(name='Checkbox', value=True))
-
-    tabs_content = {"hi": tab1_content, "Tab 2": tab2_content, "Tab 3": tab3_content, "Tab 4": tab4_content, "alflakj": tab3_content}
+    tab1_content = pn.pane.Markdown(STINGRAY_TAB_STRING)
+    tab2_content = pn.pane.Markdown(HOLOVIZ_TAB_STRING)
+    tab3_content = pn.pane.Markdown(DASHBOARD_TAB_STRING)
+    
+    tabs_content = {"What's Stingray?": tab1_content, "What's HoloViz?": tab2_content, "Dashboard": tab3_content}
+    
     return MainArea(tabs_content=tabs_content)
 
 def create_home_output_box():
-    return OutputBox(output_content="This is the output content")
+    return OutputBox(output_content=OUTPUT_BOX_STRING)
 
 def create_home_warning_box():
-    return WarningBox(warning_content="This is the warning content")
+    return WarningBox(warning_content=WARNING_BOX_STRING)
 
 def create_home_bokeh_plots_container():
-    p1 = figure(title="Scatter Plot")
-    p1.scatter([1, 2, 3], [4, 5, 6])
-    p2 = figure(title="Line Plot")
-    p2.line([1, 2, 3], [4, 5, 6])
-    p3 = figure(title="Bar Plot")
-    p3.vbar(x=[1, 2, 3], top=[4, 5, 6], width=0.5)
-    return BokehPlotsContainer(flexbox_contents=[p1, p2, p3], titles=["Scatter Plot", "Line Plot", "Bar Plot"], sizes=[(200, 200), (200, 200), (300, 300)])
+    p1 = pn.pane.Markdown(" Plot 1")
+    p2 = pn.pane.Markdown(" Plot 2")
+    p3 = pn.pane.Markdown(" Plot 3")
+    p4 = pn.pane.Markdown("Plot 4")
+    p5 = pn.pane.Markdown("Plot 5")
+    return BokehPlotsContainer(flexbox_contents=[p1, p2, p3, p4, p5], titles=["Heading 1", "Heading 2", "Heading 3", "Heading 4", "Heading 5"], sizes=[(300, 300), (300, 300), (300, 300), (300, 300), (300, 300)])
 
 def create_home_help_box():
-    help_content = """## Help Section\nThis section provides help and documentation for using the dashboard."""
+    help_content = HELP_BOX_STRING
     return HelpBox(help_content=help_content, title="Help Section")
 
 def create_home_footer():
