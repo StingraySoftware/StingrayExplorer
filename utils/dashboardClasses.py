@@ -341,7 +341,7 @@ class WarningBox(pn.viewable.Viewer):
 
 class PlotsContainer(pn.viewable.Viewer):
     """
-    PlotsContainer class represents a container for displaying multiple  plots.
+    PlotsContainer class represents a container for displaying multiple plots.
     """
 
     # Parameters for the contents, titles, and sizes of the FlexBox containers
@@ -365,7 +365,7 @@ class PlotsContainer(pn.viewable.Viewer):
 
     def __panel__(self):
         """
-        Returns the Panel layout for the B plots container, including the plots with their respective titles and sizes.
+        Returns the Panel layout for the plots container, including the plots with their respective titles and sizes.
         """
         flexbox_container = pn.FlexBox(
             align_items="center", justify_content="flex-start", flex_wrap="wrap"
@@ -542,3 +542,47 @@ class WarningHandler:
     ):
         warning_message = f"Message: {message}\nCategory: {category.__name__ if category else 'N/A'}\nFile: {filename if filename else 'N/A'}\nLine: {lineno if lineno else 'N/A'}\n"
         self.warnings.append(warning_message)
+
+
+# class FloatingPlot(pn.viewable.Viewer):
+#     """
+#     Floating Plot Container class represents a container for displaying a single plot.
+#     """
+
+#     # Parameters for the contents and titles of Floating Panel
+#     content: List[pn.viewable.Viewer] = param.parameter(
+#         default="", doc="Contents for Floating Panel"
+#     )
+#     title: List[str] = param.parameter(
+#         default="", doc="Titles for Floating Panel"
+#     )
+
+#     def __init__(self, content=None, title=None, **params):
+#         """
+#         Initializes FloatingPlot class with the provided parameters.
+#         """
+#         super().__init__(**params)
+#         self.content = [content] if content else []
+#         self.title = [title] if title else []
+
+#     def __panel__(self):
+#         """
+#         Returns the float panel which contains the content with the appropriate heading.
+#         """
+#         if not self.content or not self.title:
+#             raise ValueError("Content and title must be provided.")
+
+#         config = {"headerControls": {"close": "remove"}}
+
+        
+#         flexbox_panel = pn.layout.FloatPanel(
+#             self.content[0],
+#             name=str(self.title[0]),  # Convert title to string if not already
+#             status="closed",
+#             contained=False,
+#             position="center",
+#             config=config
+#         )
+
+#         return flexbox_panel
+
