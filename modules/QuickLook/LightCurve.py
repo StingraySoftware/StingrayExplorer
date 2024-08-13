@@ -17,6 +17,9 @@ from utils.DashboardClasses import (
 )
 
 
+floatpanel_config = {"headerControls": {"close": "remove"}}
+
+
 # Create a warning handler
 def create_warning_handler():
     # Create an instance of the warning handler
@@ -62,19 +65,22 @@ def create_loadingdata_warning_box(content):
     return WarningBox(warning_content=content)
 
 
+""" Plots Area """
+
+
+def create_lightcurve_plots_area():
+    return PlotsContainer()
+
+
 """ Main Area Section """
 
 
 def create_lightcurve_tab(
-    header_container,
-    main_area_container,
     output_box_container,
     warning_box_container,
+    warning_handler,
     plots_container,
-    help_box_container,
-    footer_container,
 ):
-
     line_output_hv = pn.pane.HoloViews(width=500, height=300)
     dataframe_output = pn.pane.DataFrame(width=500, height=300)
 
@@ -106,22 +112,53 @@ def create_lightcurve_tab(
         return None
 
     def generate_lightcurve(event=None):
+        if not loaded_event_data:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No loaded event data available.")
+            ]
+            return
+
         selected_event_list_index = event_list_dropdown.value
+        if selected_event_list_index is None:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event list selected.")
+            ]
+            return
+
         dt = dt_slider.value
         df = create_dataframe(selected_event_list_index, dt)
         if df is not None:
-
-            # Creating the line plot with HoloViews (Bokeh)
             line_plot_hv = df.hvplot.line(x="Time", y="Counts")
             line_output_hv.object = line_plot_hv
 
+        else:
+            output_box_container[:] = [
+                create_loadingdata_output_box("Failed to create dataframe.")
+            ]
+
     def show_dataframe(event=None):
+        if not loaded_event_data:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No loaded event data available.")
+            ]
+            return
+
         selected_event_list_index = event_list_dropdown.value
+        if selected_event_list_index is None:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event list selected.")
+            ]
+            return
+
         dt = dt_slider.value
         df = create_dataframe(selected_event_list_index, dt)
         if df is not None:
-            # Display the DataFrame
             dataframe_output.object = df
+            plots_container[:] = [line_output_hv, dataframe_output]
+        else:
+            output_box_container[:] = [
+                create_loadingdata_output_box("Failed to create dataframe.")
+            ]
 
     generate_lightcurve_button = pn.widgets.Button(
         name="Generate Light Curve", button_type="primary"
@@ -137,9 +174,16 @@ def create_lightcurve_tab(
         event_list_dropdown,
         dt_slider,
         pn.Row(generate_lightcurve_button, show_dataframe_button),
-        pn.Row(line_output_hv, dataframe_output),
     )
 
+    # tab1_content.append(
+    #     pn.layout.FloatPanel(
+    #         "Try dragging me around.",
+    #         name="Free Floating FloatPanel",
+    #         contained=False,
+    #         position="center",
+    #     )
+    #     )
     return tab1_content
 
 
@@ -158,6 +202,7 @@ def create_quicklook_lightcurve_main_area(
             output_box_container=output_box_container,
             warning_box_container=warning_box_container,
             warning_handler=warning_handler,
+            plots_container=plots_container,
         ),
     }
 

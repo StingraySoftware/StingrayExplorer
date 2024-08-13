@@ -12,7 +12,7 @@ from utils.sidebar import create_sidebar
 
 
 # Initialize panel extension
-pn.extension()
+pn.extension('floatpanel')
 
 # Create a boolean status indicator
 busy_indicator = pn.indicators.BooleanStatus(
@@ -113,10 +113,10 @@ layout = pn.template.FastGridTemplate(
 )
 
 layout.main[0:10, 0:12] = header_container
-layout.main[10:45, 0:8] = main_area_container
-layout.main[10:27, 8:12] = output_box_container
-layout.main[27:45, 8:12] = warning_box_container
-layout.main[45:85, 0:12] = plots_container
+layout.main[10:55, 0:8] = main_area_container
+layout.main[10:33, 8:12] = output_box_container
+layout.main[33:55, 8:12] = warning_box_container
+layout.main[55:85, 0:12] = plots_container
 layout.main[85:120, 0:12] = help_box_container
 layout.main[120:150, 0:12] = footer_container
 
