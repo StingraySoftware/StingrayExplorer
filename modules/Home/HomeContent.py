@@ -1,4 +1,5 @@
 import panel as pn
+import holoviews as hv
 from utils.DashboardClasses import (
     MainHeader,
     MainArea,
@@ -7,6 +8,7 @@ from utils.DashboardClasses import (
     PlotsContainer,
     HelpBox,
     Footer,
+    FloatingPlot,
 )
 from utils.strings import (
     HOME_HEADER_STRING,
@@ -41,7 +43,6 @@ def create_home_main_area():
     tab1_content = pn.pane.Markdown(HOME_STINGRAY_TAB_STRING)
     tab2_content = pn.pane.Markdown(HOME_HOLOVIZ_TAB_STRING)
     tab3_content = pn.pane.Markdown(HOME_DASHBOARD_TAB_STRING)
-
     tabs_content = {
         "What's Stingray?": tab1_content,
         "What's HoloViz?": tab2_content,

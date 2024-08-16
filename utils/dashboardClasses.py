@@ -2,6 +2,7 @@ import panel as pn
 import param
 from typing import List, Tuple
 
+pn.extension('floatpanel')
 
 class MainHeader(pn.viewable.Viewer):
     """
@@ -544,45 +545,48 @@ class WarningHandler:
         self.warnings.append(warning_message)
 
 
-# class FloatingPlot(pn.viewable.Viewer):
-#     """
-#     Floating Plot Container class represents a container for displaying a single plot.
-#     """
+class FloatingPlot(pn.viewable.Viewer):
+    """
+    Floating Plot Container class represents a container for displaying a single plot.
+    """
 
-#     # Parameters for the contents and titles of Floating Panel
-#     content: List[pn.viewable.Viewer] = param.parameter(
-#         default="", doc="Contents for Floating Panel"
-#     )
-#     title: List[str] = param.parameter(
-#         default="", doc="Titles for Floating Panel"
-#     )
+    # Parameters for the contents and titles of Floating Panel
+    content: pn.viewable.Viewer = param.Parameter(
+        default=None, doc="Content for Floating Panel"
+    )
+    title: str = param.String(
+        default="", doc="Title for Floating Panel"
+    )
 
-#     def __init__(self, content=None, title=None, **params):
-#         """
-#         Initializes FloatingPlot class with the provided parameters.
-#         """
-#         super().__init__(**params)
-#         self.content = [content] if content else []
-#         self.title = [title] if title else []
+    def __init__(self, content=None, title="", **params):
+        """
+        Initializes FloatingPlot class with the provided parameters.
+        """
+        super().__init__(**params)
+        self.content = content
+        self.title = title
 
-#     def __panel__(self):
-#         """
-#         Returns the float panel which contains the content with the appropriate heading.
-#         """
-#         if not self.content or not self.title:
-#             raise ValueError("Content and title must be provided.")
-
-#         config = {"headerControls": {"close": "remove"}}
-
+    def __panel__(self):
+        """
+        Returns the floating panel which contains the content with the appropriate heading.
+        """
+        if not self.content or not self.title:
+            raise ValueError("Content and title must be provided.")
         
-#         flexbox_panel = pn.layout.FloatPanel(
-#             self.content[0],
-#             name=str(self.title[0]),  # Convert title to string if not already
-#             status="closed",
-#             contained=False,
-#             position="center",
-#             config=config
-#         )
+        # Debugging information
+        print(f"Creating FloatingPanel with title: {self.title}")
+        print(f"Content: {self.content}")
 
-#         return flexbox_panel
+        float_panel = pn.layout.FloatPanel(
+            self.content,
+            name=str(self.title),
+            contained=False,
+            position="center",
+            width=500,
+            height=500,
+            margin=20,
+        )
+        
+        print("FloatPanel created successfully.")
+        return float_panel
 

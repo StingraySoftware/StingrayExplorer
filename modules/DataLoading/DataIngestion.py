@@ -13,7 +13,7 @@ from utils.DashboardClasses import (
     OutputBox,
     WarningBox,
     PlotsContainer,
-    HelpBox,
+    HelpBox, 
     Footer,
     WarningHandler,
 )
