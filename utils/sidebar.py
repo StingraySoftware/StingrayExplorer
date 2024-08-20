@@ -6,9 +6,9 @@ from modules.Home.HomeContent import (
     create_home_main_area,
     create_home_output_box,
     create_home_warning_box,
-    create_home_plots_area,
     create_home_help_area,
     create_home_footer,
+    create_home_plots_area,
 )
 from modules.DataLoading.DataIngestion import (
     create_loadingdata_header,
@@ -16,16 +16,20 @@ from modules.DataLoading.DataIngestion import (
     create_loadingdata_output_box,
     create_loadingdata_warning_box,
     create_loadingdata_help_area,
+    create_loadingdata_plots_area,
 )
 from modules.QuickLook.LightCurve import (
     create_quicklook_lightcurve_header,
     create_quicklook_lightcurve_main_area,
 )
+from modules.QuickLook.PowerSpectrum import (
+    create_quicklook_powerspectrum_header,
+    create_quicklook_powerspectrum_main_area,
+)
 from assets.icons.svg import HOME_ICON_SVG, LOAD_DATA_ICON_SVG
 
-
 def create_sidebar(
-    main_area, header, footer, output_box, warning_box, help_box, plots_area
+    main_area, header, footer, output_box, warning_box, help_box, plots_area, floating_panel
 ):
     menu_items_quicklook_stingray = [
         ("Light Curve", "QuickLookLightCurve"),
@@ -68,6 +72,7 @@ def create_sidebar(
         warning_box[:] = [create_home_warning_box()]
         help_box[:] = [create_home_help_area()]
         footer[:] = [create_home_footer()]
+        plots_area[:] = [create_home_plots_area()]
 
     home_button.on_click(handle_home_button_selection)
 
@@ -98,6 +103,7 @@ def create_sidebar(
         output_box[:] = [create_home_output_box()]
         warning_box[:] = [create_home_warning_box()]
         help_box[:] = [create_loadingdata_help_area()]
+        plots_area[:] = [create_loadingdata_plots_area()]
 
     load_data_button.on_click(load_data)
 
@@ -118,6 +124,29 @@ def create_sidebar(
             ]
             main_area[:] = [
                 create_quicklook_lightcurve_main_area(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_area,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                )
+            ]
+        elif clicked == "QuickLookPowerspectra":
+            header[:] = [
+                create_quicklook_powerspectrum_header(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_area,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                )
+            ]
+            main_area[:] = [
+                create_quicklook_powerspectrum_main_area(
                     header_container=header,
                     main_area_container=main_area,
                     output_box_container=output_box,

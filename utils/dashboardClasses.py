@@ -2,7 +2,8 @@ import panel as pn
 import param
 from typing import List, Tuple
 
-pn.extension('floatpanel')
+pn.extension("floatpanel")
+
 
 class MainHeader(pn.viewable.Viewer):
     """
@@ -345,57 +346,26 @@ class PlotsContainer(pn.viewable.Viewer):
     PlotsContainer class represents a container for displaying multiple plots.
     """
 
-    # Parameters for the contents, titles, and sizes of the FlexBox containers
-    flexbox_contents: List[pn.viewable.Viewer] = param.List(
-        default=[], doc="Contents for FlexBox containers", allow_refs=True
-    )
-    titles: List[str] = param.List(
-        default=[], doc="Titles for FlexBox containers", allow_refs=True
-    )
-    sizes: List[Tuple[int, int]] = param.List(
-        default=[],
-        doc="Sizes for FlexBox containers as (height, width)",
-        allow_refs=True,
-    )
+    flexbox_contents: list = param.List(default=[], doc="Contents for FlexBox containers", allow_refs=True)
 
-    def __init__(self, **params):
-        """
-        Initializes thePlotsContainer class with the provided parameters.
-        """
+    def __init__(self, *contents, **params):
         super().__init__(**params)
+        self.flexbox_contents = list(contents)
 
     def __panel__(self):
         """
-        Returns the Panel layout for the plots container, including the plots with their respective titles and sizes.
+        Returns the Panel layout for the plots container.
         """
+        title = pn.pane.Markdown("<h2> Plots </h2>", align="center")
         flexbox_container = pn.FlexBox(
-            align_items="center", justify_content="flex-start", flex_wrap="wrap"
+            *self.flexbox_contents,
+            flex_direction='row', 
+            align_content='space-evenly', 
+            align_items="center", 
+            justify_content="center", 
+            flex_wrap="wrap"
         )
-
-        for idx, content in enumerate(self.flexbox_contents):
-            if idx < len(self.titles):
-                title = self.titles[idx]
-            else:
-                title = f"FlexBox {idx+1}"
-
-            heading = pn.pane.Markdown(f"<h2> {title} </h2>", align="center")
-            flexbox = pn.Column(
-                heading,
-                content,
-            )
-
-            if idx < len(self.sizes):
-                height, width = self.sizes[idx]
-                flexbox.height = height
-                flexbox.width = width
-            else:
-                flexbox.height = 300
-                flexbox.width = 300
-
-            flexbox_container.append(flexbox)
-
-        return flexbox_container
-
+        return pn.Column(title, flexbox_container, sizing_mode="stretch_both")
 
 class HelpBox(pn.viewable.Viewer):
     """
@@ -554,9 +524,7 @@ class FloatingPlot(pn.viewable.Viewer):
     content: pn.viewable.Viewer = param.Parameter(
         default=None, doc="Content for Floating Panel"
     )
-    title: str = param.String(
-        default="", doc="Title for Floating Panel"
-    )
+    title: str = param.String(default="", doc="Title for Floating Panel")
 
     def __init__(self, content=None, title="", **params):
         """
@@ -572,7 +540,7 @@ class FloatingPlot(pn.viewable.Viewer):
         """
         if not self.content or not self.title:
             raise ValueError("Content and title must be provided.")
-        
+
         # Debugging information
         print(f"Creating FloatingPanel with title: {self.title}")
         print(f"Content: {self.content}")
@@ -586,7 +554,6 @@ class FloatingPlot(pn.viewable.Viewer):
             height=500,
             margin=20,
         )
-        
+
         print("FloatPanel created successfully.")
         return float_panel
-
