@@ -12,10 +12,11 @@ from utils.DashboardClasses import (
     MainArea,
     OutputBox,
     WarningBox,
-    PlotsContainer,
-    HelpBox, 
+    HelpBox,
     Footer,
     WarningHandler,
+    FloatingPlot,
+    PlotsContainer,
 )
 import param
 from utils.strings import LOADING_DATA_HELP_BOX_STRING
@@ -300,8 +301,8 @@ def save_loaded_files(
 def delete_selected_files(
     event,
     file_selector,
-    output_box_container,
     warning_box_container,
+    output_box_container,
     warning_handler,
 ):
     """
@@ -923,3 +924,13 @@ def create_loadingdata_help_area():
     """
     help_content = LOADING_DATA_HELP_BOX_STRING
     return HelpBox(help_content=help_content, title="Help Section")
+
+
+def create_loadingdata_plots_area():
+    """
+    Create the plots area for the data loading tab.
+
+    Returns:
+        PlotsContainer: An instance of PlotsContainer with the plots for the data loading tab.
+    """
+    return PlotsContainer()
