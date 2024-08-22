@@ -80,28 +80,54 @@ def create_home_warning_box():
 """ Plots Area Section """
 
 def create_home_plots_area():
-    # Generate sample data
-    times = np.arange(500)
-    counts = np.floor(np.random.rand(500) * 50000)
 
-    # Create a Lightcurve object
-    lc = Lightcurve(times, counts, skip_checks=True, dt=1.0)
-    lc2 = Lightcurve(times, counts, skip_checks=True, dt=1.0)
-    lc3 = Lightcurve(times, counts, skip_checks=True, dt=1.0)
-    lc4 = Lightcurve(times, counts, skip_checks=True, dt=1.0)
+    # Path to the data files
+    data_dir = os.path.join(os.getcwd(), "files", "data")
 
-    # Create a Bokeh figure
-    plot = figure(title="Demo Lightcurve", width=500, height=500)
-    plot2 = figure(title="Demo Lightcurve 2", width=500, height=500)
-    plot3 = figure(title="Demo Lightcurve 3", width=500, height=500)
-    plot4 = figure(title="Demo Lightcurve 4", width=500, height=500)
+    target_file = "nomission.evt"
 
-    plot.line(lc.time, lc.counts, line_width=2)
-    plot2.line(lc2.time, lc2.counts, line_width=2)
-    plot3.line(lc3.time, lc3.counts, line_width=2)
-    plot4.line(lc4.time, lc4.counts, line_width=2)
+    file_path = os.path.join(data_dir, target_file)
 
-    return PlotsContainer(plot, plot2, plot3, plot4)
+    event_list = EventList.read(file_path, "ogip")
+
+    # Create the raw light curve
+    lc_raw = event_list.to_lc(dt=1)
+
+    # Matplotlib raw lightcurve plot
+    fig1, ax1 = plt.subplots()
+    lc_raw.plot(ax=ax1)
+    ax1.set_title("Lightcurve of nomission.evt", fontsize=16)
+    raw_lightcurve_pane = pn.pane.Matplotlib(fig1, width=500, height=500)
+
+    # Same plot but axis limited
+    fig2, ax2 = plt.subplots()
+    lc_raw.plot(ax=ax2, axis_limits=[80000200, 80000400, None, None])
+    ax2.set_title("Axis limited Lightcurve of nomission.evt", fontsize=16)
+    axislimited_lightcurve_pane = pn.pane.Matplotlib(fig2, width=500, height=500)
+    
+
+    # # Generate sample data
+    # times = np.arange(500)
+    # counts = np.floor(np.random.rand(500) * 50000)
+
+    # # Create a Lightcurve object
+    # lc = Lightcurve(times, counts, skip_checks=True, dt=1.0)
+    # lc2 = Lightcurve(times, counts, skip_checks=True, dt=1.0)
+    # lc3 = Lightcurve(times, counts, skip_checks=True, dt=1.0)
+    # lc4 = Lightcurve(times, counts, skip_checks=True, dt=1.0)
+
+    # # Create a Bokeh figure
+    # plot = figure(title="Demo Lightcurve", width=500, height=500)
+    # plot2 = figure(title="Demo Lightcurve 2", width=500, height=500)
+    # plot3 = figure(title="Demo Lightcurve 3", width=500, height=500)
+    # plot4 = figure(title="Demo Lightcurve 4", width=500, height=500)
+
+    # plot.line(lc.time, lc.counts, line_width=2)
+    # plot2.line(lc2.time, lc2.counts, line_width=2)
+    # plot3.line(lc3.time, lc3.counts, line_width=2)
+    # plot4.line(lc4.time, lc4.counts, line_width=2)
+
+    return PlotsContainer(raw_lightcurve_pane, axislimited_lightcurve_pane)
 
 
 
