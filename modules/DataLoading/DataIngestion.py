@@ -1,4 +1,5 @@
 import panel as pn
+import asyncio
 from stingray.events import EventList
 from stingray import Lightcurve
 import warnings
