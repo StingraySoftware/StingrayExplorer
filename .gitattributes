@@ -1,3 +1,4 @@
 files/data/data_small.hdf5 filter=lfs diff=lfs merge=lfs -text
+files/data/data_smaller.hdf5 filter=lfs diff=lfs merge=lfs -text
 assets/images/*.png filter=lfs diff=lfs merge=lfs -text
 assets/images/*.webp filter=lfs diff=lfs merge=lfs -text
