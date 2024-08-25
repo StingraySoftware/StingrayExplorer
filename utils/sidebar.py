@@ -21,15 +21,17 @@ from modules.DataLoading.DataIngestion import (
 from modules.QuickLook.LightCurve import (
     create_quicklook_lightcurve_header,
     create_quicklook_lightcurve_main_area,
+    create_quicklook_lightcurve_plots_area,
 )
 from modules.QuickLook.PowerSpectrum import (
     create_quicklook_powerspectrum_header,
     create_quicklook_powerspectrum_main_area,
+    create_quicklook_powerspectrum_area,
 )
 from assets.icons.svg import HOME_ICON_SVG, LOAD_DATA_ICON_SVG
 
 def create_sidebar(
-    main_area, header, footer, output_box, warning_box, help_box, plots_area, floating_panel
+    main_area, header, footer, output_box, warning_box, help_box, plots_container, float_panel_container
 ):
     menu_items_quicklook_stingray = [
         ("Light Curve", "QuickLookLightCurve"),
@@ -72,7 +74,7 @@ def create_sidebar(
         warning_box[:] = [create_home_warning_box()]
         help_box[:] = [create_home_help_area()]
         footer[:] = [create_home_footer()]
-        plots_area[:] = [create_home_plots_area()]
+        plots_container[:] = [create_home_plots_area()]
 
     home_button.on_click(handle_home_button_selection)
 
@@ -84,7 +86,7 @@ def create_sidebar(
                 main_area_container=main_area,
                 output_box_container=output_box,
                 warning_box_container=warning_box,
-                plots_container=plots_area,
+                plots_container=plots_container,
                 help_box_container=help_box,
                 footer_container=footer,
             )
@@ -95,7 +97,7 @@ def create_sidebar(
                 main_area_container=main_area,
                 output_box_container=output_box,
                 warning_box_container=warning_box,
-                plots_container=plots_area,
+                plots_container=plots_container,
                 help_box_container=help_box,
                 footer_container=footer,
             )
@@ -103,7 +105,7 @@ def create_sidebar(
         output_box[:] = [create_home_output_box()]
         warning_box[:] = [create_home_warning_box()]
         help_box[:] = [create_loadingdata_help_area()]
-        plots_area[:] = [create_loadingdata_plots_area()]
+        plots_container[:] = [create_loadingdata_plots_area()]
 
     load_data_button.on_click(load_data)
 
@@ -117,10 +119,10 @@ def create_sidebar(
                     main_area_container=main_area,
                     output_box_container=output_box,
                     warning_box_container=warning_box,
-                    plots_container=plots_area,
+                    plots_container=plots_container,
                     help_box_container=help_box,
                     footer_container=footer,
-                    float_panel_container=floating_panel
+                    float_panel_container=float_panel_container,
                 )
             ]
             main_area[:] = [
@@ -129,12 +131,14 @@ def create_sidebar(
                     main_area_container=main_area,
                     output_box_container=output_box,
                     warning_box_container=warning_box,
-                    plots_container=plots_area,
+                    plots_container=plots_container,
                     help_box_container=help_box,
                     footer_container=footer,
-                    float_panel_container=floating_panel,
+                    float_panel_container=float_panel_container,
                 )
             ]
+            plots_container[:] = [create_quicklook_lightcurve_plots_area()]
+
         elif clicked == "QuickLookPowerspectra":
             header[:] = [
                 create_quicklook_powerspectrum_header(
@@ -142,7 +146,7 @@ def create_sidebar(
                     main_area_container=main_area,
                     output_box_container=output_box,
                     warning_box_container=warning_box,
-                    plots_container=plots_area,
+                    plots_container=plots_container,
                     help_box_container=help_box,
                     footer_container=footer,
                 )
@@ -153,11 +157,13 @@ def create_sidebar(
                     main_area_container=main_area,
                     output_box_container=output_box,
                     warning_box_container=warning_box,
-                    plots_container=plots_area,
+                    plots_container=plots_container,
                     help_box_container=help_box,
                     footer_container=footer,
+                    float_panel_container=float_panel_container,
                 )
             ]
+            plots_container[:] = [create_quicklook_powerspectrum_area()]
 
     quicklook_stingray_button.on_click(handle_quicklook_button_selection)
 

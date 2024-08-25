@@ -13,6 +13,7 @@ from utils.DashboardClasses import (
     Footer,
     WarningHandler,
     FloatingPlot,
+    PlotsContainer,
 )
 
 
@@ -150,7 +151,7 @@ def create_lightcurve_tab(
             dataframe_output.object = df
 
             if dataframe_checkbox.value:
-                header_container.append(
+                float_panel_container.append(
                     pn.layout.FloatPanel(
                         dataframe_output,
                         contained=False,
@@ -274,3 +275,13 @@ def create_quicklook_lightcurve_main_area(
     }
 
     return MainArea(tabs_content=tabs_content)
+
+
+def create_quicklook_lightcurve_plots_area():
+    """
+    Create the plots area for the quicklook lightcurve tab.
+
+    Returns:
+        PlotsContainer: An instance of PlotsContainer with the plots for the quicklook lightcurve tab.
+    """
+    return PlotsContainer()

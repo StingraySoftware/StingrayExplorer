@@ -53,7 +53,7 @@ warning_box_container = pn.Column(warning_box)
 plots_container = pn.FlexBox(plots_area, flex_direction='row', align_content='space-evenly', align_items="center", justify_content="center", flex_wrap="wrap")
 help_box_container = pn.Column(help_box)
 footer_container = pn.Column(footer)
-floating_panel_container = pn.Column(pn.pane.Markdown("This is not a bug that this container is scrolling, it's a container to hold Floating Plots. You can ignore it completely."))
+float_panel_container = pn.Column(pn.pane.Markdown("This is not a bug that this container is scrolling, it's a container to hold Floating Plots. You can ignore it completely."))
 
 # Floating Plot Demo
 # floating_plot_demo = create_floating_plot_demo(floating_panel_container)
@@ -65,8 +65,8 @@ sidebar = create_sidebar(
     output_box=output_box_container,
     warning_box=warning_box_container,
     help_box=help_box_container,
-    plots_area=plots_container,
-    floating_panel=floating_panel_container
+    plots_container=plots_container,
+    float_panel_container=float_panel_container,
 )
 
 
@@ -129,7 +129,7 @@ layout.main[33:55, 8:12] = warning_box_container
 layout.main[55:100, 0:12] = plots_container
 layout.main[100:140, 0:12] = help_box_container
 layout.main[140:170, 0:12] = footer_container
-layout.main[170:170, 0:12] = floating_panel_container
+layout.main[170:170, 0:12] = float_panel_container
 
 
 # Serve the layout
