@@ -534,6 +534,12 @@ class FloatingPlot(pn.viewable.Viewer):
         self.title = title
         self.content = content
 
+    @property
+    def object(self):
+        print(f"Object property called for {self.content}")
+        return self.content
+    
+    
     def __panel__(self):
         """
         Returns the floating panel which contains the content with the appropriate heading.
@@ -541,20 +547,15 @@ class FloatingPlot(pn.viewable.Viewer):
         if not self.title or not self.content:
             raise ValueError("Title and content must be provided.")
 
-        # Debugging information
-        print(f"Creating FloatingPanel with title: {self.title}")
-        print(f"Content: {self.content}")
-
         float_panel = pn.layout.FloatPanel(
             self.content,
             name=str(self.title),
             contained=False,
             position="center",
-            width=500,
-            height=500,
+            width=700,
+            height=700,
             margin=20,
+            theme="success",
         )
-
-        print("FloatPanel created successfully.")
         return float_panel
 
