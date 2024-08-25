@@ -34,6 +34,7 @@ def create_quicklook_lightcurve_header(
     plots_container,
     help_box_container,
     footer_container,
+    float_panel_container,
 ):
     home_heading_input = pn.widgets.TextInput(
         name="Heading", value="QuickLook Light Curve"
@@ -73,6 +74,7 @@ def create_lightcurve_tab(
     warning_handler,
     plots_container,
     header_container,
+    float_panel_container
 ):
 
     event_list_dropdown = pn.widgets.Select(
@@ -105,13 +107,13 @@ def create_lightcurve_tab(
     )
 
     def create_holoviews_panes():
-        return pn.pane.HoloViews(width=600, height=500)
+        return pn.pane.HoloViews(width=600, height=600)
 
     def create_holoviews_plots(df):
         return df.hvplot.line(x="Time", y="Counts")
 
     def create_dataframe_panes():
-        return pn.pane.DataFrame(width=600, height=500)
+        return pn.pane.DataFrame(width=600, height=600)
 
     def create_dataframe(selected_event_list_index, dt):
         if selected_event_list_index is not None:
@@ -153,8 +155,8 @@ def create_lightcurve_tab(
                         dataframe_output,
                         contained=False,
                         position="center",
-                        height=350,
-                        width=500,
+                        height=600,
+                        width=600,
                         theme="primary",
                     )
                 )
@@ -182,12 +184,26 @@ def create_lightcurve_tab(
         dt = dt_slider.value
         df = create_dataframe(selected_event_list_index, dt)
         if df is not None:
-            holoviews_output = create_holoviews_panes()
             plot_hv = create_holoviews_plots(df)
-            holoviews_output.object = plot_hv
+            holoviews_output = pn.pane.HoloViews(plot_hv, width=500, height=500)
 
-            if combine_plots_checkbox.value:
-                # If combining, we need to get all existing plots and combine with the new one
+            if not combine_plots_checkbox.value:
+                # Handle case when plots are not combined
+                if floatpanel_plots_checkbox.value:
+                    # Create a new FloatPanel for each independent plot
+                    new_floatpanel = pn.layout.FloatPanel(
+                        holoviews_output,
+                        contained=False,
+                        position="center",
+                        height=350,
+                        width=500,
+                        theme="primary",
+                    )
+                    float_panel_container.append(new_floatpanel)
+                else:
+                    plots_container.append(holoviews_output)
+            else:
+                # Handle case when plots are combined
                 existing_plots = [
                     p.object
                     for p in plots_container
@@ -197,34 +213,22 @@ def create_lightcurve_tab(
                 combined_pane = pn.pane.HoloViews(combined_plot, width=500, height=500)
 
                 if floatpanel_plots_checkbox.value:
-                    header_container.append(
-                        pn.layout.FloatPanel(
-                            combined_pane,
-                            contained=False,
-                            position="center",
-                            height=350,
-                            theme="primary",
-                        )
+                    new_floatpanel = pn.layout.FloatPanel(
+                        combined_pane,
+                        contained=False,
+                        position="center",
+                        height=350,
+                        width=500,
+                        theme="primary",
                     )
+                    float_panel_container.append(new_floatpanel)
                 else:
                     plots_container.append(combined_pane)
-            else:
-                if floatpanel_plots_checkbox.value:
-                    header_container.append(
-                        pn.layout.FloatPanel(
-                            holoviews_output,
-                            contained=False,
-                            position="center",
-                            height=350,
-                            theme="primary",
-                        )
-                    )
-                else:
-                    plots_container.append(holoviews_output)
         else:
             output_box_container[:] = [
                 create_loadingdata_output_box("Failed to create dataframe.")
             ]
+
 
     generate_lightcurve_button = pn.widgets.Button(
         name="Generate Light Curve", button_type="primary"
@@ -255,6 +259,7 @@ def create_quicklook_lightcurve_main_area(
     plots_container,
     help_box_container,
     footer_container,
+    float_panel_container,
 ):
     warning_handler = create_warning_handler()
     tabs_content = {
@@ -264,6 +269,7 @@ def create_quicklook_lightcurve_main_area(
             warning_handler=warning_handler,
             plots_container=plots_container,
             header_container=header_container,
+            float_panel_container=float_panel_container
         ),
     }
 
