@@ -13,8 +13,10 @@ from utils.DashboardClasses import (
     Footer,
     WarningHandler,
     FloatingPlot,
+    PlotsContainer,
 )
 from stingray import Powerspectrum
+
 
 # Create a warning handler
 def create_warning_handler():
@@ -22,7 +24,9 @@ def create_warning_handler():
     warnings.showwarning = warning_handler.warn
     return warning_handler
 
+
 """ Header Section """
+
 
 def create_quicklook_powerspectrum_header(
     header_container,
@@ -40,22 +44,30 @@ def create_quicklook_powerspectrum_header(
 
     return MainHeader(heading=home_heading_input, subheading=home_subheading_input)
 
+
 """ Output Box Section """
+
 
 def create_loadingdata_output_box(content):
     return OutputBox(output_content=content)
 
+
 """ Warning Box Section """
+
 
 def create_loadingdata_warning_box(content):
     return WarningBox(warning_content=content)
 
+
 """ Float Panel """
+
 
 def create_floatpanel_area(content, title):
     return FloatingPlot(content, title)
 
+
 """ Main Area Section """
+
 
 def create_powerspectrum_tab(
     output_box_container,
@@ -63,6 +75,7 @@ def create_powerspectrum_tab(
     warning_handler,
     plots_container,
     header_container,
+    float_panel_container,
 ):
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
@@ -81,16 +94,20 @@ def create_powerspectrum_tab(
         name="Combine with Existing Plot", value=False
     )
 
-    floatpanel_plots_checkbox = pn.widgets.Checkbox(name="Add Plot to FloatingPanel", value=False)
+    floatpanel_plots_checkbox = pn.widgets.Checkbox(
+        name="Add Plot to FloatingPanel", value=False
+    )
 
     def create_holoviews_panes():
         return pn.pane.HoloViews(width=600, height=500)
 
     def create_holoviews_plots(ps):
         return hv.Curve((ps.freq, ps.power)).opts(
-            xlabel='Frequency (Hz)', ylabel='Power',
-            title='Power Spectrum',
-            width=600, height=500
+            xlabel="Frequency (Hz)",
+            ylabel="Power",
+            title="Power Spectrum",
+            width=600,
+            height=500,
         )
 
     def create_dataframe_panes():
@@ -231,6 +248,7 @@ def create_powerspectrum_tab(
     )
     return tab1_content
 
+
 def create_quicklook_powerspectrum_main_area(
     header_container,
     main_area_container,
@@ -239,6 +257,7 @@ def create_quicklook_powerspectrum_main_area(
     plots_container,
     help_box_container,
     footer_container,
+    float_panel_container,
 ):
     warning_handler = create_warning_handler()
     tabs_content = {
@@ -248,7 +267,18 @@ def create_quicklook_powerspectrum_main_area(
             warning_handler=warning_handler,
             plots_container=plots_container,
             header_container=header_container,
+            float_panel_container=float_panel_container,
         ),
     }
 
     return MainArea(tabs_content=tabs_content)
+
+
+def create_quicklook_powerspectrum_area():
+    """
+    Create the plots area for the quicklook lightcurve tab.
+
+    Returns:
+        PlotsContainer: An instance of PlotsContainer with the plots for the quicklook lightcurve tab.
+    """
+    return PlotsContainer()
