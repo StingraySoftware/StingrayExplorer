@@ -120,6 +120,7 @@ def create_sidebar(
                     plots_container=plots_area,
                     help_box_container=help_box,
                     footer_container=footer,
+                    float_panel_container=floating_panel
                 )
             ]
             main_area[:] = [
@@ -131,6 +132,7 @@ def create_sidebar(
                     plots_container=plots_area,
                     help_box_container=help_box,
                     footer_container=footer,
+                    float_panel_container=floating_panel,
                 )
             ]
         elif clicked == "QuickLookPowerspectra":

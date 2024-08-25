@@ -520,26 +520,26 @@ class FloatingPlot(pn.viewable.Viewer):
     Floating Plot Container class represents a container for displaying a single plot.
     """
 
-    # Parameters for the contents and titles of Floating Panel
+    # Parameters for the title and content of Floating Panel
+    title: str = param.String(default="", doc="Title for Floating Panel")
     content: pn.viewable.Viewer = param.Parameter(
         default=None, doc="Content for Floating Panel"
     )
-    title: str = param.String(default="", doc="Title for Floating Panel")
 
-    def __init__(self, content=None, title="", **params):
+    def __init__(self, title="", content=None, **params):
         """
         Initializes FloatingPlot class with the provided parameters.
         """
         super().__init__(**params)
-        self.content = content
         self.title = title
+        self.content = content
 
     def __panel__(self):
         """
         Returns the floating panel which contains the content with the appropriate heading.
         """
-        if not self.content or not self.title:
-            raise ValueError("Content and title must be provided.")
+        if not self.title or not self.content:
+            raise ValueError("Title and content must be provided.")
 
         # Debugging information
         print(f"Creating FloatingPanel with title: {self.title}")
@@ -557,3 +557,4 @@ class FloatingPlot(pn.viewable.Viewer):
 
         print("FloatPanel created successfully.")
         return float_panel
+

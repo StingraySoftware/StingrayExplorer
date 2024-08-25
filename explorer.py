@@ -1,5 +1,6 @@
 import panel as pn
 import os
+import holoviews as hv
 from modules.Home.HomeContent import (
     create_home_header,
     create_home_main_area,
@@ -7,13 +8,15 @@ from modules.Home.HomeContent import (
     create_home_warning_box,
     create_home_help_area,
     create_home_footer,
-    create_home_plots_area,
+    create_home_plots_area_initial,
+    # create_floating_plot_demo,
 )
 from utils.sidebar import create_sidebar
 
 
 # Initialize panel extension
 pn.extension('floatpanel')
+hv.extension('bokeh')
 
 # Create a boolean status indicator
 busy_indicator = pn.indicators.BooleanStatus(
@@ -39,7 +42,7 @@ help_box = create_home_help_area()
 footer = create_home_footer()
 
 # Plots Area 
-plots_container = create_home_plots_area()
+plots_area = create_home_plots_area_initial()
 
 
 # Containers for changing the layouts dynamically
@@ -47,10 +50,13 @@ header_container = pn.Column(header)
 main_area_container = pn.Column(main_area)
 output_box_container = pn.Column(output_box)
 warning_box_container = pn.Column(warning_box)
-plots_container = pn.FlexBox(plots_container, flex_direction='row', align_content='space-evenly', align_items="center", justify_content="center", flex_wrap="wrap")
+plots_container = pn.FlexBox(plots_area, flex_direction='row', align_content='space-evenly', align_items="center", justify_content="center", flex_wrap="wrap")
 help_box_container = pn.Column(help_box)
 footer_container = pn.Column(footer)
 floating_panel_container = pn.Column(pn.pane.Markdown("This is not a bug that this container is scrolling, it's a container to hold Floating Plots. You can ignore it completely."))
+
+# Floating Plot Demo
+# floating_plot_demo = create_floating_plot_demo(floating_panel_container)
 
 sidebar = create_sidebar(
     main_area=main_area_container,
