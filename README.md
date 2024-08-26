@@ -73,6 +73,8 @@ stingray, holoviews, panel\
 You would need to instal the various dependencies to install all this. \
 \
 If the import errors are still persisting, see what libraries absence is causing the import and install them from pip or conda forge. \
+
+If nothing else works, contact me at kartik4321mandar@gmail.com or in the Stingray slack channel @kartikmandar\\
 ## Usage
 
 To run the StingrayExplorer application, execute inside StingrayExplorer:
