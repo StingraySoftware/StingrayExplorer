@@ -253,7 +253,7 @@ def create_lightcurve_tab(
                 combined_title.append(event_list_name)
 
         if combined_plots:
-            combined_plot = hv.Overlay(combined_plots)
+            combined_plot = hv.Overlay(combined_plots).opts(shared_axes=False)
             combined_pane = create_holoviews_panes(combined_plot)
 
             combined_title_str = " + ".join(combined_title)
