@@ -134,4 +134,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - The Stingray library for providing tools for X-ray astronomy data analysis.
-- Panel and Holoviews for enabling interactive data visualization in Python.
+- Panel and Holoviews (HoloViz ecosystem) for enabling interactive data visualization in Python.
