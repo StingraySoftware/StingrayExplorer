@@ -33,6 +33,16 @@ from modules.QuickLook.AveragePowerSpectrum import (
     create_quicklook_avg_powerspectrum_main_area,
     create_quicklook_avg_powerspectrum_area,
 )
+from modules.QuickLook.CrossSpectrum import (
+    create_quicklook_cross_spectrum_header,
+    create_quicklook_cross_spectrum_main_area,
+    create_quicklook_cross_spectrum_area,
+)
+from modules.QuickLook.AverageCrossSpectrum import (
+    create_quicklook_avg_cross_spectrum_header,
+    create_quicklook_avg_cross_spectrum_main_area,
+    create_quicklook_avg_cross_spectrum_area,
+)
 from assets.icons.svg import HOME_ICON_SVG, LOAD_DATA_ICON_SVG
 
 def create_sidebar(
@@ -40,9 +50,10 @@ def create_sidebar(
 ):
     menu_items_quicklook_stingray = [
         ("Light Curve", "QuickLookLightCurve"),
-        ("Power spectra", "QuickLookPowerspectra"),
+        ("Power Spectrum", "QuickLookPowerspectra"),
         ("Averaged Power Spectrum", "QuickLookAvgPowerspectra"),
-        ("Cross Correlation", "QuickLookCrossCorrelation"),
+        ("Cross Spectrum", "QuickLookCrossSpectrum"),
+        ("Averaged Cross Spectrum", "QuickLookAvgCrossSpectrum"),
     ]
 
     # Home Button
@@ -196,6 +207,58 @@ def create_sidebar(
                 )
             ]
             plots_container[:] = [create_quicklook_avg_powerspectrum_area()]
+
+        elif clicked == "QuickLookCrossSpectrum":
+            header[:] = [
+                create_quicklook_cross_spectrum_header(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                )
+            ]
+            main_area[:] = [
+                create_quicklook_cross_spectrum_main_area(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                    float_panel_container=float_panel_container,
+                )
+            ]
+            plots_container[:] = [create_quicklook_cross_spectrum_area()]
+
+        elif clicked == "QuickLookAvgCrossSpectrum":
+            header[:] = [
+                create_quicklook_avg_cross_spectrum_header(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                )
+            ]
+            main_area[:] = [
+                create_quicklook_avg_cross_spectrum_main_area(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                    float_panel_container=float_panel_container,
+                )
+            ]
+            plots_container[:] = [create_quicklook_avg_cross_spectrum_area()]
 
     quicklook_stingray_button.on_click(handle_quicklook_button_selection)
 
