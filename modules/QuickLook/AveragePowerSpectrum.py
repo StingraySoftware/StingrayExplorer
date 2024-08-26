@@ -169,7 +169,8 @@ def create_avg_powerspectrum_tab(
         return pn.pane.HoloViews(plot, width=600, height=600)
 
     def create_holoviews_plots(ps, title, dt, norm, segment_size):
-        return hv.Curve((ps.freq, ps.power)).opts(
+        label = f"{title} (dt={dt}, norm={norm}, segment={segment_size})"
+        return hv.Curve((ps.freq, ps.power), label=label).opts(
             xlabel="Frequency (Hz)",
             ylabel="Power",
             title=f"{title} (dt={dt}, norm={norm}, segment={segment_size})",
