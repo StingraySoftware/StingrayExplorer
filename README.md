@@ -45,7 +45,7 @@ StingrayExplorer is a data analysis tool designed for quick visualization and ex
 - Panel
 - Holoviews
 - Stingray
-- Other dependencies listed in `requirements.txt`
+- Other dependencies listed in `environment.yml`
 
 ### Setup
 
@@ -61,6 +61,18 @@ StingrayExplorer is a data analysis tool designed for quick visualization and ex
     cd StingrayExplorer
     ```
 
+3. Create and activate the conda environment:
+
+    ```bash
+    conda env create -f environment.yml
+    conda activate stingray-env
+    ```
+Note: In case of dependencies clashing refer to individual dependencies and see if the version is correct for Stingray installation. 
+The most important dependencies are as follows:
+stingray, holoviews, panel
+You would need to instal the various dependencies to install all this. 
+
+If the import errors are still persisting, see what libraries absence is causing the import and install them from pip or conda forge. 
 ## Usage
 
 To run the StingrayExplorer application, execute inside StingrayExplorer:
