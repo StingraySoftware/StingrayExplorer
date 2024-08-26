@@ -63,7 +63,7 @@ def create_loadingdata_warning_box(content):
 
 
 def create_floatpanel_area(content, title):
-    return FloatingPlot(content, title)
+    return FloatingPlot(content=content, title=title)
 
 
 """ Main Area Section """
@@ -90,36 +90,56 @@ def create_powerspectrum_tab(
         value=1,
     )
 
-    combine_plots_checkbox = pn.widgets.Checkbox(
-        name="Combine with Existing Plot", value=False
+    norm_select = pn.widgets.Select(
+        name="Normalization",
+        options=["frac", "leahy", "abs", "none"],
+        value="leahy",
+    )
+
+    multi_event_select = pn.widgets.MultiSelect(
+        name="Or Select Event List(s) to Combine",
+        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        size=8,
     )
 
     floatpanel_plots_checkbox = pn.widgets.Checkbox(
         name="Add Plot to FloatingPanel", value=False
     )
 
-    def create_holoviews_panes():
-        return pn.pane.HoloViews(width=600, height=500)
+    dataframe_checkbox = pn.widgets.Checkbox(
+        name="Add DataFrame to FloatingPanel", value=False
+    )
 
-    def create_holoviews_plots(ps):
-        return hv.Curve((ps.freq, ps.power)).opts(
+    def create_holoviews_panes(plot):
+        return pn.pane.HoloViews(plot, width=600, height=600)
+
+    def create_holoviews_plots(ps, event_list_name, dt, norm):
+        label = f"{event_list_name} (dt={dt}, norm={norm})"
+        return hv.Curve((ps.freq, ps.power), label=label).opts(
             xlabel="Frequency (Hz)",
             ylabel="Power",
-            title="Power Spectrum",
+            title=label,
             width=600,
-            height=500,
+            height=600,
+            shared_axes=False,
         )
 
-    def create_dataframe_panes():
-        return pn.pane.DataFrame(width=600, height=500)
+    def create_dataframe_panes(df, title):
+        return pn.FlexBox(
+            pn.pane.Markdown(f"**{title}**"),
+            pn.pane.DataFrame(df, width=600, height=600),
+            align_items="center",
+            justify_content="center",
+            flex_wrap="nowrap",
+            flex_direction="column",
+        )
 
-    def create_dataframe(selected_event_list_index, dt):
+    def create_dataframe(selected_event_list_index, dt, norm):
         if selected_event_list_index is not None:
             event_list = loaded_event_data[selected_event_list_index][1]
-            lc_new = event_list.to_lc(dt=dt)
 
-            # Create a PowerSpectrum object
-            ps = Powerspectrum.from_lightcurve(lc_new, norm="leahy")
+            # Create a PowerSpectrum object using from_events
+            ps = Powerspectrum.from_events(events=event_list, dt=dt, norm=norm)
 
             df = pd.DataFrame(
                 {
@@ -145,20 +165,17 @@ def create_powerspectrum_tab(
             return
 
         dt = dt_slider.value
-        df, ps = create_dataframe(selected_event_list_index, dt)
+        norm = norm_select.value
+        df, ps = create_dataframe(selected_event_list_index, dt, norm)
         if df is not None:
-            dataframe_output = create_dataframe_panes()
-            dataframe_output.object = df
-
-            if floatpanel_plots_checkbox.value:
-                header_container.append(
-                    pn.layout.FloatPanel(
-                        dataframe_output,
-                        contained=False,
-                        position="center",
-                        height=350,
-                        width=500,
-                        theme="primary",
+            event_list_name = loaded_event_data[selected_event_list_index][0]
+            dataframe_title = f"{event_list_name} (dt={dt}, norm={norm})"
+            dataframe_output = create_dataframe_panes(df, dataframe_title)
+            if dataframe_checkbox.value:
+                float_panel_container.append(
+                    create_floatpanel_area(
+                        content=dataframe_output,
+                        title=f"DataFrame for {dataframe_title}",
                     )
                 )
             else:
@@ -183,56 +200,91 @@ def create_powerspectrum_tab(
             return
 
         dt = dt_slider.value
-        df, ps = create_dataframe(selected_event_list_index, dt)
+        norm = norm_select.value
+        df, ps = create_dataframe(selected_event_list_index, dt, norm)
         if df is not None:
-            holoviews_output = create_holoviews_panes()
-            plot_hv = create_holoviews_plots(ps)
-            holoviews_output.object = plot_hv
+            event_list_name = loaded_event_data[selected_event_list_index][0]
+            plot_hv = create_holoviews_plots(ps, event_list_name, dt, norm)
+            holoviews_output = create_holoviews_panes(plot_hv)
 
-            if combine_plots_checkbox.value:
-                # If combining, we need to get all existing plots and combine with the new one
-                existing_plots = [
-                    p.object
-                    for p in plots_container
-                    if isinstance(p, pn.pane.HoloViews)
-                ]
-                combined_plot = hv.Overlay(existing_plots + [plot_hv])
-                combined_pane = pn.pane.HoloViews(combined_plot, width=500, height=500)
-
-                if floatpanel_plots_checkbox.value:
-                    header_container.append(
-                        pn.layout.FloatPanel(
-                            combined_pane,
-                            contained=False,
-                            position="center",
-                            height=350,
-                            theme="primary",
-                        )
+            if floatpanel_plots_checkbox.value:
+                float_panel_container.append(
+                    create_floatpanel_area(
+                        content=holoviews_output, title=f"Power Spectrum for {event_list_name} (dt={dt}, norm={norm})"
                     )
-                else:
-                    plots_container.append(combined_pane)
+                )
             else:
-                if floatpanel_plots_checkbox.value:
-                    header_container.append(
-                        pn.layout.FloatPanel(
-                            holoviews_output,
-                            contained=False,
-                            position="center",
-                            height=350,
-                            theme="primary",
-                        )
+                markdown_content = f"## Power Spectrum for {event_list_name} (dt={dt}, norm={norm})"
+                plots_container.append(
+                    pn.FlexBox(
+                        pn.pane.Markdown(markdown_content),
+                        holoviews_output,
+                        align_items="center",
+                        justify_content="center",
+                        flex_wrap="nowrap",
+                        flex_direction="column",
                     )
-                else:
-                    plots_container.append(holoviews_output)
+                )
         else:
             output_box_container[:] = [
                 create_loadingdata_output_box("Failed to create power spectrum.")
             ]
 
+    def combine_selected_plots(event=None):
+        selected_event_list_indices = multi_event_select.value
+        if not selected_event_list_indices:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event lists selected.")
+            ]
+            return
+
+        combined_plots = []
+        combined_title = []
+
+        for index in selected_event_list_indices:
+            dt = dt_slider.value
+            norm = norm_select.value
+            df, ps = create_dataframe(index, dt, norm)
+            if df is not None:
+                event_list_name = loaded_event_data[index][0]
+                plot_hv = create_holoviews_plots(ps, event_list_name, dt, norm)
+                combined_plots.append(plot_hv)
+                combined_title.append(event_list_name)
+
+        if combined_plots:
+            combined_plot = hv.Overlay(combined_plots).opts(shared_axes=False)
+            combined_pane = create_holoviews_panes(combined_plot)
+
+            combined_title_str = " + ".join(combined_title)
+            combined_title_str += f" (dt={dt}, norm={norm})"
+            if floatpanel_plots_checkbox.value:
+                float_panel_container.append(
+                    create_floatpanel_area(
+                        content=combined_pane, title=combined_title_str
+                    )
+                )
+            else:
+                markdown_content = f"## {combined_title_str}"
+                plots_container.append(
+                    pn.FlexBox(
+                        pn.pane.Markdown(markdown_content),
+                        combined_pane,
+                        align_items="center",
+                        justify_content="center",
+                        flex_wrap="nowrap",
+                        flex_direction="column",
+                    )
+                )
+
     generate_powerspectrum_button = pn.widgets.Button(
         name="Generate Power Spectrum", button_type="primary"
     )
     generate_powerspectrum_button.on_click(generate_powerspectrum)
+
+    combine_plots_button = pn.widgets.Button(
+        name="Combine Selected Plots", button_type="success"
+    )
+    combine_plots_button.on_click(combine_selected_plots)
 
     show_dataframe_button = pn.widgets.Button(
         name="Show DataFrame", button_type="primary"
@@ -242,9 +294,11 @@ def create_powerspectrum_tab(
     tab1_content = pn.Column(
         event_list_dropdown,
         dt_slider,
-        combine_plots_checkbox,
+        norm_select,
+        multi_event_select,
         floatpanel_plots_checkbox,
-        pn.Row(generate_powerspectrum_button, show_dataframe_button),
+        dataframe_checkbox,
+        pn.Row(generate_powerspectrum_button, show_dataframe_button, combine_plots_button),
     )
     return tab1_content
 
