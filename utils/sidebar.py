@@ -28,6 +28,11 @@ from modules.QuickLook.PowerSpectrum import (
     create_quicklook_powerspectrum_main_area,
     create_quicklook_powerspectrum_area,
 )
+from modules.QuickLook.AveragePowerSpectrum import (
+    create_quicklook_avg_powerspectrum_header,
+    create_quicklook_avg_powerspectrum_main_area,
+    create_quicklook_avg_powerspectrum_area,
+)
 from assets.icons.svg import HOME_ICON_SVG, LOAD_DATA_ICON_SVG
 
 def create_sidebar(
@@ -36,6 +41,7 @@ def create_sidebar(
     menu_items_quicklook_stingray = [
         ("Light Curve", "QuickLookLightCurve"),
         ("Power spectra", "QuickLookPowerspectra"),
+        ("Averaged Power Spectrum", "QuickLookAvgPowerspectra"),
         ("Cross Correlation", "QuickLookCrossCorrelation"),
     ]
 
@@ -164,6 +170,32 @@ def create_sidebar(
                 )
             ]
             plots_container[:] = [create_quicklook_powerspectrum_area()]
+
+        elif clicked == "QuickLookAvgPowerspectra":
+            header[:] = [
+                create_quicklook_avg_powerspectrum_header(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                )
+            ]
+            main_area[:] = [
+                create_quicklook_avg_powerspectrum_main_area(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                    float_panel_container=float_panel_container,
+                )
+            ]
+            plots_container[:] = [create_quicklook_avg_powerspectrum_area()]
 
     quicklook_stingray_button.on_click(handle_quicklook_button_selection)
 
