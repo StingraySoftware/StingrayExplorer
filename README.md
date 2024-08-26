@@ -63,10 +63,10 @@ StingrayExplorer is a data analysis tool designed for quick visualization and ex
 
 ## Usage
 
-To run the StingrayExplorer application, execute:
+To run the StingrayExplorer application, execute inside StingrayExplorer:
 
 ```
-python start_application.py
+panel serve explorer.py --autoreload --static-dirs assets=./assets
 ```
 
 This will start a Panel server and launch the application in your default web browser.
