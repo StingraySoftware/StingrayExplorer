@@ -1,28 +1,39 @@
-FROM python:3.11.9
+# Use the full Anaconda base image
+FROM continuumio/anaconda3:latest
 
 WORKDIR /code
 
+# Create a new Conda environment with Python 3.11.9
+RUN conda create --name stingray_env python=3.11.9 -y
+
+# Activate the environment and upgrade pip
+RUN conda run -n stingray_env pip install --no-cache-dir --upgrade pip
+
+# Install all dependencies using pip within the Conda environment
+RUN conda run -n stingray_env pip install --no-cache-dir astropy \
+    scipy \
+    matplotlib \
+    numpy \
+    tqdm \
+    numba \
+    pint-pulsar \
+    emcee \
+    corner \
+    statsmodels \
+    stingray \
+    panel \
+    watchfiles \
+    holoviews \
+    hvplot \
+    param \
+    pandas \
+    h5py
+
+# Copy the application code
 COPY . .
 
-RUN python3 -m pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir astropy
-RUN pip install --no-cache-dir scipy
-RUN pip install --no-cache-dir matplotlib
-RUN pip install --no-cache-dir numpy
-RUN pip install --no-cache-dir tqdm
-RUN pip install --no-cache-dir numba
-RUN pip install --no-cache-dir pint-pulsar
-RUN pip install --no-cache-dir emcee
-RUN pip install --no-cache-dir corner
-RUN pip install --no-cache-dir statsmodels
-RUN pip install --no-cache-dir stingray
-RUN pip install --no-cache-dir panel
-RUN pip install --no-cache-dir watchfiles
-RUN pip install --no-cache-dir holoviews
-RUN pip install --no-cache-dir hvplot
-RUN pip install --no-cache-dir param
-RUN pip install --no-cache-dir pandas
+# Set the shell to activate the Conda environment by default
+SHELL ["conda", "run", "-n", "stingray_env", "/bin/bash", "-c"]
 
-
-CMD ["panel", "serve", "explorer.py", "--autoreload", "--static-dirs", "assets=./assets", "--address", "0.0.0.0", "--port", "7860", "--allow-websocket-origin", "*"]
-
+# Command to run the Panel app within the Conda environment
+CMD ["conda", "run", "--no-capture-output", "-n", "stingray_env", "panel", "serve", "explorer.py", "--autoreload", "--static-dirs", "assets=./assets", "--address", "0.0.0.0", "--port", "7860", "--allow-websocket-origin", "*"]
