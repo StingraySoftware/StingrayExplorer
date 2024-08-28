@@ -1,4 +1,15 @@
-
+---
+title: Stingray Explorer
+emoji: 🚀
+colorFrom: gray
+colorTo: green
+sdk: docker
+pinned: false
+license: mit
+thumbnail: >-
+  https://cdn-uploads.huggingface.co/production/uploads/668d17c6e6887d1f6afde2a6/4q5lnlS6-eJ_JBh8tW3_I.png
+short_description: Stingray Explorer Dashboard Demo
+---
 # StingrayExplorer
 
 StingrayExplorer is a data analysis tool designed for quick visualization and exploration of astronomical time series data. It leverages the Stingray library to compute power spectra, cross spectra, and more, with a user-friendly dashboard built using Panel.
