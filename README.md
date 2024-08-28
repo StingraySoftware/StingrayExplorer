@@ -86,6 +86,21 @@ You would need to install the various dependencies to install all this.
 If the import errors are still persisting, see what libraries absence is causing the import and install them from pip or conda forge. 
 
 If nothing else works, contact me at kartik4321mandar@gmail.com or in the Stingray slack channel @kartikmandar
+
+## Deployment
+
+The dashboard can now be deployed using Docker and is live on Hugging Face Spaces at [https://kartikmandar-stingrayexplorer.hf.space/explorer](https://kartikmandar-stingrayexplorer.hf.space/explorer).
+
+The Hugging Face Spaces repository is located at: [https://huggingface.co/spaces/kartikmandar/StingrayExplorer](https://huggingface.co/spaces/kartikmandar/StingrayExplorer).
+
+A live demo of the application is also embedded on my website for easy access: [https://www.kartikmandar.com/gsoc-2024/stingray-explorer](https://www.kartikmandar.com/gsoc-2024/stingray-explorer).
+
+## GitHub Actions Integration
+
+The Hugging Face Spaces repository is synced with the main GitHub repository using GitHub Actions. This sync occurs automatically for every commit pushed to the `main` branch.
+
+
+
 ## Usage
 
 To run the StingrayExplorer application, execute inside StingrayExplorer:
