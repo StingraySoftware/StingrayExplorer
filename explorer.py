@@ -11,6 +11,7 @@ from modules.Home.HomeContent import (
     create_home_plots_area_initial,
     # create_floating_plot_demo,
 )
+
 from utils.sidebar import create_sidebar
 
 
