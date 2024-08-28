@@ -99,12 +99,12 @@ A live demo of the application is also embedded on my website for easy access: [
 
 To deploy the dashboard using Docker, follow these steps:
 
-1. **Build the Docker Image**:  
-   Navigate to the project directory and build the Docker image using the following command:
+### Build the Docker Image:  
+Navigate to the project directory and build the Docker image using the following command:
 
-   ```bash
-   docker build -t stingray-explorer .
-    ```
+```bash
+docker build -t stingray-explorer .
+```
 
 ### Run the Docker Container
 
