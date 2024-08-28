@@ -32,6 +32,9 @@ RUN conda run -n stingray_env pip install --no-cache-dir astropy \
 # Copy the application code
 COPY . .
 
+# Create the necessary directories with appropriate permissions
+RUN mkdir -p /code/files/loaded-data && chmod -R 777 /code/files
+
 # Set the shell to activate the Conda environment by default
 SHELL ["conda", "run", "-n", "stingray_env", "/bin/bash", "-c"]
 
