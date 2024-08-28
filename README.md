@@ -104,13 +104,7 @@ To deploy the dashboard using Docker, follow these steps:
 
    ```bash
    docker build -t stingray-explorer .
-
-
-
-
-## GitHub Actions Integration
-
-The Hugging Face Spaces repository is synced with the main GitHub repository using GitHub Actions. This sync occurs automatically for every commit pushed to the `main` branch.
+    ```
 
 ### Run the Docker Container
 
@@ -119,6 +113,14 @@ After building the image, run the container with the following command:
 ```bash
 docker run -p 7860:7860 stingray-explorer
 ```
+
+
+
+
+## GitHub Actions Integration
+
+The Hugging Face Spaces repository is synced with the main GitHub repository using GitHub Actions. This sync occurs automatically for every commit pushed to the `main` branch.
+
 
 ## Usage
 
