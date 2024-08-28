@@ -95,11 +95,30 @@ The Hugging Face Spaces repository is located at: [https://huggingface.co/spaces
 
 A live demo of the application is also embedded on my website for easy access: [https://www.kartikmandar.com/gsoc-2024/stingray-explorer](https://www.kartikmandar.com/gsoc-2024/stingray-explorer).
 
+### How to Deploy and Build Using Docker
+
+To deploy the dashboard using Docker, follow these steps:
+
+1. **Build the Docker Image**:  
+   Navigate to the project directory and build the Docker image using the following command:
+
+   ```bash
+   docker build -t stingray-explorer .
+
+
+
+
 ## GitHub Actions Integration
 
 The Hugging Face Spaces repository is synced with the main GitHub repository using GitHub Actions. This sync occurs automatically for every commit pushed to the `main` branch.
 
+### Run the Docker Container
 
+After building the image, run the container with the following command:
+
+```bash
+docker run -p 7860:7860 stingray-explorer
+```
 
 ## Usage
 
