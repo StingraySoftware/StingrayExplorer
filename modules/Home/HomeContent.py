@@ -1,3 +1,7 @@
+from stingray.events import EventList
+from utils.globals import loaded_event_data
+import os
+
 from matplotlib import pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 import panel as pn
@@ -45,6 +49,21 @@ def create_home_header():
 """ Main Area Section """
 
 def create_home_main_area():
+
+    # Path to the data files
+    data_dir = os.path.join(os.getcwd(), "files", "data")
+    target_file = "nomission.evt"
+    file_path = os.path.join(data_dir, target_file)
+
+    # Check if the file is already loaded
+    if not any(file_name == "nomission" for file_name, _ in loaded_event_data):
+        try:
+            event_list = EventList.read(file_path, "ogip")
+            loaded_event_data.append(("nomission", event_list))
+            print(f"File '{target_file}' loaded successfully.")
+        except Exception as e:
+            print(f"Failed to load file '{target_file}': {e}")
+
     tab1_content = pn.pane.Markdown(HOME_STINGRAY_TAB_STRING)
     tab2_content = pn.pane.Markdown(HOME_HOLOVIZ_TAB_STRING)
     tab3_content = pn.pane.Markdown(HOME_DASHBOARD_TAB_STRING)
