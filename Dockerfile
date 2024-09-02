@@ -30,11 +30,16 @@ RUN conda run -n stingray_env pip install --no-cache-dir astropy \
     h5py \
     datashader
 
+# Set environment variables
+ENV NUMBA_CACHE_DIR=/tmp/numba_cache
+
 # Copy the application code
 COPY . .
 
 # Create the necessary directories with appropriate permissions
 RUN mkdir -p /code/files/loaded-data && chmod -R 777 /code/files
+RUN mkdir -p /tmp/numba_cache && chmod -R 777 /tmp/numba_cache
+
 
 # Set the shell to activate the Conda environment by default
 SHELL ["conda", "run", "-n", "stingray_env", "/bin/bash", "-c"]
