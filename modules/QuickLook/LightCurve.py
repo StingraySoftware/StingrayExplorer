@@ -1,5 +1,6 @@
 import panel as pn
 import holoviews as hv
+import holoviews.operation.datashader as hd
 from utils.globals import loaded_event_data
 import pandas as pd
 import warnings
@@ -16,6 +17,13 @@ from utils.DashboardClasses import (
     PlotsContainer,
 )
 
+colors = [
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+    "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5",
+    "#c49c94", "#f7b6d2", "#c7c7c7", "#dbdb8d", "#9edae5"
+]
+
 
 # Create a warning handler
 def create_warning_handler():
@@ -25,7 +33,6 @@ def create_warning_handler():
 
 
 """ Header Section """
-
 
 def create_quicklook_lightcurve_header(
     header_container,
@@ -47,20 +54,17 @@ def create_quicklook_lightcurve_header(
 
 """ Output Box Section """
 
-
 def create_loadingdata_output_box(content):
     return OutputBox(output_content=content)
 
 
 """ Warning Box Section """
 
-
 def create_loadingdata_warning_box(content):
     return WarningBox(warning_content=content)
 
 
 """ Main Area Section """
-
 
 def create_lightcurve_tab(
     output_box_container,
@@ -76,29 +80,19 @@ def create_lightcurve_tab(
         options={name: i for i, (name, event) in enumerate(loaded_event_data)},
     )
 
-    dt_slider = pn.widgets.FloatSlider(
+    dt_input = pn.widgets.FloatInput(
         name="Select dt",
-        start=0.1,
-        end=1000,
-        step=0.1,
-        value=1,
+        value=1.0,
+        step=0.0001,
+        start=0.0000000001,  # Prevents negative and zero values
+        end=1000.0,
     )
-
-    # tstart_input = pn.widgets.FloatInput(
-    #     name="Start Time (tstart)",
-    #     value=None,
-    #     step=0.1,
-    # )
 
     multi_event_select = pn.widgets.MultiSelect(
         name="Or Select Event List(s) to Combine",
         options={name: i for i, (name, event) in enumerate(loaded_event_data)},
         size=8,
     )
-
-    # combine_plots_checkbox = pn.widgets.Checkbox(
-    #     name="Combine with Existing Plot", value=False
-    # )
 
     floatpanel_plots_checkbox = pn.widgets.Checkbox(
         name="Add Plot to FloatingPanel", value=False
@@ -108,14 +102,16 @@ def create_lightcurve_tab(
         name="Add DataFrame to FloatingPanel", value=False
     )
 
-    # floating_plot_titles = []
-    # plots_container_titles = []
-
     def create_holoviews_panes(plot):
-        return pn.pane.HoloViews(plot, width=600, height=600)
+        return pn.pane.HoloViews(plot, width=600, height=600, linked_axes=False)
 
-    def create_holoviews_plots(df, label, dt):
-        return df.hvplot(x="Time", y="Counts", shared_axes=False, label=f"{label} (dt={dt})")
+    def create_holoviews_plots(df, label, dt, color_key=None):
+        plot = df.hvplot(x="Time", y="Counts", shared_axes=False, label=f"{label} (dt={dt})")
+        if color_key:
+            return hd.datashade(plot, aggregator=hd.ds.mean("Counts"), color_key=color_key)
+        else:
+            return hd.datashade(plot, aggregator=hd.ds.mean("Counts"))
+
 
     def create_dataframe_panes(df, title, dt):
         return pn.FlexBox(
@@ -160,14 +156,12 @@ def create_lightcurve_tab(
             ]
             return
 
-        dt = dt_slider.value
+        dt = dt_input.value
         df = create_dataframe(selected_event_list_index, dt)
         if df is not None:
-            # Get the title
             event_list_name = loaded_event_data[selected_event_list_index][0]
             dataframe_output = create_dataframe_panes(df, f"{event_list_name}", dt)
             if dataframe_checkbox.value:
-
                 float_panel_container.append(
                     create_floating_plot_container(
                         content=dataframe_output,
@@ -195,27 +189,19 @@ def create_lightcurve_tab(
             ]
             return
 
-        dt = dt_slider.value
+        dt = dt_input.value
         df = create_dataframe(selected_event_list_index, dt)
         if df is not None:
-            # Get the title
             event_list_name = loaded_event_data[selected_event_list_index][0]
             plot_hv = create_holoviews_plots(df, label=event_list_name, dt=dt)
             holoviews_output = create_holoviews_panes(plot=plot_hv)
 
-            # Handle case when plots are not combined
             if floatpanel_plots_checkbox.value:
-
-                # Add title to the list of floating plot titles
-                # floating_plot_titles.append(event_list_name)
-                # Create a new FloatPanel for each independent plot
                 new_floatpanel = create_floating_plot_container(
                     content=holoviews_output, title=event_list_name
                 )
                 float_panel_container.append(new_floatpanel)
             else:
-                # Add title to the list of plots container titles
-                # plots_container_titles.append(event_list_name)
                 markdown_content = f"## {event_list_name}"
                 plots_container.append(
                     pn.FlexBox(
@@ -243,17 +229,21 @@ def create_lightcurve_tab(
         combined_plots = []
         combined_title = []
 
+        # Define a color key for distinct colors
+        color_key = {index: color for index, color in zip(selected_event_list_indices, colors)}
+
+
         for index in selected_event_list_indices:
-            dt = dt_slider.value
+            dt = dt_input.value
             df = create_dataframe(index, dt)
             if df is not None:
                 event_list_name = loaded_event_data[index][0]
-                plot_hv = create_holoviews_plots(df, label=event_list_name, dt=dt)
+                plot_hv = create_holoviews_plots(df, label=event_list_name, dt=dt, color_key={0: color_key[index]})
                 combined_plots.append(plot_hv)
                 combined_title.append(event_list_name)
 
         if combined_plots:
-            combined_plot = hv.Overlay(combined_plots).opts(shared_axes=False)
+            combined_plot = hv.Overlay(combined_plots).opts(shared_axes=False).collate()
             combined_pane = create_holoviews_panes(combined_plot)
 
             combined_title_str = " + ".join(combined_title)
@@ -264,7 +254,6 @@ def create_lightcurve_tab(
                 float_panel_container.append(new_floatpanel)
             else:
                 markdown_content = f"## {combined_title_str}"
-
                 plots_container.append(
                     pn.FlexBox(
                         pn.pane.Markdown(markdown_content),
@@ -275,54 +264,6 @@ def create_lightcurve_tab(
                         flex_direction="column",
                     )
                 )
-
-        # if not combine_plots_checkbox.value:
-        #     # Handle case when plots are not combined
-        #     if floatpanel_plots_checkbox.value:
-
-        #         # Add title to the list of floating plot titles
-        #         floating_plot_titles.append(event_list_name)
-        #         # Create a new FloatPanel for each independent plot
-        #         new_floatpanel = create_floating_plot_container(
-        #             content=holoviews_output, title=event_list_name
-        #         )
-        #         float_panel_container.append(new_floatpanel)
-        #     else:
-        #         # Add title to the list of plots container titles
-        #         plots_container_titles.append(event_list_name)
-        #         plots_container.append(holoviews_output)
-        # else:
-        #     # Handle case when plots are combined
-        #     if floatpanel_plots_checkbox.value:
-        #         existing_floating_panels = [
-        #             p.object
-        #             for p in float_panel_container
-        #             if isinstance(p, pn.pane.HoloViews)
-        #         ]
-        #         combined_plot = hv.Overlay(
-        #             existing_floating_panels + [plot_hv]
-        #         )
-        #         combined_pane = create_holoviews_panes(combined_plot)
-
-        #         combined_title = " + ".join(
-        #             floating_plot_titles + [event_list_name]
-        #         )
-        #         floating_plot_titles.append(event_list_name)
-        #         new_floatpanel = create_floating_plot_container(
-        #             content=combined_pane, title=combined_title
-        #         )
-        #         float_panel_container.append(new_floatpanel)
-        #     else:
-        #         existing_plots = [
-        #             p.object
-        #             for p in plots_container
-        #             if isinstance(p, pn.pane.HoloViews)
-        #         ]
-        #         combined_plot = hv.Overlay(existing_plots + [plot_hv])
-
-        #         combined_pane = create_holoviews_panes(combined_plot)
-
-        #         plots_container.append(combined_pane)
 
     generate_lightcurve_button = pn.widgets.Button(
         name="Generate Light Curve", button_type="primary"
@@ -341,7 +282,7 @@ def create_lightcurve_tab(
 
     tab1_content = pn.Column(
         event_list_dropdown,
-        dt_slider,
+        dt_input,
         multi_event_select,
         floatpanel_plots_checkbox,
         dataframe_checkbox,
@@ -383,3 +324,4 @@ def create_quicklook_lightcurve_plots_area():
         PlotsContainer: An instance of PlotsContainer with the plots for the quicklook lightcurve tab.
     """
     return PlotsContainer()
+
