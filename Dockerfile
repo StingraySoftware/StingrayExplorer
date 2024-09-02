@@ -27,7 +27,8 @@ RUN conda run -n stingray_env pip install --no-cache-dir astropy \
     hvplot \
     param \
     pandas \
-    h5py
+    h5py \
+    datashader
 
 # Copy the application code
 COPY . .
