@@ -28,6 +28,7 @@ from utils.strings import (
     HOME_OUTPUT_BOX_STRING,
     HOME_WARNING_BOX_STRING,
     HOME_HELP_BOX_STRING,
+    DASHBOARD_HELP_CONTENT
 )
 
 from stingray import EventList
@@ -95,86 +96,6 @@ def create_home_plots_area_initial():
     text = pn.pane.Markdown("Not displaying the NICER analysis plots on first load as it takes time to load. Move around the dashboard and come back to home page, to see the analysis plots. The buttons to navigate are in the sidebar.")
     return PlotsContainer(text)
 
-# # Define the function to create demo plots
-# def create_floating_plot_demo(floating_plot_container):
-#     # Define different plots with independent axes
-#     hv_plot = hv.Curve([1, 2, 3, 4, 5], label='Simple Line Plot').opts(
-#         title="Simple Line Plot",
-#         width=400,
-#         height=300,
-#         color='blue',
-#         tools=['hover'],
-#         shared_axes=False  # Prevent sharing axes
-#     )
-    
-#     scatter_plot = hv.Scatter(
-#         [(1, 2), (2, 3), (3, 4), (4, 5), (5, 6)], 
-#         kdims=['x'], vdims=['y']
-#     ).opts(
-#         title="Simple Scatter Plot",
-#         width=400,
-#         height=300,
-#         color='green',
-#         size=10,
-#         tools=['hover'],
-#         shared_axes=False  # Prevent sharing axes
-#     )
-    
-#     button = pn.widgets.Button(name='Click me', button_type='primary')
-#     markdown = pn.pane.Markdown("This is a floating plot demo. Click the button to create a new plot.")
-    
-#     # Create and add different FloatPanel instances to the container
-#     floating_plot = pn.layout.FloatPanel(
-#         pn.panel(hv_plot),
-#         name="NICER Analysis Plots",
-#         contained=False,
-#         position="center",
-#         width=500,
-#         height=300,
-#         margin=20,
-#         config={"headerControls": {"close": "remove"}}  # Example config
-#     )
-    
-#     new_plot = pn.layout.FloatPanel(
-#         button,
-#         name="Button Panel",
-#         contained=False,
-#         position="center",
-#         width=500,
-#         height=300,
-#         margin=20,
-#         config={"headerControls": {"close": "remove"}}  # Example config
-#     )
-    
-#     new_newplot = pn.layout.FloatPanel(
-#         markdown,
-#         name="Markdown Panel",
-#         contained=False,
-#         position="center",
-#         width=500,
-#         height=300,
-#         margin=20,
-#         config={"headerControls": {"close": "remove"}}  # Example config
-#     )
-    
-#     scatter_plot_panel = pn.layout.FloatPanel(
-#         pn.panel(scatter_plot),
-#         name="Scatter Plot Panel",
-#         contained=False,
-#         position="center",
-#         width=500,
-#         height=300,
-#         margin=20,
-#         config={"headerControls": {"close": "remove"}}  # Example config
-#     )
-
-#     # Append panels to the container
-#     floating_plot_container.append(floating_plot)
-#     floating_plot_container.append(new_plot)
-#     floating_plot_container.append(new_newplot)
-#     floating_plot_container.append(scatter_plot_panel)
-    
-#     return
 
 
 """ Plots Area Section """
@@ -300,7 +221,7 @@ def create_home_plots_area():
 
 
 def create_home_help_area():
-    help_content = HOME_HELP_BOX_STRING
+    help_content = f"{HOME_HELP_BOX_STRING}\n\n{DASHBOARD_HELP_CONTENT}"
     return HelpBox(help_content=help_content, title="Help Section")
 
 

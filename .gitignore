@@ -2,3 +2,4 @@
 .idea/
 __pycache__/
 files/loaded-data/
+.vscode/

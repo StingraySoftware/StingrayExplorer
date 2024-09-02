@@ -18,10 +18,26 @@ from utils.DashboardClasses import (
 )
 
 colors = [
-    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
-    "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5",
-    "#c49c94", "#f7b6d2", "#c7c7c7", "#dbdb8d", "#9edae5"
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+    "#aec7e8",
+    "#ffbb78",
+    "#98df8a",
+    "#ff9896",
+    "#c5b0d5",
+    "#c49c94",
+    "#f7b6d2",
+    "#c7c7c7",
+    "#dbdb8d",
+    "#9edae5",
 ]
 
 
@@ -33,6 +49,7 @@ def create_warning_handler():
 
 
 """ Header Section """
+
 
 def create_quicklook_lightcurve_header(
     header_container,
@@ -54,17 +71,20 @@ def create_quicklook_lightcurve_header(
 
 """ Output Box Section """
 
+
 def create_loadingdata_output_box(content):
     return OutputBox(output_content=content)
 
 
 """ Warning Box Section """
 
+
 def create_loadingdata_warning_box(content):
     return WarningBox(warning_content=content)
 
 
 """ Main Area Section """
+
 
 def create_lightcurve_tab(
     output_box_container,
@@ -106,12 +126,15 @@ def create_lightcurve_tab(
         return pn.pane.HoloViews(plot, width=600, height=600, linked_axes=False)
 
     def create_holoviews_plots(df, label, dt, color_key=None):
-        plot = df.hvplot(x="Time", y="Counts", shared_axes=False, label=f"{label} (dt={dt})")
+        plot = df.hvplot(
+            x="Time", y="Counts", shared_axes=False, label=f"{label} (dt={dt})"
+        )
         if color_key:
-            return hd.datashade(plot, aggregator=hd.ds.mean("Counts"), color_key=color_key)
+            return hd.datashade(
+                plot, aggregator=hd.ds.mean("Counts"), color_key=color_key
+            )
         else:
             return hd.datashade(plot, aggregator=hd.ds.mean("Counts"))
-
 
     def create_dataframe_panes(df, title, dt):
         return pn.FlexBox(
@@ -230,15 +253,18 @@ def create_lightcurve_tab(
         combined_title = []
 
         # Define a color key for distinct colors
-        color_key = {index: color for index, color in zip(selected_event_list_indices, colors)}
-
+        color_key = {
+            index: color for index, color in zip(selected_event_list_indices, colors)
+        }
 
         for index in selected_event_list_indices:
             dt = dt_input.value
             df = create_dataframe(index, dt)
             if df is not None:
                 event_list_name = loaded_event_data[index][0]
-                plot_hv = create_holoviews_plots(df, label=event_list_name, dt=dt, color_key={0: color_key[index]})
+                plot_hv = create_holoviews_plots(
+                    df, label=event_list_name, dt=dt, color_key={0: color_key[index]}
+                )
                 combined_plots.append(plot_hv)
                 combined_title.append(event_list_name)
 
@@ -247,6 +273,8 @@ def create_lightcurve_tab(
             combined_pane = create_holoviews_panes(combined_plot)
 
             combined_title_str = " + ".join(combined_title)
+            # The line `if floatpanel_plots_checkbox.value:` is checking the value of a checkbox
+            # widget named `floatpanel_plots_checkbox`.
             if floatpanel_plots_checkbox.value:
                 new_floatpanel = create_floating_plot_container(
                     content=combined_pane, title=combined_title_str
@@ -324,4 +352,3 @@ def create_quicklook_lightcurve_plots_area():
         PlotsContainer: An instance of PlotsContainer with the plots for the quicklook lightcurve tab.
     """
     return PlotsContainer()
-
