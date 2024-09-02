@@ -4,6 +4,60 @@ HOME_HEADER_STRING = """
 <h1>Welcome to the Stingray Explorer Dashboard</h1>
 """
 
+DASHBOARD_HELP_CONTENT = """
+## Stingray Explorer Dashboard
+
+Welcome to the Stingray Explorer Dashboard! This tool is designed to provide quick and easy access to various X-ray astronomy data analysis techniques using the Stingray library.
+
+### How to Use the Dashboard
+
+1. **Navigation:**
+   - Use the sidebar to navigate between different sections like Light Curves, Power Spectra, Cross Spectra, etc.
+   - The home button will take you back to the main overview.
+
+2. **Loading Data:**
+   - Go to the 'Data Ingestion' section to load your event list files. You can select files from your local system, and specify formats if needed.
+   - Once loaded, the data will be available for analysis in other sections of the dashboard.
+
+3. **Generating Plots:**
+   - Each section (e.g., Light Curves, Power Spectra) provides options to generate and visualize different types of plots.
+   - You can adjust parameters like time binning (dt) and combine multiple event lists for analysis.
+   - The generated plots can be added to floating panels for more flexible viewing.
+
+4. **Output & Warnings:**
+   - The Output Box displays the results and messages from your analysis operations.
+   - The Warning Box alerts you of any issues encountered during data processing.
+
+5. **Help & Documentation:**
+   - Each section has a help area that provides guidance on how to use the tools within that section.
+   - This dashboard is equipped with floating panels, meaning plots and data frames can be moved around and resized independently.
+
+6. **Saving and Managing Data:**
+   - The 'Data Ingestion' section also allows you to save loaded event data to disk in various formats.
+   - Manage your data effectively using the clear and delete options provided in the data ingestion section.
+
+7. **Advanced Features:**
+   - The dashboard includes modules for advanced analysis, such as cross-spectra and averaged power spectra.
+   - Customize plots with different color schemes, and overlay multiple data sets for comparative analysis.
+
+### Video Tutorial
+
+Watch the video tutorial below for a detailed walkthrough:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/G_-OyY3B1cA" frameborder="0" allowfullscreen></iframe>
+
+### Additional Resources
+
+- [Stingray Library Documentation](https://stingray.readthedocs.io/)
+- [Holoviz Documentation](https://holoviz.org/)
+- [Dashboard additonal information](https://www.kartikmandar.com/gsoc-2024/stingray-explorer)
+
+For any issues or queries, feel free to reach out via the Stingray Slack channel or by email.
+
+Happy exploring!
+<br><br>
+"""
+
 HOME_WELCOME_MESSAGE_STRING = """
 <div>
     <p>This dashboard is designed to provide a comprehensive toolset for X-ray astronomy data analysis. Here are the main features:</p>
