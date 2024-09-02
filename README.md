@@ -63,7 +63,7 @@ StingrayExplorer is a data analysis tool designed for quick visualization and ex
 1. Clone the repository:
 
     ```
-    git clone <repository_url>
+    git clone https://github.com/kartikmandar-GSOC24/StingrayExplorer.git
     ```
 
 2. Navigate to the project directory:
