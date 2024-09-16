@@ -3,8 +3,10 @@ import holoviews as hv
 from utils.globals import loaded_event_data
 import pandas as pd
 import warnings
-import holoviews.operation.datashader as hd
 import hvplot.pandas
+from stingray.bispectrum import Bispectrum
+from stingray import Lightcurve
+import matplotlib.pyplot as plt
 from utils.DashboardClasses import (
     MainHeader,
     MainArea,
@@ -16,8 +18,6 @@ from utils.DashboardClasses import (
     FloatingPlot,
     PlotsContainer,
 )
-from stingray import Powerspectrum
-
 
 colors = [
     "#1f77b4",
@@ -42,6 +42,11 @@ colors = [
     "#9edae5",
 ]
 
+windows = [
+    "uniform", "parzen", "hamming", "hanning", "triangular", 
+    "blackmann", "welch", "flat-top"
+]
+
 
 # Create a warning handler
 def create_warning_handler():
@@ -53,7 +58,7 @@ def create_warning_handler():
 """ Header Section """
 
 
-def create_quicklook_powerspectrum_header(
+def create_quicklook_bispectrum_header(
     header_container,
     main_area_container,
     output_box_container,
@@ -63,7 +68,7 @@ def create_quicklook_powerspectrum_header(
     footer_container,
 ):
     home_heading_input = pn.widgets.TextInput(
-        name="Heading", value="QuickLook Power Spectrum"
+        name="Heading", value="QuickLook Bispectrum"
     )
     home_subheading_input = pn.widgets.TextInput(name="Subheading", value="")
 
@@ -84,13 +89,10 @@ def create_loadingdata_warning_box(content):
     return WarningBox(warning_content=content)
 
 
-
-
-
 """ Main Area Section """
 
 
-def create_powerspectrum_tab(
+def create_bispectrum_tab(
     output_box_container,
     warning_box_container,
     warning_handler,
@@ -111,16 +113,24 @@ def create_powerspectrum_tab(
         end=1000.0,
     )
 
-    norm_select = pn.widgets.Select(
-        name="Normalization",
-        options=["frac", "leahy", "abs", "none"],
-        value="leahy",
+    maxlag_input = pn.widgets.IntInput(
+        name="Max Lag",
+        value=25,
+        step=1,
+        start=1,
+        end=100,
     )
 
-    multi_event_select = pn.widgets.MultiSelect(
-        name="Or Select Event List(s) to Combine",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
-        size=8,
+    scale_select = pn.widgets.Select(
+        name="Scale",
+        options=["biased", "unbiased"],
+        value="unbiased",
+    )
+
+    window_select = pn.widgets.Select(
+        name="Window Type",
+        options=windows,
+        value="uniform",
     )
 
     floatpanel_plots_checkbox = pn.widgets.Checkbox(
@@ -134,13 +144,9 @@ def create_powerspectrum_tab(
     def create_holoviews_panes(plot):
         return pn.pane.HoloViews(plot, width=600, height=600, linked_axes=False)
 
-    def create_holoviews_plots(df, label, dt, norm, color_key=None):
-        plot = df.hvplot(x="Frequency", y="Power", shared_axes=False, label=label)
-        if color_key:
-            return hd.rasterize(plot, aggregator=hd.ds.mean("Power"), color_key=color_key).opts(tools=['hover'], cmap=[color_key], width=600, height=600)
-        else:
-            return hd.rasterize(plot, aggregator=hd.ds.mean("Power")).opts(tools=['hover'])
-
+    def create_holoviews_plots(df, label, dt, window, scale, color_key=None):
+        plot = df.hvplot(x="Frequency", y="Magnitude", shared_axes=False, label=label)
+        return plot.opts(tools=['hover'], cmap=[color_key] if color_key else "viridis")
 
     def create_dataframe_panes(df, title):
         return pn.FlexBox(
@@ -152,20 +158,21 @@ def create_powerspectrum_tab(
             flex_direction="column",
         )
 
-    def create_dataframe(selected_event_list_index, dt, norm):
+    def create_dataframe(selected_event_list_index, dt, maxlag, scale, window):
         if selected_event_list_index is not None:
             event_list = loaded_event_data[selected_event_list_index][1]
+            lc = Lightcurve(event_list.time, event_list.counts)
 
-            # Create a PowerSpectrum object using from_events
-            ps = Powerspectrum.from_events(events=event_list, dt=dt, norm=norm)
+            bs = Bispectrum(lc, maxlag=maxlag, window=window, scale=scale)
 
             df = pd.DataFrame(
                 {
-                    "Frequency": ps.freq,
-                    "Power": ps.power,
+                    "Frequency": bs.freq,
+                    "Magnitude": bs.bispec_mag.flatten(),
+                    "Phase": bs.bispec_phase.flatten(),
                 }
             )
-            return df, ps
+            return df, bs
         return None, None
 
     """ Float Panel """
@@ -189,11 +196,13 @@ def create_powerspectrum_tab(
             return
 
         dt = dt_input.value
-        norm = norm_select.value
-        df, ps = create_dataframe(selected_event_list_index, dt, norm)
+        maxlag = maxlag_input.value
+        scale = scale_select.value
+        window = window_select.value
+        df, bs = create_dataframe(selected_event_list_index, dt, maxlag, scale, window)
         if df is not None:
             event_list_name = loaded_event_data[selected_event_list_index][0]
-            dataframe_title = f"{event_list_name} (dt={dt}, norm={norm})"
+            dataframe_title = f"{event_list_name} (dt={dt}, maxlag={maxlag}, scale={scale}, window={window})"
             dataframe_output = create_dataframe_panes(df, dataframe_title)
             if dataframe_checkbox.value:
                 float_panel_container.append(
@@ -209,7 +218,7 @@ def create_powerspectrum_tab(
                 create_loadingdata_output_box("Failed to create dataframe.")
             ]
 
-    def generate_powerspectrum(event=None):
+    def generate_bispectrum(event=None):
         if not loaded_event_data:
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
@@ -224,26 +233,28 @@ def create_powerspectrum_tab(
             return
 
         dt = dt_input.value
-        norm = norm_select.value
-        df, ps = create_dataframe(selected_event_list_index, dt, norm)
+        maxlag = maxlag_input.value
+        scale = scale_select.value
+        window = window_select.value
+        df, bs = create_dataframe(selected_event_list_index, dt, maxlag, scale, window)
         if df is not None:
             event_list_name = loaded_event_data[selected_event_list_index][0]
 
-            label = f"{event_list_name} (dt={dt}, norm={norm})"
+            label = f"{event_list_name} (dt={dt}, maxlag={maxlag}, scale={scale}, window={window})"
 
-            plot_hv = create_holoviews_plots(df, label, dt, norm)
+            plot_hv = create_holoviews_plots(df, label, dt, window, scale)
             holoviews_output = create_holoviews_panes(plot_hv)
 
             if floatpanel_plots_checkbox.value:
                 float_panel_container.append(
                     create_floatpanel_area(
                         content=holoviews_output,
-                        title=f"Power Spectrum for {event_list_name} (dt={dt}, norm={norm})",
+                        title=f"Bispectrum for {event_list_name} (dt={dt}, maxlag={maxlag}, scale={scale}, window={window})",
                     )
                 )
             else:
                 markdown_content = (
-                    f"## Power Spectrum for {event_list_name} (dt={dt}, norm={norm})"
+                    f"## Bispectrum for {event_list_name} (dt={dt}, maxlag={maxlag}, scale={scale}, window={window})"
                 )
                 plots_container.append(
                     pn.FlexBox(
@@ -257,78 +268,13 @@ def create_powerspectrum_tab(
                 )
         else:
             output_box_container[:] = [
-                create_loadingdata_output_box("Failed to create power spectrum.")
+                create_loadingdata_output_box("Failed to create bispectrum.")
             ]
 
-    def combine_selected_plots(event=None):
-        selected_event_list_indices = multi_event_select.value
-        if not selected_event_list_indices:
-            output_box_container[:] = [
-                create_loadingdata_output_box("No event lists selected.")
-            ]
-            return
-
-        combined_plots = []
-        combined_title = []
-
-        # Define a color key for distinct colors
-
-        color_key = {
-            index: colors[i % len(colors)] for i, index in enumerate(selected_event_list_indices)
-        }
-
-        for index in selected_event_list_indices:
-            dt = dt_input.value
-            norm = norm_select.value
-            df, ps = create_dataframe(index, dt, norm)
-            if df is not None:
-                event_list_name = loaded_event_data[index][0]
-
-                label = f"{event_list_name} (dt={dt}, norm={norm})"
-
-                plot_hv = create_holoviews_plots(
-
-                    df, label, dt, norm, color_key=color_key[index]
-
-                )
-                combined_plots.append(plot_hv)
-                combined_title.append(event_list_name)
-
-        if combined_plots:
-            combined_plot = hv.Overlay(combined_plots).opts(shared_axes=False, legend_position='right', width=600, height=600).collate()
-
-            combined_pane = create_holoviews_panes(combined_plot)
-
-            combined_title_str = " + ".join(combined_title)
-            combined_title_str += f" (dt={dt}, norm={norm})"
-            if floatpanel_plots_checkbox.value:
-                float_panel_container.append(
-                    create_floatpanel_area(
-                        content=combined_pane, title=combined_title_str
-                    )
-                )
-            else:
-                markdown_content = f"## {combined_title_str}"
-                plots_container.append(
-                    pn.FlexBox(
-                        pn.pane.Markdown(markdown_content),
-                        combined_pane,
-                        align_items="center",
-                        justify_content="center",
-                        flex_wrap="nowrap",
-                        flex_direction="column",
-                    )
-                )
-
-    generate_powerspectrum_button = pn.widgets.Button(
-        name="Generate Power Spectrum", button_type="primary"
+    generate_bispectrum_button = pn.widgets.Button(
+        name="Generate Bispectrum", button_type="primary"
     )
-    generate_powerspectrum_button.on_click(generate_powerspectrum)
-
-    combine_plots_button = pn.widgets.Button(
-        name="Combine Selected Plots", button_type="success"
-    )
-    combine_plots_button.on_click(combine_selected_plots)
+    generate_bispectrum_button.on_click(generate_bispectrum)
 
     show_dataframe_button = pn.widgets.Button(
         name="Show DataFrame", button_type="primary"
@@ -338,18 +284,17 @@ def create_powerspectrum_tab(
     tab1_content = pn.Column(
         event_list_dropdown,
         dt_input,
-        norm_select,
-        multi_event_select,
+        maxlag_input,
+        scale_select,
+        window_select,
         floatpanel_plots_checkbox,
         dataframe_checkbox,
-        pn.Row(
-            generate_powerspectrum_button, show_dataframe_button, combine_plots_button
-        ),
+        pn.Row(generate_bispectrum_button, show_dataframe_button),
     )
     return tab1_content
 
 
-def create_quicklook_powerspectrum_main_area(
+def create_quicklook_bispectrum_main_area(
     header_container,
     main_area_container,
     output_box_container,
@@ -361,7 +306,7 @@ def create_quicklook_powerspectrum_main_area(
 ):
     warning_handler = create_warning_handler()
     tabs_content = {
-        "Power Spectrum": create_powerspectrum_tab(
+        "Bispectrum": create_bispectrum_tab(
             output_box_container=output_box_container,
             warning_box_container=warning_box_container,
             warning_handler=warning_handler,
@@ -374,11 +319,11 @@ def create_quicklook_powerspectrum_main_area(
     return MainArea(tabs_content=tabs_content)
 
 
-def create_quicklook_powerspectrum_area():
+def create_quicklook_bispectrum_area():
     """
-    Create the plots area for the quicklook lightcurve tab.
+    Create the plots area for the quicklook bispectrum tab.
 
     Returns:
-        PlotsContainer: An instance of PlotsContainer with the plots for the quicklook lightcurve tab.
+        PlotsContainer: An instance of PlotsContainer with the plots for the quicklook bispectrum tab.
     """
     return PlotsContainer()
