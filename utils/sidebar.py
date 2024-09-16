@@ -1,6 +1,13 @@
 import panel as pn
 import importlib
 
+from modules.QuickLook.Bispectrum import (
+    create_quicklook_bispectrum_header,
+    create_quicklook_bispectrum_main_area,
+    create_quicklook_bispectrum_area,
+)
+
+
 from modules.Home.HomeContent import (
     create_home_header,
     create_home_main_area,
@@ -54,6 +61,7 @@ def create_sidebar(
         ("Averaged Power Spectrum", "QuickLookAvgPowerspectra"),
         ("Cross Spectrum", "QuickLookCrossSpectrum"),
         ("Averaged Cross Spectrum", "QuickLookAvgCrossSpectrum"),
+            ("Bispectrum", "QuickLookBispectrum"),
     ]
 
     # Home Button
@@ -259,6 +267,33 @@ def create_sidebar(
                 )
             ]
             plots_container[:] = [create_quicklook_avg_cross_spectrum_area()]
+
+        elif clicked == "QuickLookBispectrum":
+            header[:] = [
+                create_quicklook_bispectrum_header(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                )
+            ]
+            main_area[:] = [
+                create_quicklook_bispectrum_main_area(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                    float_panel_container=float_panel_container,
+                )
+            ]
+            plots_container[:] = [create_quicklook_bispectrum_area()]
+
 
     quicklook_stingray_button.on_click(handle_quicklook_button_selection)
 

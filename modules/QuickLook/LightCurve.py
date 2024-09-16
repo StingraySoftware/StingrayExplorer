@@ -130,11 +130,13 @@ def create_lightcurve_tab(
             x="Time", y="Counts", shared_axes=False, label=f"{label} (dt={dt})"
         )
         if color_key:
-            return hd.datashade(
-                plot, aggregator=hd.ds.mean("Counts"), color_key=color_key
+            return hd.rasterize(plot, aggregator=hd.ds.mean("Counts"), color_key=color_key).opts(
+                tools=['hover'], cmap=[color_key], width=600, height=600
             )
         else:
-            return hd.datashade(plot, aggregator=hd.ds.mean("Counts"))
+            return hd.rasterize(plot, aggregator=hd.ds.mean("Counts")).opts(
+                tools=['hover'], width=600, height=600
+            )
 
     def create_dataframe_panes(df, title, dt):
         return pn.FlexBox(
@@ -254,7 +256,7 @@ def create_lightcurve_tab(
 
         # Define a color key for distinct colors
         color_key = {
-            index: color for index, color in zip(selected_event_list_indices, colors)
+            index: colors[i % len(colors)] for i, index in enumerate(selected_event_list_indices)
         }
 
         for index in selected_event_list_indices:
@@ -263,18 +265,20 @@ def create_lightcurve_tab(
             if df is not None:
                 event_list_name = loaded_event_data[index][0]
                 plot_hv = create_holoviews_plots(
-                    df, label=event_list_name, dt=dt, color_key={0: color_key[index]}
+                    df, label=event_list_name, dt=dt, color_key=color_key[index]
                 )
                 combined_plots.append(plot_hv)
                 combined_title.append(event_list_name)
 
         if combined_plots:
-            combined_plot = hv.Overlay(combined_plots).opts(shared_axes=False).collate()
+            # Use hv.Overlay and add legend manually
+            combined_plot = hv.Overlay(combined_plots).opts(
+                shared_axes=False, legend_position='right', width=600, height=600
+            ).collate()
+
             combined_pane = create_holoviews_panes(combined_plot)
 
             combined_title_str = " + ".join(combined_title)
-            # The line `if floatpanel_plots_checkbox.value:` is checking the value of a checkbox
-            # widget named `floatpanel_plots_checkbox`.
             if floatpanel_plots_checkbox.value:
                 new_floatpanel = create_floating_plot_container(
                     content=combined_pane, title=combined_title_str
