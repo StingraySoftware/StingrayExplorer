@@ -1,6 +1,7 @@
 import panel as pn
 import holoviews as hv
 import holoviews.operation.datashader as hd
+from holoviews.operation.timeseries import rolling, rolling_outlier_std 
 from utils.globals import loaded_event_data
 import pandas as pd
 import warnings
@@ -115,28 +116,108 @@ def create_lightcurve_tab(
     )
 
     floatpanel_plots_checkbox = pn.widgets.Checkbox(
-        name="Add Plot to FloatingPanel", value=False
+        name="Add Plot to FloatingPanel", value=True
     )
 
     dataframe_checkbox = pn.widgets.Checkbox(
         name="Add DataFrame to FloatingPanel", value=False
     )
+    rasterize_checkbox = pn.widgets.Checkbox(name="Rasterize Plots", value=True)
 
     def create_holoviews_panes(plot):
         return pn.pane.HoloViews(plot, width=600, height=600, linked_axes=False)
 
     def create_holoviews_plots(df, label, dt, color_key=None):
+
         plot = df.hvplot(
             x="Time", y="Counts", shared_axes=False, label=f"{label} (dt={dt})"
         )
+
         if color_key:
-            return hd.rasterize(plot, aggregator=hd.ds.mean("Counts"), color_key=color_key).opts(
-                tools=['hover'], cmap=[color_key], width=600, height=600
-            )
+
+            if rasterize_checkbox.value:
+
+                return hd.rasterize(
+                    plot,
+                    aggregator=hd.ds.mean("Counts"),
+                    color_key=color_key,
+                    line_width=3,
+                    pixel_ratio=2,
+                ).opts(
+                    tools=["hover"],
+                    cmap=[color_key],
+                    width=600,
+                    height=600,
+                    colorbar=True,
+                )
+
+            else:
+
+                return plot
+
         else:
-            return hd.rasterize(plot, aggregator=hd.ds.mean("Counts")).opts(
-                tools=['hover'], width=600, height=600
-            )
+
+            if rasterize_checkbox.value:
+
+                return hd.rasterize(
+                    plot, aggregator=hd.ds.mean("Counts"), line_width=3, pixel_ratio=2
+                ).opts(
+                    tools=["hover"],
+                    width=600,
+                    height=600,
+                    colorbar=True,
+                    cmap="Viridis",
+                )
+
+            else:
+
+                return plot
+
+    def create_holoviews_plots_no_colorbar(df, label, dt, color_key=None):
+
+        plot = df.hvplot(
+            x="Time", y="Counts", shared_axes=False, label=f"{label} (dt={dt})"
+        )
+
+        if color_key:
+
+            if rasterize_checkbox.value:
+
+                return hd.rasterize(
+                    plot,
+                    aggregator=hd.ds.mean("Counts"),
+                    color_key=color_key,
+                    line_width=3,
+                    pixel_ratio=2,
+                ).opts(
+                    tools=["hover"],
+                    cmap=[color_key],
+                    width=600,
+                    height=600,
+                    colorbar=False,
+                )
+
+            else:
+
+                return plot
+
+        else:
+
+            if rasterize_checkbox.value:
+
+                return hd.rasterize(
+                    plot, aggregator=hd.ds.mean("Counts"), line_width=3, pixel_ratio=2
+                ).opts(
+                    tools=["hover"],
+                    width=600,
+                    height=600,
+                    colorbar=False,
+                    cmap="Viridis",
+                )
+
+            else:
+
+                return plot
 
     def create_dataframe_panes(df, title, dt):
         return pn.FlexBox(
@@ -256,7 +337,8 @@ def create_lightcurve_tab(
 
         # Define a color key for distinct colors
         color_key = {
-            index: colors[i % len(colors)] for i, index in enumerate(selected_event_list_indices)
+            index: colors[i % len(colors)]
+            for i, index in enumerate(selected_event_list_indices)
         }
 
         for index in selected_event_list_indices:
@@ -264,7 +346,7 @@ def create_lightcurve_tab(
             df = create_dataframe(index, dt)
             if df is not None:
                 event_list_name = loaded_event_data[index][0]
-                plot_hv = create_holoviews_plots(
+                plot_hv = create_holoviews_plots_no_colorbar(
                     df, label=event_list_name, dt=dt, color_key=color_key[index]
                 )
                 combined_plots.append(plot_hv)
@@ -272,9 +354,11 @@ def create_lightcurve_tab(
 
         if combined_plots:
             # Use hv.Overlay and add legend manually
-            combined_plot = hv.Overlay(combined_plots).opts(
-                shared_axes=False, legend_position='right', width=600, height=600
-            ).collate()
+            combined_plot = (
+                hv.Overlay(combined_plots)
+                .opts(shared_axes=False, legend_position="right", width=600, height=600)
+                .collate()
+            )
 
             combined_pane = create_holoviews_panes(combined_plot)
 
@@ -318,6 +402,7 @@ def create_lightcurve_tab(
         multi_event_select,
         floatpanel_plots_checkbox,
         dataframe_checkbox,
+        rasterize_checkbox,
         pn.Row(generate_lightcurve_button, show_dataframe_button, combine_plots_button),
     )
     return tab1_content
