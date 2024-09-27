@@ -42,17 +42,13 @@ colors = [
     "#9edae5",
 ]
 
-
 # Create a warning handler
 def create_warning_handler():
     warning_handler = WarningHandler()
     warnings.showwarning = warning_handler.warn
     return warning_handler
 
-
 """ Header Section """
-
-
 def create_quicklook_powerspectrum_header(
     header_container,
     main_area_container,
@@ -66,30 +62,17 @@ def create_quicklook_powerspectrum_header(
         name="Heading", value="QuickLook Power Spectrum"
     )
     home_subheading_input = pn.widgets.TextInput(name="Subheading", value="")
-
     return MainHeader(heading=home_heading_input, subheading=home_subheading_input)
 
-
 """ Output Box Section """
-
-
 def create_loadingdata_output_box(content):
     return OutputBox(output_content=content)
 
-
 """ Warning Box Section """
-
-
 def create_loadingdata_warning_box(content):
     return WarningBox(warning_content=content)
 
-
-
-
-
 """ Main Area Section """
-
-
 def create_powerspectrum_tab(
     output_box_container,
     warning_box_container,
@@ -124,11 +107,27 @@ def create_powerspectrum_tab(
     )
 
     floatpanel_plots_checkbox = pn.widgets.Checkbox(
-        name="Add Plot to FloatingPanel", value=False
+        name="Add Plot to FloatingPanel", value=True
     )
 
     dataframe_checkbox = pn.widgets.Checkbox(
         name="Add DataFrame to FloatingPanel", value=False
+    )
+    
+    rasterize_checkbox = pn.widgets.Checkbox(name="Rasterize Plots", value=True)
+    
+    # New Checkboxes for Rebinning
+    linear_rebin_checkbox = pn.widgets.Checkbox(name="Linear Rebinning", value=False)
+    log_rebin_checkbox = pn.widgets.Checkbox(name="Logarithmic Rebinning", value=False)
+    rebin_with_original_checkbox = pn.widgets.Checkbox(name="Plot Rebin with Original", value=False)
+
+    # Input for Rebin Size
+    rebin_size_input = pn.widgets.FloatInput(
+        name="Rebin Size",
+        value=0.1,
+        step=0.01,
+        start=0.01,
+        end=100.0,
     )
 
     def create_holoviews_panes(plot):
@@ -136,11 +135,77 @@ def create_powerspectrum_tab(
 
     def create_holoviews_plots(df, label, dt, norm, color_key=None):
         plot = df.hvplot(x="Frequency", y="Power", shared_axes=False, label=label)
-        if color_key:
-            return hd.rasterize(plot, aggregator=hd.ds.mean("Power"), color_key=color_key).opts(tools=['hover'], cmap=[color_key], width=600, height=600)
-        else:
-            return hd.rasterize(plot, aggregator=hd.ds.mean("Power")).opts(tools=['hover'])
 
+        if color_key:
+            if rasterize_checkbox.value:
+                return hd.rasterize(
+                    plot,
+                    aggregator=hd.ds.mean("Power"),
+                    color_key=color_key,
+                    line_width=3,
+                    pixel_ratio=2,
+                ).opts(
+                    tools=["hover"],
+                    cmap=[color_key],
+                    width=600,
+                    height=600,
+                    colorbar=True,
+                )
+            else:
+                return plot
+        else:
+            if rasterize_checkbox.value:
+                return hd.rasterize(
+                    plot,
+                    aggregator=hd.ds.mean("Power"),
+                    line_width=3,
+                    pixel_ratio=2,
+                ).opts(
+                    tools=["hover"],
+                    width=600,
+                    height=600,
+                    cmap="Viridis",
+                    colorbar=True,
+                )
+            else:
+                return plot
+
+    def create_holoviews_plots_no_colorbar(df, label, dt, norm, color_key=None):
+        plot = df.hvplot(x="Frequency", y="Power", shared_axes=False, label=label)
+
+        if color_key:
+            if rasterize_checkbox.value:
+                return hd.rasterize(
+                    plot,
+                    aggregator=hd.ds.mean("Power"),
+                    color_key=color_key,
+                    line_width=3,
+                    pixel_ratio=2,
+                ).opts(
+                    tools=["hover"],
+                    cmap=[color_key],
+                    width=600,
+                    height=600,
+                    colorbar=False,
+                )
+            else:
+                return plot
+        else:
+            if rasterize_checkbox.value:
+                return hd.rasterize(
+                    plot,
+                    aggregator=hd.ds.mean("Power"),
+                    line_width=3,
+                    pixel_ratio=2,
+                ).opts(
+                    tools=["hover"],
+                    width=600,
+                    height=600,
+                    colorbar=False,
+                    cmap="Viridis",
+                )
+            else:
+                return plot
 
     def create_dataframe_panes(df, title):
         return pn.FlexBox(
@@ -168,8 +233,22 @@ def create_powerspectrum_tab(
             return df, ps
         return None, None
 
-    """ Float Panel """
+    """ Rebin Functionality """
 
+    def rebin_powerspectrum(ps):
+        rebin_size = rebin_size_input.value
+        
+        if linear_rebin_checkbox.value:
+            # Perform linear rebinning
+            rebinned_ps = ps.rebin(rebin_size, method="mean")
+            return rebinned_ps
+        elif log_rebin_checkbox.value:
+            # Perform logarithmic rebinning
+            rebinned_ps = ps.rebin_log(f=rebin_size)
+            return rebinned_ps
+        return None
+
+    """ Float Panel """
 
     def create_floatpanel_area(content, title):
         return FloatingPlot(content=content, title=title)
@@ -226,18 +305,45 @@ def create_powerspectrum_tab(
         dt = dt_input.value
         norm = norm_select.value
         df, ps = create_dataframe(selected_event_list_index, dt, norm)
+        
         if df is not None:
             event_list_name = loaded_event_data[selected_event_list_index][0]
-
             label = f"{event_list_name} (dt={dt}, norm={norm})"
+            
+            # Create the original plot
+            original_plot_hv = create_holoviews_plots(df, label, dt, norm)
 
-            plot_hv = create_holoviews_plots(df, label, dt, norm)
-            holoviews_output = create_holoviews_panes(plot_hv)
+            # Initialize the holoviews_output variable
+            holoviews_output = original_plot_hv
+            
+            # Rebin the powerspectrum if requested
+            rebinned_ps = rebin_powerspectrum(ps)
+            
+            if rebinned_ps is not None:
+                # Create a DataFrame for the rebinned plot
+                rebinned_df = pd.DataFrame({
+                    "Frequency": rebinned_ps.freq,
+                    "Power": rebinned_ps.power,
+                })
+                rebinned_label = f"Rebinned {event_list_name} (dt={dt}, norm={norm})"
+                rebinned_plot_hv = create_holoviews_plots(rebinned_df, rebinned_label, dt, norm)
 
+                # Check if the user wants to plot rebin with the original
+                if rebin_with_original_checkbox.value:
+                    # Combine the original and rebinned plots using HoloViews
+                    holoviews_output = original_plot_hv * rebinned_plot_hv
+                else:
+                    # Only use the rebinned plot
+                    holoviews_output = rebinned_plot_hv
+
+            # Convert the combined HoloViews object to a pane
+            holoviews_output_pane = create_holoviews_panes(holoviews_output)
+
+            # Append the pane to the appropriate container
             if floatpanel_plots_checkbox.value:
                 float_panel_container.append(
                     create_floatpanel_area(
-                        content=holoviews_output,
+                        content=holoviews_output_pane,
                         title=f"Power Spectrum for {event_list_name} (dt={dt}, norm={norm})",
                     )
                 )
@@ -248,7 +354,7 @@ def create_powerspectrum_tab(
                 plots_container.append(
                     pn.FlexBox(
                         pn.pane.Markdown(markdown_content),
-                        holoviews_output,
+                        holoviews_output_pane,
                         align_items="center",
                         justify_content="center",
                         flex_wrap="nowrap",
@@ -259,6 +365,7 @@ def create_powerspectrum_tab(
             output_box_container[:] = [
                 create_loadingdata_output_box("Failed to create power spectrum.")
             ]
+
 
     def combine_selected_plots(event=None):
         selected_event_list_indices = multi_event_select.value
@@ -272,9 +379,9 @@ def create_powerspectrum_tab(
         combined_title = []
 
         # Define a color key for distinct colors
-
         color_key = {
-            index: colors[i % len(colors)] for i, index in enumerate(selected_event_list_indices)
+            index: colors[i % len(colors)]
+            for i, index in enumerate(selected_event_list_indices)
         }
 
         for index in selected_event_list_indices:
@@ -285,17 +392,18 @@ def create_powerspectrum_tab(
                 event_list_name = loaded_event_data[index][0]
 
                 label = f"{event_list_name} (dt={dt}, norm={norm})"
-
-                plot_hv = create_holoviews_plots(
-
+                plot_hv = create_holoviews_plots_no_colorbar(
                     df, label, dt, norm, color_key=color_key[index]
-
                 )
                 combined_plots.append(plot_hv)
                 combined_title.append(event_list_name)
 
         if combined_plots:
-            combined_plot = hv.Overlay(combined_plots).opts(shared_axes=False, legend_position='right', width=600, height=600).collate()
+            combined_plot = (
+                hv.Overlay(combined_plots)
+                .opts(shared_axes=False, legend_position="right", width=600, height=600)
+                .collate()
+            )
 
             combined_pane = create_holoviews_panes(combined_plot)
 
@@ -335,19 +443,21 @@ def create_powerspectrum_tab(
     )
     show_dataframe_button.on_click(show_dataframe)
 
-    tab1_content = pn.Column(
+    tab_content = pn.Column(
         event_list_dropdown,
         dt_input,
         norm_select,
         multi_event_select,
         floatpanel_plots_checkbox,
         dataframe_checkbox,
-        pn.Row(
-            generate_powerspectrum_button, show_dataframe_button, combine_plots_button
-        ),
+        rasterize_checkbox,
+        linear_rebin_checkbox,
+        log_rebin_checkbox,
+        rebin_with_original_checkbox,
+        rebin_size_input,
+        pn.Row(generate_powerspectrum_button, show_dataframe_button, combine_plots_button),
     )
-    return tab1_content
-
+    return tab_content
 
 def create_quicklook_powerspectrum_main_area(
     header_container,
@@ -377,7 +487,6 @@ def create_quicklook_powerspectrum_main_area(
 def create_quicklook_powerspectrum_area():
     """
     Create the plots area for the quicklook lightcurve tab.
-
     Returns:
         PlotsContainer: An instance of PlotsContainer with the plots for the quicklook lightcurve tab.
     """
