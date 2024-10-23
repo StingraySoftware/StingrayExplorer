@@ -19,11 +19,28 @@ from utils.DashboardClasses import (
 from stingray import AveragedPowerspectrum
 
 colors = [
-    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b",
-    "#e377c2", "#7f7f7f", "#bcbd22", "#17becf", "#aec7e8", "#ffbb78",
-    "#98df8a", "#ff9896", "#c5b0d5", "#c49c94", "#f7b6d2", "#c7c7c7",
-    "#dbdb8d", "#9edae5"
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+    "#aec7e8",
+    "#ffbb78",
+    "#98df8a",
+    "#ff9896",
+    "#c5b0d5",
+    "#c49c94",
+    "#f7b6d2",
+    "#c7c7c7",
+    "#dbdb8d",
+    "#9edae5",
 ]
+
 
 # Create a warning handler
 def create_warning_handler():
@@ -33,6 +50,8 @@ def create_warning_handler():
 
 
 """ Header Section """
+
+
 def create_quicklook_avg_powerspectrum_header(
     header_container,
     main_area_container,
@@ -51,21 +70,29 @@ def create_quicklook_avg_powerspectrum_header(
 
 
 """ Output Box Section """
+
+
 def create_loadingdata_output_box(content):
     return OutputBox(output_content=content)
 
 
 """ Warning Box Section """
+
+
 def create_loadingdata_warning_box(content):
     return WarningBox(warning_content=content)
 
 
 """ Float Panel """
+
+
 def create_floatpanel_area(content, title):
     return FloatingPlot(content=content, title=title)
 
 
 """ Main Area Section """
+
+
 def create_avg_powerspectrum_tab(
     output_box_container,
     warning_box_container,
@@ -94,9 +121,7 @@ def create_avg_powerspectrum_tab(
         value="leahy",
     )
 
-    segment_size_input = pn.widgets.FloatInput(
-        name="Segment Size", value=10, step=1
-    )
+    segment_size_input = pn.widgets.FloatInput(name="Segment Size", value=10, step=1)
 
     multi_event_select = pn.widgets.MultiSelect(
         name="Or Select Event List(s) to Combine",
@@ -111,8 +136,58 @@ def create_avg_powerspectrum_tab(
     dataframe_checkbox = pn.widgets.Checkbox(
         name="Add DataFrame to FloatingPanel", value=False
     )
-    
+
     rasterize_checkbox = pn.widgets.Checkbox(name="Rasterize Plots", value=True)
+
+    # New Checkboxes for Rebinning
+
+    linear_rebin_checkbox = pn.widgets.Checkbox(name="Linear Rebinning", value=False)
+
+    log_rebin_checkbox = pn.widgets.Checkbox(name="Logarithmic Rebinning", value=False)
+
+    rebin_with_original_checkbox = pn.widgets.Checkbox(
+        name="Plot Rebin with Original", value=False
+    )
+
+    # Input for Rebin Size
+
+    rebin_size_input = pn.widgets.FloatInput(
+        name="Rebin Size",
+        value=0.1,
+        step=0.000001,
+        start=0.01,
+        end=1000.0,
+    )
+
+    time_info_pane = pn.pane.Markdown(
+        "Select an event list to see time range", width=600
+    )
+
+    # Update time info when an event list is selected
+
+    def update_time_info(event):
+
+        selected_index = event_list_dropdown.value
+
+        if selected_index is not None:
+
+            event_list_name = loaded_event_data[selected_index][0]
+
+            event_list = loaded_event_data[selected_index][1]
+
+            start_time = event_list.time[0]
+
+            end_time = event_list.time[-1]
+
+            time_info_pane.object = (
+                f"**Event List:** {event_list_name} \n"
+                f"**Start Time:** {start_time} \n"
+                f"**End Time:** {end_time}"
+            )
+
+        else:
+
+            time_info_pane.object = "Select an event list to see time range"
 
     # Internal functions to encapsulate functionality
     def create_dataframe(selected_event_list_index, dt, norm, segment_size):
@@ -160,7 +235,8 @@ def create_avg_powerspectrum_tab(
                         create_loadingdata_output_box(
                             f"Error generating Averaged Power Spectrum: {e}. "
                             "Try using a different segment size."
-                        )]
+                        )
+                    ]
                 return None, None
         return None, None
 
@@ -179,9 +255,7 @@ def create_avg_powerspectrum_tab(
 
         if color_key:
             if rasterize_checkbox.value:
-                return hd.rasterize(
-                    plot, line_width=3, pixel_ratio=2
-                ).opts(
+                return hd.rasterize(plot, line_width=3, pixel_ratio=2).opts(
                     tools=["hover"],
                     cmap=[color_key],
                     width=600,
@@ -192,9 +266,7 @@ def create_avg_powerspectrum_tab(
                 return plot
         else:
             if rasterize_checkbox.value:
-                return hd.rasterize(
-                    plot, line_width=3, pixel_ratio=2
-                ).opts(
+                return hd.rasterize(plot, line_width=3, pixel_ratio=2).opts(
                     tools=["hover"],
                     width=600,
                     height=600,
@@ -204,7 +276,23 @@ def create_avg_powerspectrum_tab(
             else:
                 return plot
 
-    def create_holoviews_plots_no_colorbar(ps, title, dt, norm, segment_size, color_key=None):
+    def rebin_powerspectrum(ps):
+
+        rebin_size = rebin_size_input.value
+
+        if linear_rebin_checkbox.value:
+
+            return ps.rebin(rebin_size, method="mean")
+
+        elif log_rebin_checkbox.value:
+
+            return ps.rebin_log(f=rebin_size)
+
+        return None
+
+    def create_holoviews_plots_no_colorbar(
+        ps, title, dt, norm, segment_size, color_key=None
+    ):
         label = f"{title} (dt={dt}, norm={norm}, segment={segment_size})"
         plot = hv.Curve((ps.freq, ps.power), label=label).opts(
             xlabel="Frequency (Hz)",
@@ -216,9 +304,7 @@ def create_avg_powerspectrum_tab(
 
         if color_key:
             if rasterize_checkbox.value:
-                return hd.rasterize(
-                    plot, line_width=3, pixel_ratio=2
-                ).opts(
+                return hd.rasterize(plot, line_width=3, pixel_ratio=2).opts(
                     tools=["hover"],
                     cmap=[color_key],
                     width=600,
@@ -229,9 +315,7 @@ def create_avg_powerspectrum_tab(
                 return plot
         else:
             if rasterize_checkbox.value:
-                return hd.rasterize(
-                    plot, line_width=3, pixel_ratio=2
-                ).opts(
+                return hd.rasterize(plot, line_width=3, pixel_ratio=2).opts(
                     tools=["hover"],
                     width=600,
                     height=600,
@@ -243,7 +327,9 @@ def create_avg_powerspectrum_tab(
 
     def create_dataframe_panes(df, title, dt, norm, segment_size):
         return pn.FlexBox(
-            pn.pane.Markdown(f"**{title} (dt={dt}, norm={norm}, segment={segment_size})**"),
+            pn.pane.Markdown(
+                f"**{title} (dt={dt}, norm={norm}, segment={segment_size})**"
+            ),
             pn.pane.DataFrame(df, width=600, height=600),
             align_items="center",
             justify_content="center",
@@ -271,14 +357,14 @@ def create_avg_powerspectrum_tab(
         df, ps = create_dataframe(selected_event_list_index, dt, norm, segment_size)
         if df is not None:
             plot_title = f"Averaged Power Spectrum for {loaded_event_data[selected_event_list_index][0]}"
-            plot_hv = create_holoviews_plots(ps, title=plot_title, dt=dt, norm=norm, segment_size=segment_size)
+            plot_hv = create_holoviews_plots(
+                ps, title=plot_title, dt=dt, norm=norm, segment_size=segment_size
+            )
             holoviews_output = create_holoviews_panes(plot_hv)
 
             if floatpanel_plots_checkbox.value:
                 float_panel_container.append(
-                    create_floatpanel_area(
-                        content=holoviews_output, title=plot_title
-                    )
+                    create_floatpanel_area(content=holoviews_output, title=plot_title)
                 )
             else:
                 markdown_content = f"## {plot_title}"
@@ -293,11 +379,15 @@ def create_avg_powerspectrum_tab(
                     )
                 )
             output_box_container[:] = [
-                create_loadingdata_output_box("Averaged Power Spectrum generated successfully.")
+                create_loadingdata_output_box(
+                    "Averaged Power Spectrum generated successfully."
+                )
             ]
         else:
             output_box_container[:] = [
-                create_loadingdata_output_box("Failed to create averaged power spectrum.")
+                create_loadingdata_output_box(
+                    "Failed to create averaged power spectrum."
+                )
             ]
 
     def show_dataframe(event=None):
@@ -319,7 +409,13 @@ def create_avg_powerspectrum_tab(
         segment_size = segment_size_input.value
         df, ps = create_dataframe(selected_event_list_index, dt, norm, segment_size)
         if df is not None:
-            dataframe_output = create_dataframe_panes(df, f"{loaded_event_data[selected_event_list_index][0]}", dt, norm, segment_size)
+            dataframe_output = create_dataframe_panes(
+                df,
+                f"{loaded_event_data[selected_event_list_index][0]}",
+                dt,
+                norm,
+                segment_size,
+            )
             if dataframe_checkbox.value:
                 float_panel_container.append(
                     create_floatpanel_area(
@@ -355,7 +451,13 @@ def create_avg_powerspectrum_tab(
             df, ps = create_dataframe(index, dt, norm, segment_size)
             if df is not None:
                 event_list_name = loaded_event_data[index][0]
-                plot_hv = create_holoviews_plots_no_colorbar(ps, title=event_list_name, dt=dt, norm=norm, segment_size=segment_size)
+                plot_hv = create_holoviews_plots_no_colorbar(
+                    ps,
+                    title=event_list_name,
+                    dt=dt,
+                    norm=norm,
+                    segment_size=segment_size,
+                )
                 combined_plots.append(plot_hv)
                 combined_title.append(event_list_name)
 
@@ -414,7 +516,9 @@ def create_avg_powerspectrum_tab(
         floatpanel_plots_checkbox,
         dataframe_checkbox,
         rasterize_checkbox,
-        pn.Row(generate_powerspectrum_button, show_dataframe_button, combine_plots_button),
+        pn.Row(
+            generate_powerspectrum_button, show_dataframe_button, combine_plots_button
+        ),
     )
     return tab_content
 

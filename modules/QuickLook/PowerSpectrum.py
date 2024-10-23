@@ -115,6 +115,11 @@ def create_powerspectrum_tab(
     )
     
     rasterize_checkbox = pn.widgets.Checkbox(name="Rasterize Plots", value=True)
+
+    time_info_pane = pn.pane.Markdown(
+    "Select an event list to see time range", width=600
+    )
+
     
     # New Checkboxes for Rebinning
     linear_rebin_checkbox = pn.widgets.Checkbox(name="Linear Rebinning", value=False)
@@ -125,10 +130,26 @@ def create_powerspectrum_tab(
     rebin_size_input = pn.widgets.FloatInput(
         name="Rebin Size",
         value=0.1,
-        step=0.01,
+        step=0.000001,
         start=0.01,
-        end=100.0,
+        end=1000.0,
     )
+
+    def update_time_info(event):
+        selected_index = event_list_dropdown.value
+        if selected_index is not None:
+            event_list_name = loaded_event_data[selected_index][0]
+            event_list = loaded_event_data[selected_index][1]
+            start_time = event_list.time[0]
+            end_time = event_list.time[-1]
+            time_info_pane.object = (
+                f"**Event List:** {event_list_name} \n"
+                f"**Start Time:** {start_time} \n"
+                f"**End Time:** {end_time}"
+            )
+        else:
+            time_info_pane.object = "Select an event list to see time range"
+
 
     def create_holoviews_panes(plot):
         return pn.pane.HoloViews(plot, width=600, height=600, linked_axes=False)
@@ -443,8 +464,12 @@ def create_powerspectrum_tab(
     )
     show_dataframe_button.on_click(show_dataframe)
 
+    event_list_dropdown.param.watch(update_time_info, 'value')
+
+
     tab_content = pn.Column(
         event_list_dropdown,
+        time_info_pane, 
         dt_input,
         norm_select,
         multi_event_select,

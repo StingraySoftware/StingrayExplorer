@@ -7,7 +7,7 @@ import os
 import stat
 import numpy as np
 from bokeh.models import Tooltip
-from utils.globals import loaded_event_data
+from utils.globals import loaded_event_data, loaded_light_curve
 from utils.DashboardClasses import (
     MainHeader,
     MainArea,
@@ -359,7 +359,7 @@ def preview_loaded_files(
     time_limit=10,
 ):
     """
-    Preview the loaded event data files.
+    Preview the loaded event data files and light curves.
 
     Args:
         event: The event object triggering the function.
@@ -368,29 +368,38 @@ def preview_loaded_files(
         warning_handler (WarningHandler): The handler for warnings.
         time_limit (int): The number of time entries to preview.
     """
-    if not loaded_event_data:
-        output_box_container[:] = [
-            create_loadingdata_output_box("No files loaded to preview.")
-        ]
-        return
-
     preview_data = []
-    for file_name, event_list in loaded_event_data:
-        try:
-            time_data = f"Times (first {time_limit}): {event_list.time[:time_limit]}"
-            mjdref = f"MJDREF: {event_list.mjdref}"
-            gti = f"GTI: {event_list.gti}"
-            preview_data.append(f"File: {file_name}\n{time_data}\n{mjdref}\n{gti}\n")
-        except Exception as e:
-            warning_handler.warn(str(e), category=RuntimeWarning)
 
+    # Preview EventList data
+    if loaded_event_data:
+        for file_name, event_list in loaded_event_data:
+            try:
+                time_data = f"Times (first {time_limit}): {event_list.time[:time_limit]}"
+                mjdref = f"MJDREF: {event_list.mjdref}"
+                gti = f"GTI: {event_list.gti}"
+                preview_data.append(f"Event List - {file_name}:\n{time_data}\n{mjdref}\n{gti}\n")
+            except Exception as e:
+                warning_handler.warn(str(e), category=RuntimeWarning)
+
+    # Preview Lightcurve data
+    if loaded_light_curve:
+        for lc_name, lightcurve in loaded_light_curve:
+            try:
+                time_data = f"Times (first {time_limit}): {lightcurve.time[:time_limit]}"
+                counts_data = f"Counts (first {time_limit}): {lightcurve.counts[:time_limit]}"
+                dt = f"dt: {lightcurve.dt}"
+                preview_data.append(f"Light Curve - {lc_name}:\n{time_data}\n{counts_data}\n{dt}\n")
+            except Exception as e:
+                warning_handler.warn(str(e), category=RuntimeWarning)
+
+    # Display preview data or message if no data available
     if preview_data:
         output_box_container[:] = [
             create_loadingdata_output_box("\n\n".join(preview_data))
         ]
     else:
         output_box_container[:] = [
-            create_loadingdata_output_box("No valid files loaded for preview.")
+            create_loadingdata_output_box("No valid files or light curves loaded for preview.")
         ]
 
     if warning_handler.warnings:
@@ -405,24 +414,40 @@ def preview_loaded_files(
 
 def clear_loaded_files(event, output_box_container, warning_box_container):
     """
-    Clear all loaded event data files from memory.
+    Clear all loaded event data files and light curves from memory.
 
     Args:
         event: The event object triggering the function.
         output_box_container (OutputBox): The container for output messages.
         warning_box_container (WarningBox): The container for warning messages.
     """
-    global loaded_event_data
-    if not loaded_event_data:
-        output_box_container[:] = [
-            create_loadingdata_output_box("No files loaded to clear.")
-        ]
-    else:
+    global loaded_event_data, loaded_light_curve
+    event_data_cleared = False
+    light_curve_data_cleared = False
+
+    # Clear EventList data
+    if loaded_event_data:
         loaded_event_data.clear()
-        output_box_container[:] = [
-            create_loadingdata_output_box("Loaded files have been cleared.")
-        ]
+        event_data_cleared = True
+
+    # Clear Lightcurve data
+    if loaded_light_curve:
+        loaded_light_curve.clear()
+        light_curve_data_cleared = True
+
+    # Create appropriate messages based on what was cleared
+    messages = []
+    if event_data_cleared:
+        messages.append("Loaded event files have been cleared.")
+    if light_curve_data_cleared:
+        messages.append("Loaded light curves have been cleared.")
+    if not messages:
+        messages.append("No files or light curves loaded to clear.")
+
+    # Update the output and warning containers
+    output_box_container[:] = [create_loadingdata_output_box("\n".join(messages))]
     warning_box_container[:] = [create_loadingdata_warning_box("No warnings.")]
+
 
 
 def create_event_list(
