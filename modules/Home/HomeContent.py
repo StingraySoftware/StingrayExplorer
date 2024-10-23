@@ -53,17 +53,26 @@ def create_home_main_area():
 
     # Path to the data files
     data_dir = os.path.join(os.getcwd(), "files", "data")
-    target_file = "nomission.evt"
-    file_path = os.path.join(data_dir, target_file)
+    target_file1 = "nomission.evt"
+    file_path1 = os.path.join(data_dir, target_file1)
+    target_file2 = "xte_test.evt.gz"
+    file_path2 = os.path.join(data_dir, target_file2)
 
     # Check if the file is already loaded
     if not any(file_name == "nomission" for file_name, _ in loaded_event_data):
         try:
-            event_list = EventList.read(file_path, "ogip")
+            event_list = EventList.read(file_path1, "ogip")
             loaded_event_data.append(("nomission", event_list))
-            print(f"File '{target_file}' loaded successfully.")
+            print(f"File '{target_file1}' loaded successfully.")
         except Exception as e:
-            print(f"Failed to load file '{target_file}': {e}")
+            print(f"Failed to load file '{target_file1}': {e}")
+    if not any(file_name == "xte_test" for file_name, _ in loaded_event_data):
+        try:
+            event_list = EventList.read(file_path2, "ogip")
+            loaded_event_data.append(("xte_test.evt.gz", event_list))
+            print(f"File '{target_file2}' loaded successfully.")
+        except Exception as e:
+            print(f"Failed to load file '{target_file2}': {e}")
 
     tab1_content = pn.pane.Markdown(HOME_STINGRAY_TAB_STRING)
     tab2_content = pn.pane.Markdown(HOME_HOLOVIZ_TAB_STRING)

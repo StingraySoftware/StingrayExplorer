@@ -1,8 +1,8 @@
 import panel as pn
 import holoviews as hv
 import holoviews.operation.datashader as hd
-from holoviews.operation.timeseries import rolling, rolling_outlier_std 
-from utils.globals import loaded_event_data
+from holoviews.operation.timeseries import rolling, rolling_outlier_std
+from utils.globals import loaded_event_data, loaded_light_curve
 import pandas as pd
 import warnings
 import hvplot.pandas
@@ -124,6 +124,35 @@ def create_lightcurve_tab(
     )
     rasterize_checkbox = pn.widgets.Checkbox(name="Rasterize Plots", value=True)
 
+    save_lightcurve_checkbox = pn.widgets.Checkbox(
+        name="Save Generated Light Curve in RAM", value=False
+    )
+
+    time_info_pane = pn.pane.Markdown(
+        "Select an event list to see time range", width=600
+    )
+
+    gti_input = pn.widgets.TextInput(
+        name="Specify GTIs (Good Time Intervals)",
+        placeholder="e.g., 0 4; 6 10",
+    )
+
+    # Callback to update the time information
+    def update_time_info(event):
+        selected_index = event_list_dropdown.value
+        if selected_index is not None:
+            event_list_name = loaded_event_data[selected_index][0]
+            event_list = loaded_event_data[selected_index][1]
+            start_time = event_list.time[0]
+            end_time = event_list.time[-1]
+            time_info_pane.object = (
+                f"**Event List:** {event_list_name} \n"
+                f"**Start Time:** {start_time} \n"
+                f"**End Time:** {end_time}"
+            )
+        else:
+            time_info_pane.object = "Select an event list to see time range"
+
     def create_holoviews_panes(plot):
         return pn.pane.HoloViews(plot, width=600, height=600, linked_axes=False)
 
@@ -229,10 +258,38 @@ def create_lightcurve_tab(
             flex_direction="column",
         )
 
-    def create_dataframe(selected_event_list_index, dt):
+    def create_dataframe(selected_event_list_index, dt, eventlist_name):
         if selected_event_list_index is not None:
             event_list = loaded_event_data[selected_event_list_index][1]
-            lc_new = event_list.to_lc(dt=dt)
+
+
+            # Parse GTIs from input if provided
+            gti = None
+            if gti_input.value:
+                try:
+                    gti = [
+                        [float(start), float(end)]
+                        for start, end in (
+                            interval.split() for interval in gti_input.value.split(";")
+                        )
+                    ]
+                except ValueError:
+                    output_box_container[:] = [
+                        create_loadingdata_output_box("Invalid GTI format. Use 'start end; start end'.")
+                    ]
+                    return None
+                
+            if gti_input.value:
+                lc_new = event_list.to_lc(dt=dt).apply_gtis(gti)
+            else:
+                lc_new = event_list.to_lc(dt=dt)
+            
+
+            lightcurve_name = f"{eventlist_name}_lightcurve"
+
+            # Append the generated light curve to loaded_light_curve if the checkbox is checked
+            if save_lightcurve_checkbox.value:
+                loaded_light_curve.append((lightcurve_name, lc_new))
 
             df = pd.DataFrame(
                 {
@@ -296,7 +353,11 @@ def create_lightcurve_tab(
             return
 
         dt = dt_input.value
-        df = create_dataframe(selected_event_list_index, dt)
+        df = create_dataframe(
+            selected_event_list_index,
+            dt,
+            loaded_event_data[selected_event_list_index][0],
+        )
         if df is not None:
             event_list_name = loaded_event_data[selected_event_list_index][0]
             plot_hv = create_holoviews_plots(df, label=event_list_name, dt=dt)
@@ -396,13 +457,19 @@ def create_lightcurve_tab(
     )
     show_dataframe_button.on_click(show_dataframe)
 
+    event_list_dropdown.param.watch(update_time_info, 'value')
+
+
     tab1_content = pn.Column(
         event_list_dropdown,
+        time_info_pane, 
         dt_input,
+        gti_input,
         multi_event_select,
         floatpanel_plots_checkbox,
         dataframe_checkbox,
         rasterize_checkbox,
+        save_lightcurve_checkbox,
         pn.Row(generate_lightcurve_button, show_dataframe_button, combine_plots_button),
     )
     return tab1_content
