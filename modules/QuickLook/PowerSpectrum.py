@@ -42,6 +42,8 @@ colors = [
     "#9edae5",
 ]
 
+log_binned = False
+
 # Create a warning handler
 def create_warning_handler():
     warning_handler = WarningHandler()
@@ -228,6 +230,62 @@ def create_powerspectrum_tab(
             else:
                 return plot
 
+    def create_rebinned_holoviews_plots(df, label, dt, norm, color_key=None, log_binned=False):
+        """
+        Create a HoloViews plot for rebinned power spectrum data.
+        
+        Parameters:
+            df (pd.DataFrame): DataFrame containing rebinned frequency and power values.
+            label (str): Label for the plot.
+            dt (float): Time binning parameter.
+            norm (str): Normalization parameter.
+            color_key (str, optional): Color key for the plot.
+            log_binned (bool): If True, applies a logarithmic scale to the x-axis.
+        
+        Returns:
+            hv.Overlay or hv.DynamicMap: The generated HoloViews plot.
+        """
+        # Create the initial plot from the DataFrame
+        plot = df.hvplot(x="Frequency", y="Power", shared_axes=False, label=label)
+
+        # Check if color_key is provided for individual plot colors
+        if color_key:
+            if rasterize_checkbox.value:
+                return hd.rasterize(
+                    plot,
+                    aggregator=hd.ds.mean("Power"),
+                    color_key=color_key,
+                    line_width=3,
+                    pixel_ratio=2,
+                ).opts(
+                    tools=["hover"],
+                    cmap=[color_key],
+                    width=600,
+                    height=600,
+                    colorbar=True,
+                    logx=log_binned  # Apply log scale only if log_binned is True
+                )
+            else:
+                return plot.opts(logx=log_binned)  # Apply log scale only if log_binned is True
+        else:
+            if rasterize_checkbox.value:
+                return hd.rasterize(
+                    plot,
+                    aggregator=hd.ds.mean("Power"),
+                    line_width=3,
+                    pixel_ratio=2,
+                ).opts(
+                    tools=["hover"],
+                    width=600,
+                    height=600,
+                    cmap="Viridis",
+                    colorbar=True,
+                    logx=log_binned  # Apply log scale only if log_binned is True
+                )
+            else:
+                return plot.opts(logx=log_binned)  # Apply log scale only if log_binned is True
+
+    
     def create_dataframe_panes(df, title):
         return pn.FlexBox(
             pn.pane.Markdown(f"**{title}**"),
@@ -258,12 +316,13 @@ def create_powerspectrum_tab(
 
     def rebin_powerspectrum(ps):
         rebin_size = rebin_size_input.value
-        
+        log_binned = False  # Initialize flag for logarithmic rebinning
         if linear_rebin_checkbox.value:
             # Perform linear rebinning
             rebinned_ps = ps.rebin(rebin_size, method="mean")
             return rebinned_ps
         elif log_rebin_checkbox.value:
+            log_binned = True  # Set flag to indicate log rebinning
             # Perform logarithmic rebinning
             rebinned_ps = ps.rebin_log(f=rebin_size)
             return rebinned_ps
@@ -347,7 +406,7 @@ def create_powerspectrum_tab(
                     "Power": rebinned_ps.power,
                 })
                 rebinned_label = f"Rebinned {event_list_name} (dt={dt}, norm={norm})"
-                rebinned_plot_hv = create_holoviews_plots(rebinned_df, rebinned_label, dt, norm)
+                rebinned_plot_hv = create_rebinned_holoviews_plots(rebinned_df, rebinned_label, dt, norm, log_binned=log_binned)
 
                 # Check if the user wants to plot rebin with the original
                 if rebin_with_original_checkbox.value:
