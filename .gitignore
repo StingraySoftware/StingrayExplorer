@@ -3,3 +3,4 @@
 __pycache__/
 files/loaded-data/
 .vscode/
+docs/build/
