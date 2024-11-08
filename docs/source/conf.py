@@ -19,13 +19,20 @@ release = '0.1'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',       # For Google-style docstrings
-    'sphinx.ext.viewcode',       # Adds links to source code
-    'sphinx.ext.autosummary',    # Generate summaries automatically
+    'sphinx.ext.autodoc',           # Main extension for auto-documentation
+    'sphinx.ext.napoleon',          # Supports Google/NumPy style docstrings
+    'sphinx.ext.autosummary',       # Generates summary tables for modules/classes
+    'sphinx.ext.viewcode',          # Adds links to highlighted source code
+    'sphinx.ext.intersphinx',       # Links to documentation of external libraries
 ]
+
 autosummary_generate = True      # Enables automatic summary generation
 
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+}
 
 templates_path = ['_templates']
 exclude_patterns = []

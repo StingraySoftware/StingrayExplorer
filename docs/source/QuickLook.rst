@@ -11,6 +11,8 @@ QuickLook.AverageCrossSpectrum module
    :members:
    :undoc-members:
    :show-inheritance:
+   :special-members: __init__, __call__  # Include special methods like __init__
+   :inherited-members:  # Shows inherited methods in classes
 
 QuickLook.AveragePowerSpectrum module
 -------------------------------------
@@ -19,6 +21,8 @@ QuickLook.AveragePowerSpectrum module
    :members:
    :undoc-members:
    :show-inheritance:
+   :special-members: __init__, __call__  # Include special methods like __init__
+   :inherited-members:  # Shows inherited methods in classes
 
 QuickLook.Bispectrum module
 ---------------------------
@@ -27,6 +31,8 @@ QuickLook.Bispectrum module
    :members:
    :undoc-members:
    :show-inheritance:
+   :special-members: __init__, __call__  # Include special methods like __init__
+   :inherited-members:  # Shows inherited methods in classes
 
 QuickLook.CrossSpectrum module
 ------------------------------
@@ -35,6 +41,8 @@ QuickLook.CrossSpectrum module
    :members:
    :undoc-members:
    :show-inheritance:
+   :special-members: __init__, __call__  # Include special methods like __init__
+   :inherited-members:  # Shows inherited methods in classes
 
 QuickLook.LightCurve module
 ---------------------------
@@ -43,6 +51,8 @@ QuickLook.LightCurve module
    :members:
    :undoc-members:
    :show-inheritance:
+   :special-members: __init__, __call__  # Include special methods like __init__
+   :inherited-members:  # Shows inherited methods in classes
 
 QuickLook.PowerColors module
 ----------------------------
@@ -51,6 +61,8 @@ QuickLook.PowerColors module
    :members:
    :undoc-members:
    :show-inheritance:
+   :special-members: __init__, __call__  # Include special methods like __init__
+   :inherited-members:  # Shows inherited methods in classes
 
 QuickLook.PowerSpectrum module
 ------------------------------
@@ -59,6 +71,8 @@ QuickLook.PowerSpectrum module
    :members:
    :undoc-members:
    :show-inheritance:
+   :special-members: __init__, __call__  # Include special methods like __init__
+   :inherited-members:  # Shows inherited methods in classes
 
 Module contents
 ---------------
@@ -67,3 +81,5 @@ Module contents
    :members:
    :undoc-members:
    :show-inheritance:
+   :special-members: __init__, __call__  # Include special methods like __init__
+   :inherited-members:  # Shows inherited methods in classes
