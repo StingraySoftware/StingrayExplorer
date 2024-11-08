@@ -29,13 +29,19 @@ loaded_data_path = os.path.join(os.getcwd(), "files", "loaded-data")
 os.makedirs(loaded_data_path, exist_ok=True)
 
 
-# Create a warning handler
 def create_warning_handler():
     """
     Create an instance of WarningHandler and redirect warnings to this custom handler.
 
     Returns:
-        warning_handler (WarningHandler): An instance of WarningHandler to handle warnings.
+        WarningHandler: An instance of WarningHandler to handle warnings.
+
+    Side effects:
+        Overrides the default warning handler with a custom one.
+
+    Example:
+        >>> warning_handler = create_warning_handler()
+        >>> warning_handler.warn("Test warning", category=RuntimeWarning)
     """
     warning_handler = WarningHandler()
     warnings.showwarning = warning_handler.warn
@@ -57,8 +63,22 @@ def create_loadingdata_header(
     """
     Create the header for the data loading section.
 
+    Args:
+        header_container: The container for the header.
+        main_area_container: The container for the main content area.
+        output_box_container: The container for the output messages.
+        warning_box_container: The container for warning messages.
+        plots_container: The container for plots.
+        help_box_container: The container for the help section.
+        footer_container: The container for the footer.
+
     Returns:
         MainHeader: An instance of MainHeader with the specified heading.
+
+    Example:
+        >>> header = create_loadingdata_header(header_container, main_area_container, ...)
+        >>> header.heading.value
+        'Data Ingestion and creation'
     """
     home_heading_input = pn.widgets.TextInput(
         name="Heading", value="Data Ingestion and creation"
@@ -78,6 +98,11 @@ def create_loadingdata_output_box(content):
 
     Returns:
         OutputBox: An instance of OutputBox with the specified content.
+
+    Example:
+        >>> output_box = create_loadingdata_output_box("File loaded successfully.")
+        >>> output_box.output_content
+        'File loaded successfully.'
     """
     return OutputBox(output_content=content)
 
@@ -94,6 +119,11 @@ def create_loadingdata_warning_box(content):
 
     Returns:
         WarningBox: An instance of WarningBox with the specified content.
+
+    Example:
+        >>> warning_box = create_loadingdata_warning_box("Invalid file format.")
+        >>> warning_box.warning_content
+        'Invalid file format.'
     """
     return WarningBox(warning_content=content)
 
@@ -120,6 +150,21 @@ def load_event_data(
         output_box_container (OutputBox): The container for output messages.
         warning_box_container (WarningBox): The container for warning messages.
         warning_handler (WarningHandler): The handler for warnings.
+
+    Side effects:
+        - Modifies the global `loaded_event_data` list.
+        - Updates the output and warning containers with messages.
+
+    Exceptions:
+        - Displays exceptions in the output box if file loading fails.
+
+    Restrictions:
+        - Requires that the number of formats matches the number of files unless default format is used.
+
+    Example:
+        >>> load_event_data(event, file_selector, filename_input, format_input, format_checkbox, ...)
+        >>> len(loaded_event_data)
+        1  # Assuming one file was loaded
     """
     if not file_selector.value:
         output_box_container[:] = [
@@ -148,7 +193,7 @@ def load_event_data(
         filenames.extend(
             [
                 os.path.basename(path).split(".")[0]
-                for path in file_paths[len(filenames) :]
+                for path in file_paths[len(filenames):]
             ]
         )
     if len(formats) < len(file_paths):
@@ -213,6 +258,21 @@ def save_loaded_files(
         output_box_container (OutputBox): The container for output messages.
         warning_box_container (WarningBox): The container for warning messages.
         warning_handler (WarningHandler): The handler for warnings.
+
+    Side effects:
+        - Saves files to disk in the specified formats.
+        - Updates the output and warning containers with messages.
+
+    Exceptions:
+        - Displays exceptions in the warning box if file saving fails.
+
+    Restrictions:
+        - Requires that the number of filenames and formats matches the number of loaded files unless default format is used.
+
+    Example:
+        >>> save_loaded_files(event, filename_input, format_input, format_checkbox, ...)
+        >>> os.path.exists('/path/to/saved/file.hdf5')
+        True  # Assuming the file was saved successfully
     """
     if not loaded_event_data:
         output_box_container[:] = [
@@ -315,6 +375,21 @@ def delete_selected_files(
         output_box_container (OutputBox): The container for output messages.
         warning_box_container (WarningBox): The container for warning messages.
         warning_handler (WarningHandler): The handler for warnings.
+
+    Side effects:
+        - Deletes files from the file system.
+        - Updates the output and warning containers with messages.
+
+    Exceptions:
+        - Displays exceptions in the warning box if file deletion fails.
+
+    Restrictions:
+        - Cannot delete `.py` files for safety reasons.
+
+    Example:
+        >>> delete_selected_files(event, file_selector, warning_box_container, output_box_container, warning_handler)
+        >>> os.path.exists('/path/to/deleted/file')
+        False  # Assuming the file was deleted successfully
     """
     if not file_selector.value:
         output_box_container[:] = [
@@ -367,6 +442,19 @@ def preview_loaded_files(
         warning_box_container (WarningBox): The container for warning messages.
         warning_handler (WarningHandler): The handler for warnings.
         time_limit (int): The number of time entries to preview.
+
+    Side Effects:
+        Updates the output and warning containers with preview information.
+
+    Exceptions:
+        Captures exceptions and displays them in the warning box.
+
+    Restrictions:
+        None.
+
+    Example:
+        >>> preview_loaded_files(event, output_box_container, warning_box_container, warning_handler)
+        "Event List - my_event_list:\nTimes (first 10): [0.1, 0.2, ...]\nMJDREF: 58000"
     """
     preview_data = []
 
@@ -412,6 +500,7 @@ def preview_loaded_files(
     warning_handler.warnings.clear()
 
 
+
 def clear_loaded_files(event, output_box_container, warning_box_container):
     """
     Clear all loaded event data files and light curves from memory.
@@ -420,6 +509,20 @@ def clear_loaded_files(event, output_box_container, warning_box_container):
         event: The event object triggering the function.
         output_box_container (OutputBox): The container for output messages.
         warning_box_container (WarningBox): The container for warning messages.
+
+    Side effects:
+        - Clears the global `loaded_event_data` and `loaded_light_curve` lists.
+        - Updates the output and warning containers with messages.
+
+    Exceptions:
+        - None.
+
+    Restrictions:
+        - None.
+
+    Example:
+        >>> clear_loaded_files(event, output_box_container, warning_box_container)
+        "Loaded event files have been cleared."
     """
     global loaded_event_data, loaded_light_curve
     event_data_cleared = False
@@ -449,7 +552,6 @@ def clear_loaded_files(event, output_box_container, warning_box_container):
     warning_box_container[:] = [create_loadingdata_warning_box("No warnings.")]
 
 
-
 def create_event_list(
     event,
     times_input,
@@ -476,6 +578,20 @@ def create_event_list(
         output_box_container (OutputBox): The container for output messages.
         warning_box_container (WarningBox): The container for warning messages.
         warning_handler (WarningHandler): The handler for warnings.
+
+    Side effects:
+        - Creates a new EventList object and adds it to `loaded_event_data`.
+        - Updates the output and warning containers with messages.
+
+    Exceptions:
+        - Displays exceptions in the warning box if event list creation fails.
+
+    Restrictions:
+        - Requires photon arrival times and MJDREF to be provided.
+
+    Example:
+        >>> create_event_list(event, times_input, energy_input, pi_input, gti_input, mjdref_input, name_input, ...)
+        "Event List created successfully!"
     """
     # Clear previous warnings
     warning_handler.warnings.clear()
@@ -567,6 +683,20 @@ def simulate_event_list(
         output_box_container (OutputBox): The container for output messages.
         warning_box_container (WarningBox): The container for warning messages.
         warning_handler (WarningHandler): The handler for warnings.
+
+    Side effects:
+        - Creates a simulated EventList object and adds it to `loaded_event_data`.
+        - Updates the output and warning containers with messages.
+
+    Exceptions:
+        - Displays exceptions in the warning box if simulation fails.
+
+    Restrictions:
+        - Requires a unique name for the simulated event list.
+
+    Example:
+        >>> simulate_event_list(event, time_slider, count_slider, dt_input, name_input, method_selector, ...)
+        "Event List simulated successfully!"
     """
     # Clear previous warnings
     warning_handler.warnings.clear()
@@ -632,7 +762,12 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
         warning_handler (WarningHandler): The handler for warnings.
 
     Returns:
-        tab_content (Column): A Panel Column containing the widgets and layout for the loading tab.
+        Column: A Panel Column containing the widgets and layout for the loading tab.
+
+    Example:
+        >>> tab = create_loading_tab(output_box_container, warning_box_container, warning_handler)
+        >>> isinstance(tab, pn.Column)
+        True
     """
     file_selector = pn.widgets.FileSelector(
         os.getcwd(), only_files=True, name="Select File", show_hidden=True
@@ -778,7 +913,12 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
         warning_handler (WarningHandler): The handler for warnings.
 
     Returns:
-        tab_content (Column): A Panel Column containing the widgets and layout for the event list creation tab.
+        Column: A Panel Column containing the widgets and layout for the event list creation tab.
+
+    Example:
+        >>> tab = create_event_list_tab(output_box_container, warning_box_container, warning_handler)
+        >>> isinstance(tab, pn.Column)
+        True
     """
     times_input = pn.widgets.TextInput(
         name="Photon Arrival Times", placeholder="e.g., 0.5, 1.1, 2.2, 3.7"
@@ -845,7 +985,12 @@ def create_simulate_event_list_tab(
         warning_handler (WarningHandler): The handler for warnings.
 
     Returns:
-        tab_content (Column): A Panel Column containing the widgets and layout for the event list simulation tab.
+        Column: A Panel Column containing the widgets and layout for the event list simulation tab.
+
+    Example:
+        >>> tab = create_simulate_event_list_tab(output_box_container, warning_box_container, warning_handler)
+        >>> isinstance(tab, pn.Column)
+        True
     """
     simulation_title = pn.pane.Markdown("# Simulating Event Lists")
     time_slider = pn.widgets.IntSlider(
@@ -914,11 +1059,21 @@ def create_loadingdata_main_area(
     Create the main area for the data loading tab, including all sub-tabs.
 
     Args:
-        output_box (OutputBox): The container for output messages.
-        warning_box (WarningBox): The container for warning messages.
+        header_container: The container for the header.
+        main_area_container: The container for the main content area.
+        output_box_container (OutputBox): The container for output messages.
+        warning_box_container (WarningBox): The container for warning messages.
+        plots_container: The container for plots.
+        help_box_container: The container for the help section.
+        footer_container: The container for the footer.
 
     Returns:
         MainArea: An instance of MainArea with all the necessary tabs for data loading.
+
+    Example:
+        >>> main_area = create_loadingdata_main_area(header_container, main_area_container, ...)
+        >>> isinstance(main_area, MainArea)
+        True
     """
     warning_handler = create_warning_handler()
     tabs_content = {
@@ -947,6 +1102,11 @@ def create_loadingdata_help_area():
 
     Returns:
         HelpBox: An instance of HelpBox with the help content.
+
+    Example:
+        >>> help_area = create_loadingdata_help_area()
+        >>> isinstance(help_area, HelpBox)
+        True
     """
     help_content = LOADING_DATA_HELP_BOX_STRING
     return HelpBox(help_content=help_content, title="Help Section")
@@ -958,5 +1118,10 @@ def create_loadingdata_plots_area():
 
     Returns:
         PlotsContainer: An instance of PlotsContainer with the plots for the data loading tab.
+
+    Example:
+        >>> plots_area = create_loadingdata_plots_area()
+        >>> isinstance(plots_area, PlotsContainer)
+        True
     """
     return PlotsContainer()
