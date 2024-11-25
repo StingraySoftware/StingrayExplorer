@@ -18,34 +18,216 @@ StingrayExplorer is a data analysis tool designed for quick visualization and ex
 
 ```
 .
+├── CODE_OF_CONDUCT.md
+├── Dockerfile
+├── LICENSE
+├── README.md
 ├── assets
-│   ├── audio
-│   ├── icons
-│   │   └── svg.py
-│   ├── images
-│   ├── stylesheets
-│   │   └── explorer.css
-│   └── videos
+│   ├── audio
+│   ├── icons
+│   │   ├── __pycache__
+│   │   │   └── svg.cpython-311.pyc
+│   │   └── svg.py
+│   ├── images
+│   │   ├── holoviz_logo.png
+│   │   ├── holoviz_logo_minimised.png
+│   │   ├── stingray_explorer.png
+│   │   ├── stingray_explorer.webp
+│   │   ├── stingray_explorer_minimised.png
+│   │   ├── stingray_logo.png
+│   │   └── stingray_logo_minimised.png
+│   ├── stylesheets
+│   │   └── explorer.css
+│   └── videos
+├── docs
+│   ├── Makefile
+│   ├── build
+│   │   ├── doctrees
+│   │   │   ├── DataLoading.doctree
+│   │   │   ├── Home.doctree
+│   │   │   ├── QuickLook.doctree
+│   │   │   ├── environment.pickle
+│   │   │   ├── index.doctree
+│   │   │   └── modules.doctree
+│   │   └── html
+│   │       ├── DataLoading.html
+│   │       ├── Home.html
+│   │       ├── QuickLook.html
+│   │       ├── _modules
+│   │       │   ├── index.html
+│   │       │   └── modules
+│   │       │       ├── DataLoading
+│   │       │       │   └── DataIngestion.html
+│   │       │       ├── Home
+│   │       │       │   └── HomeContent.html
+│   │       │       └── QuickLook
+│   │       │           ├── AverageCrossSpectrum.html
+│   │       │           ├── AveragePowerSpectrum.html
+│   │       │           ├── Bispectrum.html
+│   │       │           ├── CrossSpectrum.html
+│   │       │           ├── LightCurve.html
+│   │       │           ├── PowerColors.html
+│   │       │           └── PowerSpectrum.html
+│   │       ├── _sources
+│   │       │   ├── DataLoading.rst.txt
+│   │       │   ├── Home.rst.txt
+│   │       │   ├── QuickLook.rst.txt
+│   │       │   ├── index.rst.txt
+│   │       │   └── modules.rst.txt
+│   │       ├── _static
+│   │       │   ├── _sphinx_javascript_frameworks_compat.js
+│   │       │   ├── basic.css
+│   │       │   ├── css
+│   │       │   │   ├── badge_only.css
+│   │       │   │   ├── fonts
+│   │       │   │   │   ├── Roboto-Slab-Bold.woff
+│   │       │   │   │   ├── Roboto-Slab-Bold.woff2
+│   │       │   │   │   ├── Roboto-Slab-Regular.woff
+│   │       │   │   │   ├── Roboto-Slab-Regular.woff2
+│   │       │   │   │   ├── fontawesome-webfont.eot
+│   │       │   │   │   ├── fontawesome-webfont.svg
+│   │       │   │   │   ├── fontawesome-webfont.ttf
+│   │       │   │   │   ├── fontawesome-webfont.woff
+│   │       │   │   │   ├── fontawesome-webfont.woff2
+│   │       │   │   │   ├── lato-bold-italic.woff
+│   │       │   │   │   ├── lato-bold-italic.woff2
+│   │       │   │   │   ├── lato-bold.woff
+│   │       │   │   │   ├── lato-bold.woff2
+│   │       │   │   │   ├── lato-normal-italic.woff
+│   │       │   │   │   ├── lato-normal-italic.woff2
+│   │       │   │   │   ├── lato-normal.woff
+│   │       │   │   │   └── lato-normal.woff2
+│   │       │   │   └── theme.css
+│   │       │   ├── doctools.js
+│   │       │   ├── documentation_options.js
+│   │       │   ├── file.png
+│   │       │   ├── fonts
+│   │       │   │   ├── Lato
+│   │       │   │   │   ├── lato-bold.eot
+│   │       │   │   │   ├── lato-bold.ttf
+│   │       │   │   │   ├── lato-bold.woff
+│   │       │   │   │   ├── lato-bold.woff2
+│   │       │   │   │   ├── lato-bolditalic.eot
+│   │       │   │   │   ├── lato-bolditalic.ttf
+│   │       │   │   │   ├── lato-bolditalic.woff
+│   │       │   │   │   ├── lato-bolditalic.woff2
+│   │       │   │   │   ├── lato-italic.eot
+│   │       │   │   │   ├── lato-italic.ttf
+│   │       │   │   │   ├── lato-italic.woff
+│   │       │   │   │   ├── lato-italic.woff2
+│   │       │   │   │   ├── lato-regular.eot
+│   │       │   │   │   ├── lato-regular.ttf
+│   │       │   │   │   ├── lato-regular.woff
+│   │       │   │   │   └── lato-regular.woff2
+│   │       │   │   └── RobotoSlab
+│   │       │   │       ├── roboto-slab-v7-bold.eot
+│   │       │   │       ├── roboto-slab-v7-bold.ttf
+│   │       │   │       ├── roboto-slab-v7-bold.woff
+│   │       │   │       ├── roboto-slab-v7-bold.woff2
+│   │       │   │       ├── roboto-slab-v7-regular.eot
+│   │       │   │       ├── roboto-slab-v7-regular.ttf
+│   │       │   │       ├── roboto-slab-v7-regular.woff
+│   │       │   │       └── roboto-slab-v7-regular.woff2
+│   │       │   ├── jquery.js
+│   │       │   ├── js
+│   │       │   │   ├── badge_only.js
+│   │       │   │   ├── theme.js
+│   │       │   │   └── versions.js
+│   │       │   ├── language_data.js
+│   │       │   ├── minus.png
+│   │       │   ├── plus.png
+│   │       │   ├── pygments.css
+│   │       │   ├── searchtools.js
+│   │       │   └── sphinx_highlight.js
+│   │       ├── genindex.html
+│   │       ├── index.html
+│   │       ├── modules.html
+│   │       ├── objects.inv
+│   │       ├── py-modindex.html
+│   │       ├── search.html
+│   │       └── searchindex.js
+│   ├── files
+│   │   └── loaded-data
+│   ├── make.bat
+│   ├── requirements.txt
+│   └── source
+│       ├── DataLoading.rst
+│       ├── Home.rst
+│       ├── QuickLook.rst
+│       ├── _static
+│       ├── _templates
+│       ├── conf.py
+│       ├── index.rst
+│       └── modules.rst
+├── environment.yml
 ├── explorer.py
 ├── files
-│   ├── data
-│   └── loaded-data
+│   ├── data
+│   │   ├── LightCurve_bexvar.fits
+│   │   ├── data_small.hdf5
+│   │   ├── data_smaller.hdf5
+│   │   ├── lcurveA.fits
+│   │   ├── lcurve_new.fits
+│   │   ├── monol_testA.evt
+│   │   ├── monol_testA_calib.evt
+│   │   ├── monol_testA_calib_unsrt.evt
+│   │   ├── nomission.evt
+│   │   ├── xte_gx_test.evt.gz
+│   │   └── xte_test.evt.gz
+│   └── loaded-data
 ├── modules
-│   ├── DataLoading
-│   │   ├── DataIngestion.py
-│   ├── Home
-│   │   ├── HomeContent.py
-│   └── QuickLook
-│       ├── AverageCrossSpectrum.py
-│       ├── AveragePowerSpectrum.py
-│       ├── CrossSpectrum.py
-│       ├── LightCurve.py
-│       ├── PowerSpectrum.py
-├── utils
+│   ├── DataLoading
+│   │   ├── DataIngestion.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       ├── DataIngestion.cpython-311.pyc
+│   │       └── __init__.cpython-311.pyc
+│   ├── Home
+│   │   ├── HomeContent.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       ├── Home.cpython-311.pyc
+│   │       ├── HomeContent.cpython-311.pyc
+│   │       └── __init__.cpython-311.pyc
+│   └── QuickLook
+│       ├── AverageCrossSpectrum.py
+│       ├── AveragePowerSpectrum.py
+│       ├── Bispectrum.py
+│       ├── CrossSpectrum.py
+│       ├── LightCurve.py
+│       ├── PowerColors.py
+│       ├── PowerSpectrum.py
+│       ├── __init__.py
+│       └── __pycache__
+│           ├── AverageCrossSpectrum.cpython-311.pyc
+│           ├── AveragePowerSpectrum.cpython-311.pyc
+│           ├── Bispectrum.cpython-311.pyc
+│           ├── CrossSpectrum.cpython-311.pyc
+│           ├── LightCurve.cpython-311.pyc
+│           ├── PowerColors.cpython-311.pyc
+│           ├── PowerSpectrum.cpython-311.pyc
+│           └── __init__.cpython-311.pyc
+├── pyproject.toml
+├── setup.py
+├── tests
+│   ├── test_dataloading
+│   │   ├── __pycache__
+│   │   │   └── test_dataingestion.cpython-311-pytest-8.2.1.pyc
+│   │   └── test_dataingestion.py
+│   ├── test_quicklook
+│   └── test_utils
+└── utils
     ├── DashboardClasses.py
+    ├── __pycache__
+    │   ├── dashboardClasses.cpython-311.pyc
+    │   ├── globals.cpython-311.pyc
+    │   ├── sidebar.cpython-311.pyc
+    │   └── strings.cpython-311.pyc
     ├── globals.py
     ├── sidebar.py
     └── strings.py
+
+47 directories, 162 files
 ```
 
 ## Installation
