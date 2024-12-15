@@ -398,18 +398,15 @@ class HelpBox(pn.viewable.Viewer):
 class Footer(pn.viewable.Viewer):
     """
     Footer class represents the footer section of the dashboard.
-    It includes the main content, additional links, and icon buttons.
+    It includes the main content, additional links, and logo.
     """
 
-    # Parameters for the main content, additional links, and icons in the footer
+    # Parameters for the main content and additional links in the footer
     main_content: str = param.String(
         default="", doc="Main content to display in the footer", allow_refs=True
     )
     additional_links: List[str] = param.List(
         default=[], doc="List of additional links as markdown strings", allow_refs=True
-    )
-    icons: List[pn.viewable.Viewer] = param.List(
-        default=[], doc="List of icon buttons", allow_refs=True
     )
 
     def __init__(self, **params):
@@ -420,12 +417,13 @@ class Footer(pn.viewable.Viewer):
 
     def __panel__(self):
         """
-        Returns the Panel layout for the footer, including logo, name, links, icons, and contact information.
+        Returns the Panel layout for the footer, including logo, name, links, and contact information.
         """
+        # Logo
         logo = pn.pane.PNG(
             "../assets/images/stingray_explorer.png",
-            width=100,
-            height=100,
+            width=120,
+            height=120,
             align="center",
         )
         name = pn.pane.Markdown("Stingray Explorer", align="center")
@@ -438,22 +436,22 @@ class Footer(pn.viewable.Viewer):
             align_items="center",
         )
 
-        links = [pn.pane.Markdown(link) for link in self.additional_links]
+        # Convert Markdown links to HTML with target="_blank"
+        html_links = [
+            pn.pane.HTML(
+                f'<a href="{link.split("(")[1][:-1]}" target="_blank">{link.split("[")[1].split("]")[0]}</a>'
+            )
+            for link in self.additional_links
+        ]
 
         links_pane = pn.FlexBox(
-            *links,
+            *html_links,
             flex_direction="column",
-            justify_content="center",
+            justify_content="flex-start",
             align_items="center",
         )
 
-        icons_pane = pn.FlexBox(
-            *self.icons,
-            flex_direction="column",
-            justify_content="center",
-            align_items="center",
-        )
-
+        # Contact Us Pane
         contact_us_pane = pn.FlexBox(
             pn.pane.Markdown("Email: kartik4321mandar@gmail.com"),
             pn.pane.Markdown("Slack: @kartikmandar"),
@@ -462,16 +460,17 @@ class Footer(pn.viewable.Viewer):
             align_items="center",
         )
 
+        # Copyright Pane
         copyright_pane = pn.pane.Markdown(
             """
-            &copy; 2024, Stingray. All rights reserved.
+            &copy; 2025 Stingray Explorer. All rights reserved.
             """,
         )
 
+        # Pane Layouts
         pane1 = pn.FlexBox(
             logo_name_pane,
             links_pane,
-            icons_pane,
             flex_direction="row",
             justify_content="space-between",
             align_items="center",
@@ -491,6 +490,7 @@ class Footer(pn.viewable.Viewer):
             align_items="center",
         )
 
+        # Final Footer Layout
         footer = pn.FlexBox(
             pane1,
             pane2,
@@ -501,6 +501,7 @@ class Footer(pn.viewable.Viewer):
         )
 
         return footer
+
 
 
 # Custom warning handler

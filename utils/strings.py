@@ -48,9 +48,11 @@ Watch the video tutorial below for a detailed walkthrough:
 
 ### Additional Resources
 
-- [Stingray Library Documentation](https://stingray.readthedocs.io/)
-- [Holoviz Documentation](https://holoviz.org/)
-- [Dashboard additonal information](https://www.kartikmandar.com/gsoc-2024/stingray-explorer)
+- <a href="https://stingray.readthedocs.io/" target="_blank">Stingray Library Documentation</a>
+- <a href="https://holoviz.org/" target="_blank">Holoviz Documentation</a>
+- <a href="https://www.kartikmandar.com/gsoc-2024/stingray-explorer" target="_blank">Dashboard additional information</a>
+- <a href="https://stingrayexplorer.readthedocs.io/en/latest/" target="_blank">Read the Docs</a>
+
 
 For any issues or queries, feel free to reach out via the Stingray Slack channel or by email.
 
@@ -240,18 +242,63 @@ HoloViz tools provide extensive support for Jupyter notebooks, as well as for st
 """
 
 HOME_DASHBOARD_TAB_STRING = """
-<h2> Stingray Explorer </h2>
+<h2> Dashboard Overview </h2>
 
 ![Stingray-Explorer-logo](../assets/images/stingray_explorer_minimised.png)
 
-This dashboard is designed to provide a comprehensive toolset for X-ray astronomy data analysis. For now the dashboard provided quicklook features like generating an EventList, loading an EvenList, and generating a lightcurve from the EventList. 
+The Dashboard tab in Stingray Explorer provides a unified interface for interactive exploration and analysis of X-ray astronomical data. It enables users to leverage advanced Fourier and time-series analysis tools seamlessly integrated with visualization capabilities.
+
+### Core Functionalities
+- **Time-Series Analysis**:
+  - Quickly generate and visualize light curves from event data.
+  - Apply Good Time Intervals (GTIs) to refine observations.
+  - Perform segment-based and aggregated analysis for improved insights.
+
+- **Fourier Analysis Tools**:
+  - Generate Power Spectra to understand frequency-domain properties of data.
+  - Compute Cross Spectra and Averaged Cross Spectra to study relationships between datasets.
+  - Explore advanced metrics like Bispectrum for higher-order analysis.
+
+- **Visualization Features**:
+  - Dynamically create floating plots for independent exploration.
+  - Customize visualization parameters such as binning, normalization, and plotting styles.
+
+- **Interactive Widgets**:
+  - Use dropdowns, sliders, and checkboxes to control data inputs and analysis configurations.
+  - Update plots and outputs in real time based on user interactions.
+
+- **Event Data Management**:
+  - Load, save, and manage event data files through a streamlined interface.
+  - Support for multiple formats including OGIP and HDF5.
+
+- **Output and Logging**:
+  - Dedicated panels for warnings, logs, and results ensure smooth operation and debugging.
+
+### How It Works
+- **Navigation**: Use the sidebar to switch between functionalities like Light Curve, Power Spectrum, Cross Spectrum, and more. The home button resets the main content area to the overview page.
+- **Data Loading**: The **Data Ingestion** section allows uploading event list files. Once uploaded, the files are available for subsequent analyses.
+- **Plot Interaction**: Each analysis tool outputs interactive plots. You can pan, zoom, and explore individual plots with HoloViews' intuitive interface.
+
+### Advanced Features
+- **Automated Data Handling**: Automatically load specific files during initialization to minimize setup time (e.g., `nomission.evt` and `xte_test.evt.gz`).
+- **Modularity**: The Dashboard leverages reusable components like `MainHeader`, `PlotsContainer`, and `FloatingPlot` for maintainable and scalable code.
+- **Floating Panel Integration**: Allows independent resizing and moving of visualizations to tailor the workspace to your needs.
+
+### Resources
+- Tutorials and documentation links are provided for both **Stingray** and **HoloViz** to assist users in mastering the tool.
+- Contextual help content is available in the Help Box for each section.
+
+### Example Use Cases
+1. **Light Curve Analysis**: Visualize photon arrival times, apply GTIs, and compare segments.
+2. **Frequency Domain Studies**: Identify quasi-periodic oscillations (QPOs) and perform detailed spectral timing.
+3. **Advanced Visualization**: Use Power Colors and Bispectrum plots to study nuanced data relationships.
 
 <br/>
 """
 
+
 HOME_OUTPUT_BOX_STRING = """
-This is the output container. It will display the output of the analysis tools.
-It may contain what EventLists are made, what lightcurves are generated, what power spectra are calculated, etc. It can also be used to preview the loaded EventList. 
+This is the output container. It will display the output of the analysis tools. 
 """
 
 
