@@ -1,13 +1,21 @@
-from stingray.events import EventList
-from utils.globals import loaded_event_data
-import os
-
-from matplotlib import pyplot as plt
-from matplotlib.offsetbox import AnchoredText
-import panel as pn
+# Standard Imports
 import os
 import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.offsetbox import AnchoredText
+
+# HoloViz Imports
+import panel as pn
+
+
+# Stingray Imports
+from stingray.events import EventList
 from stingray.gti import get_gti_lengths, get_btis, get_total_gti_length
+from stingray import EventList
+
+
+# Dashboard Classes and Event Data Imports
+from utils.globals import loaded_event_data
 from utils.DashboardClasses import (
     MainHeader,
     MainArea,
@@ -18,6 +26,9 @@ from utils.DashboardClasses import (
     FloatingPlot,
     PlotsContainer,
 )
+
+
+# Strings Imports
 from utils.strings import (
     HOME_HEADER_STRING,
     HOME_WELCOME_MESSAGE_STRING,
@@ -31,7 +42,6 @@ from utils.strings import (
     DASHBOARD_HELP_CONTENT
 )
 
-from stingray import EventList
 
 
 """ Header Section """
