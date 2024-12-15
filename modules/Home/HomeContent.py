@@ -31,25 +31,29 @@ from utils.DashboardClasses import (
 # Strings Imports
 from utils.strings import (
     HOME_HEADER_STRING,
-    HOME_WELCOME_MESSAGE_STRING,
-    HOME_FOOTER_STRING,
     HOME_STINGRAY_TAB_STRING,
     HOME_HOLOVIZ_TAB_STRING,
     HOME_DASHBOARD_TAB_STRING,
     HOME_OUTPUT_BOX_STRING,
     HOME_WARNING_BOX_STRING,
     HOME_HELP_BOX_STRING,
-    DASHBOARD_HELP_CONTENT
+    DASHBOARD_HELP_CONTENT,
 )
-
 
 
 """ Header Section """
 
-def create_home_header():
-    home_heading_input = pn.widgets.TextInput(
-        name="Heading", value=HOME_HEADER_STRING
-    )
+
+def create_home_header() -> MainHeader:
+    """
+    Create the header section for the home page.
+
+    Returns
+    -------
+    MainHeader
+        An instance of MainHeader with the specified heading and subheading.
+    """
+    home_heading_input = pn.widgets.TextInput(name="Heading", value=HOME_HEADER_STRING)
     home_subheading_input = pn.widgets.TextInput(
         name="Subheading", value="Stingray GUI using HoloViz"
     )
@@ -59,8 +63,19 @@ def create_home_header():
 
 """ Main Area Section """
 
-def create_home_main_area():
 
+def create_home_main_area() -> MainArea:
+    """
+    Create the main content area for the home page.
+
+    This function loads default data files into the global event data list,
+    if they are not already loaded, and defines content for tabs.
+
+    Returns
+    -------
+    MainArea
+        An instance of MainArea containing tabs with content.
+    """
     # Path to the data files
     data_dir = os.path.join(os.getcwd(), "files", "data")
     target_file1 = "nomission.evt"
@@ -98,29 +113,93 @@ def create_home_main_area():
 
 """ Output Box Section """
 
-def create_home_output_box():
+
+def create_home_output_box() -> OutputBox:
+    """
+    Create the output box section for the home page.
+
+    Returns
+    -------
+    OutputBox
+        An instance of OutputBox with predefined content.
+    """
     return OutputBox(output_content=HOME_OUTPUT_BOX_STRING)
 
+
 """ Floating Plots """
-def create_floating_plot_container(title, content):
+
+
+def create_floating_plot_container(title, content) -> FloatingPlot:
+    """
+    Create a floating plot container for the home page.
+
+    Parameters
+    ----------
+    title : str
+        The title of the floating plot.
+    content : pn.viewable.Viewer
+        The content to be displayed in the floating plot.
+
+    Returns
+    -------
+    FloatingPlot
+        An instance of FloatingPlot with the specified title and content.
+    """
     return FloatingPlot(title, content)
+
 
 """ Warning Box Section """
 
-def create_home_warning_box():
+
+def create_home_warning_box() -> WarningBox:
+    """
+    Create the warning box section for the home page.
+
+    Returns
+    -------
+    WarningBox
+        An instance of WarningBox with predefined content.
+    """
     return WarningBox(warning_content=HOME_WARNING_BOX_STRING)
 
-""" Plots Area Section Initial """
-def create_home_plots_area_initial():
-    text = pn.pane.Markdown("Not displaying the NICER analysis plots on first load as it takes time to load. Move around the dashboard and come back to home page, to see the analysis plots. The buttons to navigate are in the sidebar.")
-    return PlotsContainer(text)
 
+""" Plots Area Section Initial """
+
+
+def create_home_plots_area_initial() -> PlotsContainer:
+    """
+    Create the initial plots area for the home page.
+
+    This function displays a message instead of generating plots
+    to reduce load time on the first visit.
+
+    Returns
+    -------
+    PlotsContainer
+        An instance of PlotsContainer with a message.
+    """
+    text = pn.pane.Markdown(
+        "Not displaying the NICER analysis plots on first load as it takes time to load. Move around the dashboard and come back to home page, to see the analysis plots. The buttons to navigate are in the sidebar."
+    )
+    return PlotsContainer(text)
 
 
 """ Plots Area Section """
 
-def create_home_plots_area():
 
+def create_home_plots_area() -> PlotsContainer:
+    """
+    Create the main plots area for the home page.
+
+    This function generates multiple plots including light curves,
+    histograms of bad time intervals, and comparisons between raw
+    and filled light curves.
+
+    Returns
+    -------
+    PlotsContainer
+        An instance of PlotsContainer with various plots.
+    """
     # Path to the data files
     data_dir = os.path.join(os.getcwd(), "files", "data")
 
@@ -145,11 +224,10 @@ def create_home_plots_area():
     ax2.set_title("Axis limited Lightcurve", fontsize=16)
     axislimited_lightcurve_pane = pn.pane.Matplotlib(fig2, width=600, height=600)
 
-
     # Statistics on bad time intervals
     gti_lengths = get_gti_lengths(events.gti)
     btis = get_btis(events.gti)
-    bti_lengths = get_gti_lengths(btis) 
+    bti_lengths = get_gti_lengths(btis)
 
     fig3, ax3 = plt.subplots()
     ax3.hist(bti_lengths, bins=np.geomspace(1e-3, 10000, 30))
@@ -172,7 +250,7 @@ def create_home_plots_area():
         f"Total BTI length: {total_bti_length:.2f}\n"
         f"Total BTI length (short BTIs): {total_bti_length_short:.2f}"
     )
-    anchored_text = AnchoredText(stats_text, loc='upper right', frameon=True)
+    anchored_text = AnchoredText(stats_text, loc="upper right", frameon=True)
     anchored_text.patch.set_boxstyle("round,pad=0.3,rounding_size=0.2")
     ax3.add_artist(anchored_text)
 
@@ -210,15 +288,21 @@ def create_home_plots_area():
     lc_raw.plot(ax=ax5, axis_limits=[1.331126e8, 1.331134e8, None, None])
 
     # Manually add a label to the raw light curve plot
-    ax5.get_lines()[-1].set_label('Raw Light Curve')
-
+    ax5.get_lines()[-1].set_label("Raw Light Curve")
 
     # Modify the color of the raw light curve plot manually
     for line in ax5.get_lines():
-        line.set_color('black')
+        line.set_color("black")
 
     # Plot the filled light curve
-    ax5.plot(lc_filled.time, lc_filled.counts, color='navy', drawstyle='steps-mid', zorder=20, label='Filled Light Curve')
+    ax5.plot(
+        lc_filled.time,
+        lc_filled.counts,
+        color="navy",
+        drawstyle="steps-mid",
+        zorder=20,
+        label="Filled Light Curve",
+    )
 
     # Add a title and labels
     ax5.set_title("Comparison of Raw Light Curve and Simulated Data")
@@ -231,15 +315,30 @@ def create_home_plots_area():
     # Embed the plot into a Panel component
     comparison_plot_pane = pn.pane.Matplotlib(fig5, width=600, height=600)
 
-
-    return PlotsContainer(raw_lightcurve_pane, axislimited_lightcurve_pane, bti_plot_pane, filled_bti_plot_pane, comparison_plot_pane)
-
+    return PlotsContainer(
+        raw_lightcurve_pane,
+        axislimited_lightcurve_pane,
+        bti_plot_pane,
+        filled_bti_plot_pane,
+        comparison_plot_pane,
+    )
 
 
 """ Help Area Section """
 
 
-def create_home_help_area():
+def create_home_help_area() -> HelpBox:
+    """
+    Create the help section for the home page.
+
+    Combines the main dashboard help content with additional help
+    for specific sections.
+
+    Returns
+    -------
+    HelpBox
+        An instance of HelpBox with combined help content.
+    """
     help_content = f"{HOME_HELP_BOX_STRING}\n\n{DASHBOARD_HELP_CONTENT}"
     return HelpBox(help_content=help_content, title="Help Section")
 
@@ -247,24 +346,26 @@ def create_home_help_area():
 """ Footer Section """
 
 
-def create_home_footer():
-    icon_buttons = [
-        pn.widgets.Button(name="Icon 1", button_type="default"),
-        pn.widgets.Button(name="Icon 2", button_type="default"),
-        pn.widgets.Button(name="Icon 3", button_type="default"),
-        pn.widgets.Button(name="Icon 4", button_type="default"),
-        pn.widgets.Button(name="Icon 5", button_type="default"),
-    ]
+def create_home_footer() -> Footer:
+    """
+    Create the footer section for the home page.
+
+    Includes additional links such as Privacy Policy, Terms of Service, and Support.
+
+    Returns
+    -------
+    Footer
+        An instance of Footer with the specified content and links.
+    """
     footer_content = "© 2024 Stingray. All rights reserved."
     additional_links = [
-        "[Privacy Policy](https://example.com)",
-        "[Terms of Service](https://example.com)",
-        "[Contact Us](https://example.com)",
-        "[Support](https://example.com)",
-        "[About Us](https://example.com)",
+        "[Privacy Policy](https://github.com/StingraySoftware/StingrayExplorer/blob/main/PrivacyPolicy.md)",
+        "[Terms of Service](https://github.com/StingraySoftware/StingrayExplorer/blob/main/TermsOfService.md)",
+        "[Contact Us](https://github.com/StingraySoftware/StingrayExplorer/blob/main/ContactUs.md)",
+        "[Support](https://github.com/StingraySoftware/StingrayExplorer/blob/main/Support.md)",
+        "[About Us](https://github.com/StingraySoftware/StingrayExplorer/blob/main/AboutUs.md)",
     ]
     return Footer(
         main_content=footer_content,
         additional_links=additional_links,
-        icons=icon_buttons,
     )
