@@ -83,7 +83,7 @@ def create_sidebar(
     load_data_button = pn.widgets.Button(
         icon=LOAD_DATA_ICON_SVG,
         icon_size="20px",
-        name="Load Data",
+        name="Read Data",
         button_type="warning",
         styles={"width": "100"},
         description="Loading EventList",

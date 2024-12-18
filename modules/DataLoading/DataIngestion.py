@@ -1,12 +1,20 @@
-import panel as pn
-import asyncio
-from stingray.events import EventList
-from stingray import Lightcurve
-import warnings
+# Standard Imports
 import os
 import stat
 import numpy as np
+import warnings
 from bokeh.models import Tooltip
+
+
+# HoloViz Imports
+import panel as pn
+
+# Stingray Imports
+from stingray.events import EventList
+from stingray import Lightcurve
+from stingray.io import get_file_extension
+
+# Dashboard Classes and Event Data Imports
 from utils.globals import loaded_event_data, loaded_light_curve
 from utils.DashboardClasses import (
     MainHeader,
@@ -14,13 +22,14 @@ from utils.DashboardClasses import (
     OutputBox,
     WarningBox,
     HelpBox,
-    Footer,
     WarningHandler,
-    FloatingPlot,
     PlotsContainer,
 )
-import param
+
+# Strings Imports
 from utils.strings import LOADING_DATA_HELP_BOX_STRING
+
+
 
 # Path to the topmost directory for loaded data
 loaded_data_path = os.path.join(os.getcwd(), "files", "loaded-data")
@@ -81,7 +90,7 @@ def create_loadingdata_header(
         'Data Ingestion and creation'
     """
     home_heading_input = pn.widgets.TextInput(
-        name="Heading", value="Data Ingestion and creation"
+        name="Heading", value="Data Ingestion"
     )
     return MainHeader(heading=home_heading_input)
 
@@ -391,6 +400,12 @@ def delete_selected_files(
         >>> os.path.exists('/path/to/deleted/file')
         False  # Assuming the file was deleted successfully
     """
+    
+    # Define allowed extensions for deletion
+    allowed_extensions = {
+        ".pkl", ".pickle", ".fits", ".evt", ".h5", ".hdf5",
+        ".ecsv", ".txt", ".dat", ".csv", ".vot", ".tex", ".html"
+    }
     if not file_selector.value:
         output_box_container[:] = [
             create_loadingdata_output_box(
@@ -401,11 +416,12 @@ def delete_selected_files(
 
     file_paths = file_selector.value
     deleted_files = []
+    restricted_files = []
     for file_path in file_paths:
-        if file_path.endswith(".py"):
-            deleted_files.append(
-                f"Cannot delete file '{file_path}': Deleting .py files is not allowed."
-            )
+        # Check the file extension
+        _, ext = os.path.splitext(file_path)
+        if ext not in allowed_extensions:
+            restricted_files.append(file_path)
             continue
 
         try:
@@ -415,6 +431,17 @@ def delete_selected_files(
             deleted_files.append(f"File '{file_path}' deleted successfully.")
         except Exception as e:
             deleted_files.append(f"An error occurred while deleting '{file_path}': {e}")
+            
+    # Create messages for deleted and restricted files
+    messages = []
+    if deleted_files:
+        messages.append("\n".join(deleted_files))
+    if restricted_files:
+        messages.append(
+            "The following files were not deleted because their extensions are not allowed:\n" +
+            "\n".join(restricted_files)
+        )        
+    
     output_box_container[:] = [create_loadingdata_output_box("\n".join(deleted_files))]
     if warning_handler.warnings:
         warning_box_container[:] = [
@@ -885,7 +912,7 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
     clear_button.on_click(on_clear_click)
 
     first_column = pn.Column(
-        pn.pane.Markdown("# Load Files"),
+        pn.Row(pn.pane.Markdown("<h2> Read an EventList object from File</h2>"),pn.widgets.TooltipIcon(value=Tooltip(content="Supported Formats: pickle, hea or ogip, any other astropy.table.Table", position="center"))),
         file_selector,
         pn.Row(filename_input, tooltip_file),
         pn.Row(format_input, tooltip_format),
@@ -1077,7 +1104,7 @@ def create_loadingdata_main_area(
     """
     warning_handler = create_warning_handler()
     tabs_content = {
-        "Load Event List": create_loading_tab(
+        "Read Event List from File": create_loading_tab(
             output_box_container=output_box_container,
             warning_box_container=warning_box_container,
             warning_handler=warning_handler,

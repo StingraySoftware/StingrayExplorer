@@ -11,8 +11,6 @@ import panel as pn
 # Stingray Imports
 from stingray.events import EventList
 from stingray.gti import get_gti_lengths, get_btis, get_total_gti_length
-from stingray import EventList
-
 
 # Dashboard Classes and Event Data Imports
 from utils.globals import loaded_event_data
