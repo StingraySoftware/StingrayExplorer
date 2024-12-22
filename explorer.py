@@ -17,6 +17,7 @@ from utils.sidebar import create_sidebar
 
 # Initialize panel extension
 pn.extension('floatpanel', 'mathjax')
+pn.extension('filedropper')
 hv.extension('bokeh')
 
 # Create a boolean status indicator
