@@ -137,12 +137,14 @@ def create_loadingdata_warning_box(content):
     return WarningBox(warning_content=content)
 
 
-def load_event_data(
+def read_event_data(
     event,
     file_selector,
     filename_input,
     format_input,
     format_checkbox,
+    rmf_file_dropper,
+    additional_columns_input,
     output_box_container,
     warning_box_container,
     warning_handler,
@@ -171,7 +173,7 @@ def load_event_data(
         - Requires that the number of formats matches the number of files unless default format is used.
 
     Example:
-        >>> load_event_data(event, file_selector, filename_input, format_input, format_checkbox, ...)
+        >>> read_event_data(event, file_selector, filename_input, format_input, format_checkbox, ...)
         >>> len(loaded_event_data)
         1  # Assuming one file was loaded
     """
@@ -213,6 +215,63 @@ def load_event_data(
         ]
         return
 
+def read_event_data(
+    event,
+    file_selector,
+    filename_input,
+    format_input,
+    format_checkbox,
+    rmf_file_dropper,
+    additional_columns_input,
+    output_box_container,
+    warning_box_container,
+    warning_handler,
+):
+    """
+    Load event data from selected files with extended EventList.read functionality,
+    supporting FileDropper for RMF files and additional columns.
+    """
+    # Validation for required inputs
+    if not file_selector.value:
+        output_box_container[:] = [
+            create_loadingdata_output_box(
+                "No file selected. Please select a file to upload."
+            )
+        ]
+        return
+
+    file_paths = file_selector.value
+    filenames = (
+        [name.strip() for name in filename_input.value.split(",")]
+        if filename_input.value
+        else []
+    )
+    formats = (
+        [fmt.strip() for fmt in format_input.value.split(",")]
+        if format_input.value
+        else []
+    )
+
+    if format_checkbox.value:
+        formats = ["ogip" for _ in range(len(file_paths))]
+
+    # Parse optional RMF file from FileDropper
+    rmf_file = None
+    if rmf_file_dropper.value:
+        # Retrieve the uploaded RMF file
+        rmf_file_name, rmf_file_bytes = list(rmf_file_dropper.value.items())[0]
+        rmf_file_path = os.path.join(loaded_data_path, rmf_file_name)
+        with open(rmf_file_path, "wb") as f:
+            f.write(rmf_file_bytes)
+        rmf_file = rmf_file_path
+
+    # Parse additional columns
+    additional_columns = (
+        [col.strip() for col in additional_columns_input.value.split(",")]
+        if additional_columns_input.value
+        else None
+    )
+
     try:
         loaded_files = []
         for file_path, file_name, file_format in zip(file_paths, filenames, formats):
@@ -224,7 +283,7 @@ def load_event_data(
                 ]
                 return
 
-            event_list = EventList.read(file_path, file_format)
+            event_list = EventList.read(file_path, fmt=file_format, rmf_file=rmf_file, additional_columns=additional_columns)
             loaded_event_data.append((file_name, event_list))
             loaded_files.append(
                 f"File '{file_path}' loaded successfully as '{file_name}' with format '{file_format}'."
@@ -404,7 +463,7 @@ def delete_selected_files(
     # Define allowed extensions for deletion
     allowed_extensions = {
         ".pkl", ".pickle", ".fits", ".evt", ".h5", ".hdf5",
-        ".ecsv", ".txt", ".dat", ".csv", ".vot", ".tex", ".html"
+        ".ecsv", ".txt", ".dat", ".csv", ".vot", ".tex", ".html", ".gz"
     }
     if not file_selector.value:
         output_box_container[:] = [
@@ -416,12 +475,12 @@ def delete_selected_files(
 
     file_paths = file_selector.value
     deleted_files = []
-    restricted_files = []
     for file_path in file_paths:
-        # Check the file extension
-        _, ext = os.path.splitext(file_path)
-        if ext not in allowed_extensions:
-            restricted_files.append(file_path)
+        
+        if not any(file_path.endswith(ext) for ext in allowed_extensions):
+            deleted_files.append(
+                f"Cannot delete file '{file_path}': File type is not allowed for deletion."
+            )
             continue
 
         try:
@@ -431,17 +490,6 @@ def delete_selected_files(
             deleted_files.append(f"File '{file_path}' deleted successfully.")
         except Exception as e:
             deleted_files.append(f"An error occurred while deleting '{file_path}': {e}")
-            
-    # Create messages for deleted and restricted files
-    messages = []
-    if deleted_files:
-        messages.append("\n".join(deleted_files))
-    if restricted_files:
-        messages.append(
-            "The following files were not deleted because their extensions are not allowed:\n" +
-            "\n".join(restricted_files)
-        )        
-    
     output_box_container[:] = [create_loadingdata_output_box("\n".join(deleted_files))]
     if warning_handler.warnings:
         warning_box_container[:] = [
@@ -796,8 +844,12 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
         >>> isinstance(tab, pn.Column)
         True
     """
+    
+    # Get the user's home directory
+    home_directory = os.path.expanduser("~")
+    
     file_selector = pn.widgets.FileSelector(
-        os.getcwd(), only_files=True, name="Select File", show_hidden=True
+        home_directory, only_files=True, name="Select File", show_hidden=True
     )
     filename_input = pn.widgets.TextInput(
         name="Enter File Names",
@@ -810,7 +862,7 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
         width=400,
     )
     format_checkbox = pn.widgets.Checkbox(
-        name="Use default format (ogip for loading, hdf5 for saving)", value=False
+        name="Use default format (\"ogip\" for reading, \"hdf5\" for writing/saving)", value=False
     )
     load_button = pn.widgets.Button(name="Load Event Data", button_type="primary")
     save_button = pn.widgets.Button(name="Save Loaded Data", button_type="success")
@@ -835,6 +887,34 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
             position="bottom",
         )
     )
+    
+    tooltip_rmf = pn.widgets.TooltipIcon(
+        value=Tooltip(
+            content="""for energy calibration""",
+            position="bottom",
+        )
+    )
+    
+    tooltip_additional_columns = pn.widgets.TooltipIcon(
+        value=Tooltip(
+            content="""further keyword arguments to be passed to OGIP/HEASOFT format""", 
+            position="bottom",
+        )
+    )
+    
+    # FileDropper for RMF file
+    rmf_file_dropper = pn.widgets.FileDropper(
+        accepted_filetypes=[".rmf", ".fits"],  # Accept RMF files or compatible FITS files
+        multiple=False,  # Only allow a single file
+        name="Upload RMF File (optional)",
+        max_file_size="1000MB",  # Limit file size
+        layout="integrated",  # Layout style
+    )
+    
+    additional_columns_input = pn.widgets.TextInput(
+    name="Additional Columns (optional)", placeholder="Comma-separated column names"
+    )
+
 
     def on_load_click(event):
         # Clear previous outputs and warnings
@@ -843,12 +923,14 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
         warning_handler.warnings.clear()
         warnings.resetwarnings()
 
-        load_event_data(
+        read_event_data(
             event,
             file_selector,
             filename_input,
             format_input,
             format_checkbox,
+            rmf_file_dropper,
+            additional_columns_input,
             output_box_container,
             warning_box_container,
             warning_handler,
@@ -912,11 +994,13 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
     clear_button.on_click(on_clear_click)
 
     first_column = pn.Column(
-        pn.Row(pn.pane.Markdown("<h2> Read an EventList object from File</h2>"),pn.widgets.TooltipIcon(value=Tooltip(content="Supported Formats: pickle, hea or ogip, any other astropy.table.Table", position="center"))),
+        pn.Row(pn.pane.Markdown("<h2> Read an EventList object from File</h2>"),pn.widgets.TooltipIcon(value=Tooltip(content="Supported Formats: pickle, hea or ogip, any other astropy.table.Table", position="bottom"))),
         file_selector,
         pn.Row(filename_input, tooltip_file),
         pn.Row(format_input, tooltip_format),
         format_checkbox,
+        pn.Row(rmf_file_dropper, tooltip_rmf),
+        pn.Row(additional_columns_input, tooltip_additional_columns),
         pn.Row(load_button, save_button, delete_button, preview_button, clear_button),
         pn.pane.Markdown("<br/>"),
         width_policy="min",
