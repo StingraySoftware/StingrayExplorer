@@ -337,8 +337,12 @@ def create_home_help_area() -> HelpBox:
     HelpBox
         An instance of HelpBox with combined help content.
     """
-    help_content = f"{HOME_HELP_BOX_STRING}\n\n{DASHBOARD_HELP_CONTENT}"
-    return HelpBox(help_content=help_content, title="Help Section")
+    
+    tabs_content = {
+        "1st": pn.pane.Markdown("")
+    }
+    # help_content = f"{HOME_HELP_BOX_STRING}\n\n{DASHBOARD_HELP_CONTENT}"
+    return HelpBox(tabs_content=tabs_content, title="Help Section")
 
 
 """ Footer Section """

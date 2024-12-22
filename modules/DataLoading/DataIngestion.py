@@ -255,15 +255,9 @@ def read_event_data(
     if format_checkbox.value:
         formats = ["ogip" for _ in range(len(file_paths))]
 
-    # Parse optional RMF file from FileDropper
-    rmf_file = None
+    # Retrieve the RMF file from FileDropper (if any)
     if rmf_file_dropper.value:
-        # Retrieve the uploaded RMF file
-        rmf_file_name, rmf_file_bytes = list(rmf_file_dropper.value.items())[0]
-        rmf_file_path = os.path.join(loaded_data_path, rmf_file_name)
-        with open(rmf_file_path, "wb") as f:
-            f.write(rmf_file_bytes)
-        rmf_file = rmf_file_path
+        rmf_file = rmf_file_dropper.value
 
     # Parse additional columns
     additional_columns = (
@@ -282,8 +276,12 @@ def read_event_data(
                     )
                 ]
                 return
-
-            event_list = EventList.read(file_path, fmt=file_format, rmf_file=rmf_file, additional_columns=additional_columns)
+            # Handle rmf_file separately for 'hea' or 'ogip' formats
+            if file_format in ("hea", "ogip"):
+                event_list = EventList.read(file_path, fmt=file_format, additional_columns=additional_columns)
+            else:
+                # Directly pass rmf_file content for other formats
+                event_list = EventList.read(file_path, fmt=file_format, rmf_file=rmf_file,additional_columns=additional_columns)
             loaded_event_data.append((file_name, event_list))
             loaded_files.append(
                 f"File '{file_path}' loaded successfully as '{file_name}' with format '{file_format}'."
@@ -540,7 +538,19 @@ def preview_loaded_files(
                 time_data = f"Times (first {time_limit}): {event_list.time[:time_limit]}"
                 mjdref = f"MJDREF: {event_list.mjdref}"
                 gti = f"GTI: {event_list.gti}"
-                preview_data.append(f"Event List - {file_name}:\n{time_data}\n{mjdref}\n{gti}\n")
+                pi_data = (
+                    f"PI (first {time_limit}): {event_list.pi[:time_limit]}"
+                    if event_list.pi is not None
+                    else "PI: Not available"
+                )
+                energy_data = (
+                    f"Energy (first {time_limit}): {event_list.energy[:time_limit]}"
+                    if event_list.energy is not None
+                    else "Energy: Not available"
+                )
+                preview_data.append(
+                    f"Event List - {file_name}:\n{time_data}\n{mjdref}\n{gti}\n{pi_data}\n{energy_data}\n"
+                )
             except Exception as e:
                 warning_handler.warn(str(e), category=RuntimeWarning)
 
@@ -864,19 +874,19 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
     format_checkbox = pn.widgets.Checkbox(
         name="Use default format (\"ogip\" for reading, \"hdf5\" for writing/saving)", value=False
     )
-    load_button = pn.widgets.Button(name="Load Event Data", button_type="primary")
-    save_button = pn.widgets.Button(name="Save Loaded Data", button_type="success")
+    load_button = pn.widgets.Button(name="Read as EventLists", button_type="primary")
+    save_button = pn.widgets.Button(name="Save loaded EventLists", button_type="success")
     delete_button = pn.widgets.Button(
         name="Delete Selected Files", button_type="danger"
     )
     preview_button = pn.widgets.Button(
-        name="Preview Loaded Files", button_type="default"
+        name="Preview loaded EventLists", button_type="default"
     )
-    clear_button = pn.widgets.Button(name="Clear Loaded Files", button_type="warning")
+    clear_button = pn.widgets.Button(name="Clear Loaded EventLists", button_type="warning")
 
     tooltip_format = pn.widgets.TooltipIcon(
         value=Tooltip(
-            content="""For HEASoft-supported missions, use 'ogip'. Using 'fits' directly might cause issues with Astropy tables. default = ogip (for reading), hdf5 (for saving)""",
+            content="""For HEASoft-supported missions, use 'ogip'. Using 'fits' directly might cause issues with Astropy tables.""",
             position="bottom",
         )
     )
@@ -890,25 +900,25 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
     
     tooltip_rmf = pn.widgets.TooltipIcon(
         value=Tooltip(
-            content="""for energy calibration""",
+            content="""Calibrates PI(Pulse invariant) values to physical energy.""",
             position="bottom",
         )
     )
     
     tooltip_additional_columns = pn.widgets.TooltipIcon(
         value=Tooltip(
-            content="""further keyword arguments to be passed to OGIP/HEASOFT format""", 
+            content="""Any further keyword arguments to be passed for reading in event lists in OGIP/HEASOFT format""", 
             position="bottom",
         )
     )
     
     # FileDropper for RMF file
     rmf_file_dropper = pn.widgets.FileDropper(
-        accepted_filetypes=[".rmf", ".fits"],  # Accept RMF files or compatible FITS files
+        # accepted_filetypes=['.rmf', '.fits'],  # Accept RMF files or compatible FITS files
         multiple=False,  # Only allow a single file
-        name="Upload RMF File (optional)",
+        name="Upload RMF(Response Matrix File) File (optional)",
         max_file_size="1000MB",  # Limit file size
-        layout="integrated",  # Layout style
+        layout="compact",  # Layout style
     )
     
     additional_columns_input = pn.widgets.TextInput(
@@ -994,14 +1004,15 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
     clear_button.on_click(on_clear_click)
 
     first_column = pn.Column(
-        pn.Row(pn.pane.Markdown("<h2> Read an EventList object from File</h2>"),pn.widgets.TooltipIcon(value=Tooltip(content="Supported Formats: pickle, hea or ogip, any other astropy.table.Table", position="bottom"))),
+        pn.Row(pn.pane.Markdown("<h2> Read an EventList object from File</h2>"),pn.widgets.TooltipIcon(value=Tooltip(content="Supported Formats: pickle, hea or ogip, any other astropy.table.Table(ascii.ecsv, hdf5, etc.)", position="bottom"))),
         file_selector,
         pn.Row(filename_input, tooltip_file),
         pn.Row(format_input, tooltip_format),
         format_checkbox,
         pn.Row(rmf_file_dropper, tooltip_rmf),
         pn.Row(additional_columns_input, tooltip_additional_columns),
-        pn.Row(load_button, save_button, delete_button, preview_button, clear_button),
+        pn.Row(load_button, save_button, delete_button),
+        pn.Row(preview_button, clear_button),
         pn.pane.Markdown("<br/>"),
         width_policy="min",
     )
@@ -1213,14 +1224,215 @@ def create_loadingdata_help_area():
 
     Returns:
         HelpBox: An instance of HelpBox with the help content.
-
-    Example:
-        >>> help_area = create_loadingdata_help_area()
-        >>> isinstance(help_area, HelpBox)
-        True
     """
-    help_content = LOADING_DATA_HELP_BOX_STRING
-    return HelpBox(help_content=help_content, title="Help Section")
+    
+        # Content for "Introduction to Event Lists"
+    intro_content = """
+    ## Introduction to Event Lists
+
+    ### What are Event Lists?
+
+    In X-ray astronomy, an **Event List** represents a record of individual photon detection events as observed by a telescope. Each event corresponds to the detection of a photon and includes attributes like:
+    - **Time of Arrival (TOA)**: The exact time when the photon was detected.
+    - **Photon Energy**: Derived from the pulse height or energy channel recorded.
+    - **Good Time Intervals (GTIs)**: Periods during which the instrument was actively recording valid data.
+    - **Pulse Invariant (PI) Channel**: A standardized representation of photon energy.
+
+    Event Lists are typically the starting point for data analysis in high-energy astrophysics. They provide unbinned, high-precision information about individual photon arrivals, enabling various scientific analyses such as timing, spectral, and correlation studies.
+
+    ### Scientific Significance of Event Lists
+
+    Event Lists allow astronomers to study the variability of astrophysical sources across a wide range of timescales:
+    - **Fast Transients**: Sources like X-ray bursts, magnetar flares, or fast radio bursts, which brighten and dim on millisecond-to-minute scales.
+    - **Quasi-Periodic Oscillations (QPOs)**: Oscillations in black hole and neutron star systems that vary unpredictably around a central frequency.
+    - **Stochastic Variability**: Random fluctuations in brightness, often associated with accretion processes.
+
+    Additionally, Event Lists are fundamental for studying:
+    - **Time Lags**: Delays between high- and low-energy photon emissions due to processes like reflection or turbulent flows in accretion disks.
+    - **Spectral Timing**: Techniques that combine time and energy data to probe the physical processes near compact objects.
+
+    ### Anatomy of an Event List
+
+    An Event List is often stored as a FITS (Flexible Image Transport System) file, with each row in the table corresponding to a single detected photon. The table contains columns for various attributes:
+    - **Time**: Precise timestamp of the event (e.g., in seconds or Modified Julian Date).
+    - **Energy or PI Channel**: Photon energy or pulse invariant channel.
+    - **GTIs**: Intervals of valid observation time.
+    - **Spatial Information** (optional): Detector coordinates or celestial coordinates.
+
+    ### How Event Lists are Used
+
+    Event Lists are typically processed and filtered to remove invalid events or background noise. They can then be converted into:
+    - **Light Curves**: Binned time series of photon counts.
+    - **Spectra**: Energy distributions of detected photons.
+    - **Power Spectra**: Frequency-domain representations of variability.
+
+    ### Key Terms in Event Lists
+
+    - **Photon Time of Arrival (TOA)**: The recorded time when a photon hits the detector.
+    - **Good Time Intervals (GTIs)**: Periods when the instrument was actively recording valid data.
+    - **Pulse Invariant (PI) Channel**: A detector-specific channel number that maps to the photon’s energy.
+    - **RMF File**: Response Matrix File, used to calibrate PI channels into physical energy values (e.g., keV).
+    - **FITS Format**: The standard file format for Event Lists in high-energy astrophysics.
+
+    ### Example: Event List Data Structure
+
+    A typical Event List in FITS format contains columns like:
+    ```
+    TIME      PI      ENERGY   GTI
+    ---------------------------------
+    0.0012    12      2.3 keV  [0, 100]
+    0.0034    15      3.1 keV  [0, 100]
+    0.0048    10      1.8 keV  [0, 100]
+    ```
+
+    ### Advantages of Event Lists
+    - **High Precision**: Tracks individual photon events without binning, preserving maximum information.
+    - **Flexibility**: Can be transformed into various forms (e.g., light curves, spectra) for different analyses.
+    - **Time-Energy Data**: Enables advanced spectral-timing techniques.
+
+    ### Challenges and Considerations
+    - **Dead Time**: Time intervals when the detector cannot record new events, affecting variability measurements.
+    - **Instrumental Noise**: False events caused by electronics or background radiation.
+    - **Time Resolution**: Limited by the instrument's precision in recording photon arrival times.
+
+    By understanding Event Lists, astronomers gain insight into the underlying physical processes driving variability in high-energy astrophysical sources.
+
+    ### References
+    - van der Klis, M. (2006). "Rapid X-ray Variability."
+    - Miniutti, G., et al. (2019). "Quasi-Periodic Eruptions in AGN."
+    - Galloway, D., & Keek, L. (2021). "X-ray Bursts: Physics and Observations."
+    - HEASARC Guidelines for FITS Event List Formats.
+    <br><br>
+    """
+    
+    
+    eventlist_read_content = """
+    ## Reading EventList
+
+    The `EventList.read` method is used to read event data files and load them as `EventList` objects in Stingray. 
+    This process involves parsing photon event data, such as arrival times, PI (Pulse Invariant) channels, and energy values.
+
+    ### Supported File Formats
+    - **`pickle`**: Serialized Python objects (not recommended for long-term storage).
+    - **`hea`** / **`ogip`**: FITS event files (commonly used in X-ray astronomy).
+    - **Other Table-supported formats**: e.g., `hdf5`, `ascii.ecsv`, etc.
+
+    ### Parameters
+    - **`filename` (str)**: Path to the file containing the event data.
+    - **`fmt` (str)**: File format. Supported formats include:
+      - `'pickle'`
+      - `'hea'` or `'ogip'`
+      - Table-compatible formats like `'hdf5'`, `'ascii.ecsv'`.
+      - If `fmt` is not specified, the method attempts to infer the format based on the file extension.
+    - **`rmf_file` (str, default=None)**:
+      - Path to the RMF (Response Matrix File) for energy calibration.
+      - Behavior:
+        1. **If `fmt="hea"` or `fmt="ogip"`**:
+           - `rmf_file` is ignored during the `read` process.
+           - You must apply it manually after loading using `convert_pi_to_energy`.
+        2. **If `fmt` is not `hea` or `ogip`**:
+           - `rmf_file` can be directly specified in the `read` method for automatic energy calibration.
+    - **`kwargs` (dict)**:
+      - Additional parameters passed to the FITS reader (`load_events_and_gtis`) for reading OGIP/HEASOFT-compatible event lists.
+      - Example: `additional_columns` for specifying extra data columns to read.
+
+    ### Attributes in the Loaded EventList
+    - **`time`**: Array of photon arrival times in seconds relative to `mjdref`.
+    - **`energy`**: Array of photon energy values (if calibrated using `rmf_file`).
+    - **`pi`**: Array of Pulse Invariant (PI) channels.
+    - **`mjdref`**: Reference time (Modified Julian Date).
+    - **`gtis`**: Good Time Intervals, defining valid observation periods.
+
+    ### Stingray Classes and Functions in Use
+    Below are the key classes and methods from Stingray that are used during this process:
+
+    #### Class: `EventList`
+    ```python
+    from stingray.events import EventList
+
+    class EventList:
+        def __init__(self, time=None, energy=None, pi=None, gti=None, mjdref=0, rmf_file=None):
+            # Initializes the event list with time, energy, PI channels, and other parameters
+    ```
+
+    #### Method: `EventList.read`
+    ```python
+    @classmethod
+    def read(cls, filename, fmt=None, rmf_file=None, **kwargs):
+        if fmt in ("hea", "ogip"):
+            evt = FITSTimeseriesReader(filename, output_class=EventList, **kwargs)[:]
+            if rmf_file:
+                evt.convert_pi_to_energy(rmf_file)  # Must be applied manually for hea/ogip
+            return evt
+        return super().read(filename, fmt=fmt)
+    ```
+
+    #### Function: `convert_pi_to_energy`
+    ```python
+    def convert_pi_to_energy(self, rmf_file):
+        self.energy = pi_to_energy(self.pi, rmf_file)
+    ```
+
+    ### Example Usage
+    ```python
+    from stingray.events import EventList
+
+    # Reading an OGIP-compatible FITS file
+    event_list = EventList.read("example.evt", fmt="ogip")
+
+    # Applying RMF manually after reading
+    event_list.convert_pi_to_energy("example.rmf")
+
+    # Reading an HDF5 file with direct RMF calibration
+    event_list = EventList.read("example.hdf5", fmt="hdf5", rmf_file="example.rmf")
+
+    # Accessing attributes
+    print(event_list.time)     # Photon arrival times
+    print(event_list.energy)   # Calibrated energy values (if rmf_file used)
+    print(event_list.pi)       # PI channels
+    print(event_list.gtis)     # Good Time Intervals
+    ```
+
+    ### Important Notes
+    1. **FITS Event Files (`hea` or `ogip`)**:
+       - `rmf_file` must be applied manually after loading:
+         ```python
+         event_list.convert_pi_to_energy("example.rmf")
+         ```
+    2. **Energy Calibration**:
+       - Ensure the file contains PI channel data for energy calibration.
+       - Without PI channels, RMF calibration will not work, and energy values will remain `None`.
+    3. **Good Time Intervals (GTIs)**:
+       - GTIs define valid observation periods and are automatically extracted from compatible files.
+
+    ### Common Issues
+    - **Unsupported File Format**:
+      Ensure the file extension and format (`fmt`) match.
+    - **Energy Not Calibrated**:
+      Check for PI channels and provide an RMF file if needed.
+    - **Missing Columns**:
+      For OGIP/HEASOFT-compatible files, ensure required columns (e.g., `time`, `PI`) are available.
+
+    ### Additional Parameters for Advanced Use
+    - **`additional_columns`**:
+      Specify extra columns to read from the file.
+      Example:
+      ```python
+      event_list = EventList.read("example.fits", fmt="hea", additional_columns=["detector_id"])
+      ```
+      
+      <br><br>
+    """
+
+    # Create the help box
+    return HelpBox(
+        title="Help Section",
+        tabs_content={
+            "Event Lists": pn.pane.Markdown(intro_content),
+            "Reading EventList": pn.pane.Markdown(eventlist_read_content),
+        },
+    )
+
 
 
 def create_loadingdata_plots_area():

@@ -369,15 +369,15 @@ class PlotsContainer(pn.viewable.Viewer):
 
 class HelpBox(pn.viewable.Viewer):
     """
-    HelpBox class represents a box to display help or documentation content.
+    HelpBox class represents a box to display help or documentation content with tab-like functionality.
     """
 
-    # Parameters for the title and content of the help box
+    # Parameters for the title and tabbed content of the help box
     title: str = param.String(
         default="Help", doc="Title for the help box", allow_refs=True
     )
-    help_content: str = param.String(
-        default="", doc="Markdown content for the help box", allow_refs=True
+    tabs_content: dict = param.Dict(
+        default={}, doc="Dictionary with tab names as keys and content as values", allow_refs=True
     )
 
     def __init__(self, **params):
@@ -388,11 +388,17 @@ class HelpBox(pn.viewable.Viewer):
 
     def __panel__(self):
         """
-        Returns the Panel layout for the help box, including a heading and Markdown content.
+        Returns the Panel layout for the help box, including a heading and tabbed content.
         """
-        heading = pn.pane.Markdown(f"<h2> {self.title}</h2>")
-        help_markdown = pn.pane.Markdown(self.help_content, sizing_mode="stretch_both")
-        return pn.Column(heading, help_markdown, sizing_mode="stretch_both")
+        heading = pn.pane.Markdown(f"<h2>{self.title}</h2>")
+
+        # Create tabs using the provided content
+        tabs = pn.Tabs(dynamic=True)
+        for tab_name, content in self.tabs_content.items():
+            tabs.append((tab_name, content))
+
+        return pn.Column(heading, tabs, sizing_mode="stretch_both")
+
 
 
 class Footer(pn.viewable.Viewer):
