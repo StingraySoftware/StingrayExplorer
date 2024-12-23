@@ -2,6 +2,7 @@ import panel as pn
 import holoviews as hv
 from utils.globals import loaded_event_data
 import pandas as pd
+import numpy as np
 import warnings
 import hvplot.pandas
 from stingray.bispectrum import Bispectrum
@@ -68,7 +69,7 @@ def create_quicklook_bispectrum_header(
     footer_container,
 ):
     home_heading_input = pn.widgets.TextInput(
-        name="Heading", value="QuickLook Bispectrum"
+        name="Heading", value="Bispectrum"
     )
     home_subheading_input = pn.widgets.TextInput(name="Subheading", value="")
 
@@ -100,47 +101,66 @@ def create_bispectrum_tab(
     header_container,
     float_panel_container,
 ):
+    
     event_list_dropdown = pn.widgets.Select(
-        name="Select Event List(s)",
+        name="Select Event List",
         options={name: i for i, (name, event) in enumerate(loaded_event_data)},
     )
+    dt_input = pn.widgets.FloatInput(name="Select dt", value=1.0, step=0.0001, start=0.0001, end=1000.0)
+    maxlag_input = pn.widgets.IntInput(name="Max Lag", value=25, step=1, start=1, end=100)
+    scale_select = pn.widgets.Select(name="Scale", options=["biased", "unbiased"], value="unbiased")
+    window_select = pn.widgets.Select(name="Window Type", options=windows, value=windows[0])
+    visualization_select = pn.widgets.Select(name="Visualization", options=["Cumulant", "Magnitude", "Phase"], value="Magnitude")
 
-    dt_input = pn.widgets.FloatInput(
-        name="Select dt",
-        value=1.0,
-        step=0.0001,
-        start=0.0000000001,  # Prevents negative and zero values
-        end=1000.0,
-    )
-
-    maxlag_input = pn.widgets.IntInput(
-        name="Max Lag",
-        value=25,
-        step=1,
-        start=1,
-        end=100,
-    )
-
-    scale_select = pn.widgets.Select(
-        name="Scale",
-        options=["biased", "unbiased"],
-        value="unbiased",
-    )
-
-    window_select = pn.widgets.Select(
-        name="Window Type",
-        options=windows,
-        value="uniform",
-    )
-
-    floatpanel_plots_checkbox = pn.widgets.Checkbox(
-        name="Add Plot to FloatingPanel", value=False
-    )
+    floatpanel_checkbox = pn.widgets.Checkbox(name="Add Plot to FloatingPanel", value=True)
 
     dataframe_checkbox = pn.widgets.Checkbox(
         name="Add DataFrame to FloatingPanel", value=False
     )
+    
+    def create_bispectrum(selected_event_index, dt, maxlag, scale, window):
+        try:
+            event_list = loaded_event_data[selected_event_index][1]
+            # Use `to_lc` for efficient light curve creation
+            lc = event_list.to_lc(dt=dt)
 
+            # Create Bispectrum
+            bs = Bispectrum(lc, maxlag=maxlag, scale=scale, window=window)
+            return bs
+        except Exception as e:
+            output_box_container[:] = [pn.pane.Markdown(f"Error: {str(e)}")]
+            return None
+
+
+    def visualize_bispectrum(bs, vis_type):
+        try:
+            import matplotlib.pyplot as plt
+
+            # Create a new figure for each plot to avoid reusing the same one
+            plt.figure()
+
+            if vis_type == "Cumulant":
+                bs.plot_cum3()  # This directly plots on the current figure
+            elif vis_type == "Magnitude":
+                bs.plot_mag()  # This directly plots on the current figure
+            elif vis_type == "Phase":
+                bs.plot_phase()  # This directly plots on the current figure
+            else:
+                return None
+
+            # Retrieve the current figure
+            fig = plt.gcf()  # Get the current figure
+            return pn.pane.Matplotlib(fig, width=600, height=600)
+
+        except Exception as e:
+            output_box_container[:] = [pn.pane.Markdown(f"Visualization Error: {str(e)}")]
+            return None
+
+
+
+        
+        
+        
     def create_holoviews_panes(plot):
         return pn.pane.HoloViews(plot, width=600, height=600, linked_axes=False)
 
@@ -160,20 +180,51 @@ def create_bispectrum_tab(
 
     def create_dataframe(selected_event_list_index, dt, maxlag, scale, window):
         if selected_event_list_index is not None:
-            event_list = loaded_event_data[selected_event_list_index][1]
-            lc = Lightcurve(event_list.time, event_list.counts)
+            try:
+                # Fetch the selected EventList
+                event_list = loaded_event_data[selected_event_list_index][1]
 
-            bs = Bispectrum(lc, maxlag=maxlag, window=window, scale=scale)
+                # Convert EventList to Lightcurve
+                lc = event_list.to_lc(dt=dt)
 
-            df = pd.DataFrame(
-                {
-                    "Frequency": bs.freq,
-                    "Magnitude": bs.bispec_mag.flatten(),
-                    "Phase": bs.bispec_phase.flatten(),
-                }
-            )
-            return df, bs
+                # Generate the Bispectrum
+                bs = Bispectrum(lc, maxlag=maxlag, window=window, scale=scale)
+
+                # Create 2D grids for Frequency and Lags
+                freq_grid, lags_grid = np.meshgrid(bs.freq, bs.lags)
+
+                # Flatten grids and corresponding Bispectrum data
+                freq_flat = freq_grid.flatten()
+                lags_flat = lags_grid.flatten()
+                mag_flat = bs.bispec_mag.flatten()
+                phase_flat = bs.bispec_phase.flatten()
+                cum3_flat = bs.cum3.flatten()
+
+                # Ensure all arrays are of the same length
+                if not (
+                    len(freq_flat) == len(lags_flat) == len(mag_flat) == len(phase_flat) == len(cum3_flat)
+                ):
+                    raise ValueError("Inconsistent lengths of Bispectrum data.")
+
+                # Create DataFrame
+                df = pd.DataFrame(
+                    {
+                        "Frequency": freq_flat,
+                        "Lags": lags_flat,
+                        "Cumulant (Cum3)": cum3_flat,
+                        "Magnitude": mag_flat,
+                        "Phase": phase_flat,
+                    }
+                )
+                return df, bs
+            except Exception as e:
+                output_box_container[:] = [
+                    create_loadingdata_output_box(f"Error creating dataframe: {e}")
+                ]
+                return None, None
         return None, None
+
+
 
     """ Float Panel """
 
@@ -218,58 +269,33 @@ def create_bispectrum_tab(
                 create_loadingdata_output_box("Failed to create dataframe.")
             ]
 
+
     def generate_bispectrum(event=None):
         if not loaded_event_data:
-            output_box_container[:] = [
-                create_loadingdata_output_box("No loaded event data available.")
-            ]
+            output_box_container[:] = [pn.pane.Markdown("No event data available.")]
             return
 
-        selected_event_list_index = event_list_dropdown.value
-        if selected_event_list_index is None:
-            output_box_container[:] = [
-                create_loadingdata_output_box("No event list selected.")
-            ]
+        selected_index = event_list_dropdown.value
+        if selected_index is None:
+            output_box_container[:] = [pn.pane.Markdown("Select an event list.")]
             return
 
         dt = dt_input.value
         maxlag = maxlag_input.value
         scale = scale_select.value
         window = window_select.value
-        df, bs = create_dataframe(selected_event_list_index, dt, maxlag, scale, window)
-        if df is not None:
-            event_list_name = loaded_event_data[selected_event_list_index][0]
+        vis_type = visualization_select.value
 
-            label = f"{event_list_name} (dt={dt}, maxlag={maxlag}, scale={scale}, window={window})"
+        bs = create_bispectrum(selected_index, dt, maxlag, scale, window)
+        if bs:
+            pane = visualize_bispectrum(bs, vis_type)
+            if pane:
+                title = f"Bispectrum ({vis_type}) for Event {loaded_event_data[selected_index][0]}"
+                if floatpanel_checkbox.value:
+                    float_panel_container.append(FloatingPlot(title=title, content=pane))
+                else:
+                    plots_container.append(pn.Row(pn.pane.Markdown(f"## {title}"), pane))
 
-            plot_hv = create_holoviews_plots(df, label, dt, window, scale)
-            holoviews_output = create_holoviews_panes(plot_hv)
-
-            if floatpanel_plots_checkbox.value:
-                float_panel_container.append(
-                    create_floatpanel_area(
-                        content=holoviews_output,
-                        title=f"Bispectrum for {event_list_name} (dt={dt}, maxlag={maxlag}, scale={scale}, window={window})",
-                    )
-                )
-            else:
-                markdown_content = (
-                    f"## Bispectrum for {event_list_name} (dt={dt}, maxlag={maxlag}, scale={scale}, window={window})"
-                )
-                plots_container.append(
-                    pn.FlexBox(
-                        pn.pane.Markdown(markdown_content),
-                        holoviews_output,
-                        align_items="center",
-                        justify_content="center",
-                        flex_wrap="nowrap",
-                        flex_direction="column",
-                    )
-                )
-        else:
-            output_box_container[:] = [
-                create_loadingdata_output_box("Failed to create bispectrum.")
-            ]
 
     generate_bispectrum_button = pn.widgets.Button(
         name="Generate Bispectrum", button_type="primary"
@@ -287,7 +313,8 @@ def create_bispectrum_tab(
         maxlag_input,
         scale_select,
         window_select,
-        floatpanel_plots_checkbox,
+        visualization_select,
+        floatpanel_checkbox,
         dataframe_checkbox,
         pn.Row(generate_bispectrum_button, show_dataframe_button),
     )

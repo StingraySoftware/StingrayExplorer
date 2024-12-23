@@ -30,7 +30,6 @@ from utils.DashboardClasses import (
 from utils.strings import LOADING_DATA_HELP_BOX_STRING
 
 
-
 # Path to the topmost directory for loaded data
 loaded_data_path = os.path.join(os.getcwd(), "files", "loaded-data")
 
@@ -89,9 +88,7 @@ def create_loadingdata_header(
         >>> header.heading.value
         'Data Ingestion and creation'
     """
-    home_heading_input = pn.widgets.TextInput(
-        name="Heading", value="Data Ingestion"
-    )
+    home_heading_input = pn.widgets.TextInput(name="Heading", value="Data Ingestion")
     return MainHeader(heading=home_heading_input)
 
 
@@ -204,7 +201,7 @@ def read_event_data(
         filenames.extend(
             [
                 os.path.basename(path).split(".")[0]
-                for path in file_paths[len(filenames):]
+                for path in file_paths[len(filenames) :]
             ]
         )
     if len(formats) < len(file_paths):
@@ -214,6 +211,7 @@ def read_event_data(
             )
         ]
         return
+
 
 def read_event_data(
     event,
@@ -278,10 +276,17 @@ def read_event_data(
                 return
             # Handle rmf_file separately for 'hea' or 'ogip' formats
             if file_format in ("hea", "ogip"):
-                event_list = EventList.read(file_path, fmt=file_format, additional_columns=additional_columns)
+                event_list = EventList.read(
+                    file_path, fmt=file_format, additional_columns=additional_columns
+                )
             else:
                 # Directly pass rmf_file content for other formats
-                event_list = EventList.read(file_path, fmt=file_format, rmf_file=rmf_file,additional_columns=additional_columns)
+                event_list = EventList.read(
+                    file_path,
+                    fmt=file_format,
+                    rmf_file=rmf_file,
+                    additional_columns=additional_columns,
+                )
             loaded_event_data.append((file_name, event_list))
             loaded_files.append(
                 f"File '{file_path}' loaded successfully as '{file_name}' with format '{file_format}'."
@@ -457,11 +462,23 @@ def delete_selected_files(
         >>> os.path.exists('/path/to/deleted/file')
         False  # Assuming the file was deleted successfully
     """
-    
+
     # Define allowed extensions for deletion
     allowed_extensions = {
-        ".pkl", ".pickle", ".fits", ".evt", ".h5", ".hdf5",
-        ".ecsv", ".txt", ".dat", ".csv", ".vot", ".tex", ".html", ".gz"
+        ".pkl",
+        ".pickle",
+        ".fits",
+        ".evt",
+        ".h5",
+        ".hdf5",
+        ".ecsv",
+        ".txt",
+        ".dat",
+        ".csv",
+        ".vot",
+        ".tex",
+        ".html",
+        ".gz",
     }
     if not file_selector.value:
         output_box_container[:] = [
@@ -474,7 +491,6 @@ def delete_selected_files(
     file_paths = file_selector.value
     deleted_files = []
     for file_path in file_paths:
-        
         if not any(file_path.endswith(ext) for ext in allowed_extensions):
             deleted_files.append(
                 f"Cannot delete file '{file_path}': File type is not allowed for deletion."
@@ -535,7 +551,9 @@ def preview_loaded_files(
     if loaded_event_data:
         for file_name, event_list in loaded_event_data:
             try:
-                time_data = f"Times (first {time_limit}): {event_list.time[:time_limit]}"
+                time_data = (
+                    f"Times (first {time_limit}): {event_list.time[:time_limit]}"
+                )
                 mjdref = f"MJDREF: {event_list.mjdref}"
                 gti = f"GTI: {event_list.gti}"
                 pi_data = (
@@ -558,10 +576,16 @@ def preview_loaded_files(
     if loaded_light_curve:
         for lc_name, lightcurve in loaded_light_curve:
             try:
-                time_data = f"Times (first {time_limit}): {lightcurve.time[:time_limit]}"
-                counts_data = f"Counts (first {time_limit}): {lightcurve.counts[:time_limit]}"
+                time_data = (
+                    f"Times (first {time_limit}): {lightcurve.time[:time_limit]}"
+                )
+                counts_data = (
+                    f"Counts (first {time_limit}): {lightcurve.counts[:time_limit]}"
+                )
                 dt = f"dt: {lightcurve.dt}"
-                preview_data.append(f"Light Curve - {lc_name}:\n{time_data}\n{counts_data}\n{dt}\n")
+                preview_data.append(
+                    f"Light Curve - {lc_name}:\n{time_data}\n{counts_data}\n{dt}\n"
+                )
             except Exception as e:
                 warning_handler.warn(str(e), category=RuntimeWarning)
 
@@ -572,7 +596,9 @@ def preview_loaded_files(
         ]
     else:
         output_box_container[:] = [
-            create_loadingdata_output_box("No valid files or light curves loaded for preview.")
+            create_loadingdata_output_box(
+                "No valid files or light curves loaded for preview."
+            )
         ]
 
     if warning_handler.warnings:
@@ -583,7 +609,6 @@ def preview_loaded_files(
         warning_box_container[:] = [create_loadingdata_warning_box("No warnings.")]
 
     warning_handler.warnings.clear()
-
 
 
 def clear_loaded_files(event, output_box_container, warning_box_container):
@@ -644,25 +669,29 @@ def create_event_list(
     pi_input,
     gti_input,
     mjdref_input,
+    dt_input,
+    # ncounts_input,
+    high_precision_checkbox,
+    mission_input,
+    instr_input,
+    detector_id_input,
+    header_input,
+    timeref_input,
+    timesys_input,
+    ephem_input,
+    # rmf_file_input,
+    skip_checks_checkbox,
+    notes_input,
     name_input,
     output_box_container,
     warning_box_container,
     warning_handler,
 ):
     """
-    Create an event list from user input.
+    Create an event list from user input with all parameters of the EventList class.
 
     Args:
-        event: The event object triggering the function.
-        times_input (TextInput): The input widget for photon arrival times.
-        energy_input (TextInput): The input widget for energy values (optional).
-        pi_input (TextInput): The input widget for PI values (optional).
-        gti_input (TextInput): The input widget for GTIs (optional).
-        mjdref_input (TextInput): The input widget for MJDREF value.
-        name_input (TextInput): The input widget for the event list name.
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
-        warning_handler (WarningHandler): The handler for warnings.
+        See above function for argument details.
 
     Side effects:
         - Creates a new EventList object and adds it to `loaded_event_data`.
@@ -670,69 +699,115 @@ def create_event_list(
 
     Exceptions:
         - Displays exceptions in the warning box if event list creation fails.
-
-    Restrictions:
-        - Requires photon arrival times and MJDREF to be provided.
-
-    Example:
-        >>> create_event_list(event, times_input, energy_input, pi_input, gti_input, mjdref_input, name_input, ...)
-        "Event List created successfully!"
     """
-    # Clear previous warnings
-    warning_handler.warnings.clear()
-    warnings.resetwarnings()
-
     try:
-        if not times_input.value or not mjdref_input.value:
+        
+        # Mandatory input validation
+        if not times_input.value:
             output_box_container[:] = [
                 create_loadingdata_output_box(
-                    "Please enter Photon Arrival Times and MJDREF."
+                    "Error: Photon Arrival Times is a mandatory field."
+                )
+            ]
+            warning_box_container[:] = [
+                create_loadingdata_warning_box(
+                    "Warning: Mandatory fields are missing. Please provide required inputs."
+                )
+            ]
+            return
+        
+        
+        # Clean and parse inputs, ignoring empty values
+        times = [float(t) for t in times_input.value.split(",") if t.strip()]
+        mjdref = float(mjdref_input.value.strip()) if mjdref_input.value.strip() else 0.0
+        energy = (
+            [float(e) for e in energy_input.value.split(",") if e.strip()]
+            if energy_input.value.strip()
+            else None
+        )
+        pi = (
+            [int(p) for p in pi_input.value.split(",") if p.strip()]
+            if pi_input.value.strip()
+            else None
+        )
+        gti = (
+            [
+                [float(g) for g in interval.split()]
+                for interval in gti_input.value.split(";") if interval.strip()
+            ]
+            if gti_input.value.strip()
+            else None
+        )
+        dt = float(dt_input.value.strip()) if dt_input.value.strip() else 0.0
+        high_precision = high_precision_checkbox.value
+        mission = mission_input.value.strip() or None
+        instr = instr_input.value.strip() or None
+        detector_id = (
+            [int(d) for d in detector_id_input.value.split(",") if d.strip()]
+            if detector_id_input.value.strip()
+            else None
+        )
+        header = header_input.value.strip() or None
+        timeref = timeref_input.value.strip() or None
+        timesys = timesys_input.value.strip() or None
+        ephem = ephem_input.value.strip() or None
+        # rmf_file = rmf_file_input.value.strip() or None
+        skip_checks = skip_checks_checkbox.value
+        notes = notes_input.value.strip() or None
+        name = name_input.value.strip() or f"event_list_{len(loaded_event_data)}"
+
+        # Check for duplicates
+        if any(name == event[0] for event in loaded_event_data):
+            output_box_container[:] = [
+                create_loadingdata_output_box(
+                    f"A file with the name '{name}' already exists in memory. Please provide a different name."
                 )
             ]
             return
 
-        times = [float(t) for t in times_input.value.split(",")]
-        mjdref = float(mjdref_input.value)
-        energy = (
-            [float(e) for e in energy_input.value.split(",")]
-            if energy_input.value
-            else None
+        # Create EventList
+        event_list = EventList(
+            time=times,
+            energy=energy,
+            pi=pi,
+            gti=gti,
+            mjdref=mjdref,
+            dt=dt,
+            # ncounts=ncounts,
+            high_precision=high_precision,
+            mission=mission,
+            instr=instr,
+            detector_id=detector_id,
+            header=header,
+            timeref=timeref,
+            timesys=timesys,
+            ephem=ephem,
+            # rmf_file=rmf_file,
+            skip_checks=skip_checks,
+            notes=notes,
         )
-        pi = [int(p) for p in pi_input.value.split(",")] if pi_input.value else None
-        gti = (
-            [
-                [float(g) for g in interval.split()]
-                for interval in gti_input.value.split(";")
-            ]
-            if gti_input.value
-            else None
-        )
 
-        if name_input.value:
-            name = name_input.value
-            if any(name == event[0] for event in loaded_event_data):
-                output_box_container[:] = [
-                    create_loadingdata_output_box(
-                        f"A file with the name '{name}' already exists in memory. Please provide a different name."
-                    )
-                ]
-                return
-        else:
-            name = f"event_list_{len(loaded_event_data)}"
-
-        event_list = EventList(times, energy=energy, pi=pi, gti=gti, mjdref=mjdref)
-
+        # Store the EventList
         loaded_event_data.append((name, event_list))
 
         output_box_container[:] = [
             create_loadingdata_output_box(
-                f"Event List created successfully!\nSaved as: {name}\nTimes: {event_list.time}\nMJDREF: {event_list.mjdref}\nGTI: {event_list.gti}\nEnergy: {event_list.energy if energy else 'Not provided'}\nPI: {event_list.pi if pi else 'Not provided'}"
+                f"Event List created successfully!\nSaved as: {name}\nDetails:\n"
+                f"Times: {event_list.time}\nMJDREF: {event_list.mjdref}\nGTI: {event_list.gti}\n"
+                f"Energy: {event_list.energy if energy else 'Not provided'}\nPI: {event_list.pi if pi else 'Not provided'}\n"
+                f"Mission: {event_list.mission if mission else 'Not provided'}\nInstrument: {event_list.instr if instr else 'Not provided'}"
             )
         ]
     except ValueError as ve:
         warning_handler.warn(str(ve), category=ValueError)
+        output_box_container[:] = [
+            create_loadingdata_output_box("An error occurred: Please check your inputs.")
+        ]
     except Exception as e:
         warning_handler.warn(str(e), category=RuntimeError)
+        output_box_container[:] = [
+            create_loadingdata_output_box(f"An unexpected error occurred: {e}")
+        ]
 
     if warning_handler.warnings:
         warning_box_container[:] = [
@@ -746,8 +821,8 @@ def create_event_list(
 
 def simulate_event_list(
     event,
-    time_slider,
-    count_slider,
+    time_bins_input,
+    max_counts_input,
     dt_input,
     name_input,
     method_selector,
@@ -804,9 +879,14 @@ def simulate_event_list(
             ]
             return
 
-        times = np.arange(time_slider.value)
-        counts = np.floor(np.random.rand(time_slider.value) * count_slider.value)
+        # Parse inputs from IntInput and FloatInput widgets
+        time_bins = time_bins_input.value
+        max_counts = max_counts_input.value
         dt = dt_input.value
+
+        # Simulate the light curve
+        times = np.arange(time_bins)
+        counts = np.floor(np.random.rand(time_bins) * max_counts)
         lc = Lightcurve(times, counts, dt=dt, skip_checks=True)
 
         if method_selector.value == "Standard Method":
@@ -854,10 +934,10 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
         >>> isinstance(tab, pn.Column)
         True
     """
-    
+
     # Get the user's home directory
     home_directory = os.path.expanduser("~")
-    
+
     file_selector = pn.widgets.FileSelector(
         home_directory, only_files=True, name="Select File", show_hidden=True
     )
@@ -872,17 +952,22 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
         width=400,
     )
     format_checkbox = pn.widgets.Checkbox(
-        name="Use default format (\"ogip\" for reading, \"hdf5\" for writing/saving)", value=False
+        name='Use default format ("ogip" for reading, "hdf5" for writing/saving)',
+        value=False,
     )
     load_button = pn.widgets.Button(name="Read as EventLists", button_type="primary")
-    save_button = pn.widgets.Button(name="Save loaded EventLists", button_type="success")
+    save_button = pn.widgets.Button(
+        name="Save loaded EventLists", button_type="success"
+    )
     delete_button = pn.widgets.Button(
         name="Delete Selected Files", button_type="danger"
     )
     preview_button = pn.widgets.Button(
         name="Preview loaded EventLists", button_type="default"
     )
-    clear_button = pn.widgets.Button(name="Clear Loaded EventLists", button_type="warning")
+    clear_button = pn.widgets.Button(
+        name="Clear Loaded EventLists", button_type="warning"
+    )
 
     tooltip_format = pn.widgets.TooltipIcon(
         value=Tooltip(
@@ -897,21 +982,21 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
             position="bottom",
         )
     )
-    
+
     tooltip_rmf = pn.widgets.TooltipIcon(
         value=Tooltip(
             content="""Calibrates PI(Pulse invariant) values to physical energy.""",
             position="bottom",
         )
     )
-    
+
     tooltip_additional_columns = pn.widgets.TooltipIcon(
         value=Tooltip(
-            content="""Any further keyword arguments to be passed for reading in event lists in OGIP/HEASOFT format""", 
+            content="""Any further keyword arguments to be passed for reading in event lists in OGIP/HEASOFT format""",
             position="bottom",
         )
     )
-    
+
     # FileDropper for RMF file
     rmf_file_dropper = pn.widgets.FileDropper(
         # accepted_filetypes=['.rmf', '.fits'],  # Accept RMF files or compatible FITS files
@@ -920,11 +1005,10 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
         max_file_size="1000MB",  # Limit file size
         layout="compact",  # Layout style
     )
-    
-    additional_columns_input = pn.widgets.TextInput(
-    name="Additional Columns (optional)", placeholder="Comma-separated column names"
-    )
 
+    additional_columns_input = pn.widgets.TextInput(
+        name="Additional Columns (optional)", placeholder="Comma-separated column names"
+    )
 
     def on_load_click(event):
         # Clear previous outputs and warnings
@@ -1004,7 +1088,15 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
     clear_button.on_click(on_clear_click)
 
     first_column = pn.Column(
-        pn.Row(pn.pane.Markdown("<h2> Read an EventList object from File</h2>"),pn.widgets.TooltipIcon(value=Tooltip(content="Supported Formats: pickle, hea or ogip, any other astropy.table.Table(ascii.ecsv, hdf5, etc.)", position="bottom"))),
+        pn.Row(
+            pn.pane.Markdown("<h2> Read an EventList object from File</h2>"),
+            pn.widgets.TooltipIcon(
+                value=Tooltip(
+                    content="Supported Formats: pickle, hea or ogip, any other astropy.table.Table(ascii.ecsv, hdf5, etc.)",
+                    position="bottom",
+                )
+            ),
+        ),
         file_selector,
         pn.Row(filename_input, tooltip_file),
         pn.Row(format_input, tooltip_format),
@@ -1027,7 +1119,7 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
 
 def create_event_list_tab(output_box_container, warning_box_container, warning_handler):
     """
-    Create the tab for creating an event list.
+    Create the tab for creating an event list with all parameters of the EventList class.
 
     Args:
         output_box_container (OutputBox): The container for output messages.
@@ -1036,16 +1128,16 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
 
     Returns:
         Column: A Panel Column containing the widgets and layout for the event list creation tab.
-
-    Example:
-        >>> tab = create_event_list_tab(output_box_container, warning_box_container, warning_handler)
-        >>> isinstance(tab, pn.Column)
-        True
     """
+    # Mandatory parameters
     times_input = pn.widgets.TextInput(
         name="Photon Arrival Times", placeholder="e.g., 0.5, 1.1, 2.2, 3.7"
     )
-    mjdref_input = pn.widgets.TextInput(name="MJDREF", placeholder="e.g., 58000.")
+    mjdref_input = pn.widgets.TextInput(
+        name="Reference MJD", placeholder="e.g., 58000."
+    )
+
+    # Optional parameters
     energy_input = pn.widgets.TextInput(
         name="Energy (optional)", placeholder="e.g., 0., 3., 4., 20."
     )
@@ -1055,9 +1147,48 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
     gti_input = pn.widgets.TextInput(
         name="GTIs (optional)", placeholder="e.g., 0 4; 5 10"
     )
+    dt_input = pn.widgets.TextInput(
+        name="Time Resolution (optional)", placeholder="e.g., 0.01"
+    )
+    # ncounts_input = pn.widgets.IntInput(
+    #     name="Number of Counts (deprecated)", placeholder="e.g., 100"
+    # )
+    high_precision_checkbox = pn.widgets.Checkbox(
+        name="Use High Precision (float128)", value=False
+    )
+    mission_input = pn.widgets.TextInput(
+        name="Mission (optional)", placeholder="e.g., NICER"
+    )
+    instr_input = pn.widgets.TextInput(
+        name="Instrument (optional)", placeholder="e.g., XTI"
+    )
+    detector_id_input = pn.widgets.TextInput(
+        name="Detector ID (optional)", placeholder="e.g., 1, 2, 3"
+    )
+    header_input = pn.widgets.TextAreaInput(
+        name="Header (optional)", placeholder="Provide FITS header if available"
+    )
+    timeref_input = pn.widgets.TextInput(
+        name="Time Reference (optional)", placeholder="e.g., SOLARSYSTEM"
+    )
+    timesys_input = pn.widgets.TextInput(
+        name="Time System (optional)", placeholder="e.g., TDB"
+    )
+    ephem_input = pn.widgets.TextInput(
+        name="Ephemeris (optional)", placeholder="e.g., DE430"
+    )
+    # rmf_file_input = pn.widgets.TextInput(
+    #     name="RMF File (optional)", placeholder="e.g., test.rmf"
+    # )
+    skip_checks_checkbox = pn.widgets.Checkbox(name="Skip Validity Checks", value=False)
+    notes_input = pn.widgets.TextAreaInput(
+        name="Notes (optional)", placeholder="Any useful annotations"
+    )
     name_input = pn.widgets.TextInput(
         name="Event List Name", placeholder="e.g., my_event_list"
     )
+
+    # Create button
     create_button = pn.widgets.Button(name="Create Event List", button_type="primary")
 
     def on_create_button_click(event):
@@ -1074,6 +1205,19 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
             pi_input,
             gti_input,
             mjdref_input,
+            dt_input,
+            # ncounts_input,
+            high_precision_checkbox,
+            mission_input,
+            instr_input,
+            detector_id_input,
+            header_input,
+            timeref_input,
+            timesys_input,
+            ephem_input,
+            # rmf_file_input,
+            skip_checks_checkbox,
+            notes_input,
             name_input,
             output_box_container,
             warning_box_container,
@@ -1084,12 +1228,31 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
 
     tab_content = pn.Column(
         pn.pane.Markdown("# Create Event List"),
-        times_input,
-        mjdref_input,
-        energy_input,
-        pi_input,
-        gti_input,
-        name_input,
+        pn.Row(
+            pn.Column(
+                name_input,
+                times_input,
+                mjdref_input,
+                energy_input,
+                pi_input,
+                gti_input,
+                dt_input,
+                # ncounts_input,
+                high_precision_checkbox,
+                mission_input,
+            ),
+            pn.Column(
+                instr_input,
+                detector_id_input,
+                header_input,
+                timeref_input,
+                timesys_input,
+                ephem_input,
+                # rmf_file_input,
+                skip_checks_checkbox,
+                notes_input,
+            ),
+        ),
         create_button,
     )
     return tab_content
@@ -1115,14 +1278,14 @@ def create_simulate_event_list_tab(
         True
     """
     simulation_title = pn.pane.Markdown("# Simulating Event Lists")
-    time_slider = pn.widgets.IntSlider(
-        name="Number of Time Bins", start=1, end=10000, value=10
+    time_bins_input = pn.widgets.IntInput(
+        name="Number of Time Bins", value=10, step=1, start=1, end=10000
     )
-    count_slider = pn.widgets.IntSlider(
-        name="Max Counts per Bin", start=1, end=10000, value=5
+    max_counts_input = pn.widgets.IntInput(
+        name="Max Counts per Bin", value=5, step=1, start=1, end=10000
     )
-    dt_input = pn.widgets.FloatSlider(
-        name="Delta Time (dt)", start=0.0001, end=10000.0, step=0.001, value=1.0
+    dt_input = pn.widgets.FloatInput(
+        name="Delta Time (dt)", value=1.0, step=0.1, start=0.001, end=10000.0
     )
     method_selector = pn.widgets.Select(
         name="Method", options=["Standard Method", "Inverse CDF Method"]
@@ -1144,8 +1307,8 @@ def create_simulate_event_list_tab(
         # Simulate the event list
         simulate_event_list(
             event,
-            time_slider,
-            count_slider,
+            time_bins_input,
+            max_counts_input,
             dt_input,
             sim_name_input,
             method_selector,
@@ -1158,8 +1321,8 @@ def create_simulate_event_list_tab(
 
     tab_content = pn.Column(
         simulation_title,
-        time_slider,
-        count_slider,
+        time_bins_input,
+        max_counts_input,
         dt_input,
         method_selector,
         sim_name_input,
@@ -1225,8 +1388,8 @@ def create_loadingdata_help_area():
     Returns:
         HelpBox: An instance of HelpBox with the help content.
     """
-    
-        # Content for "Introduction to Event Lists"
+
+    # Content for "Introduction to Event Lists"
     intro_content = """
     ## Introduction to Event Lists
 
@@ -1304,8 +1467,7 @@ def create_loadingdata_help_area():
     - HEASARC Guidelines for FITS Event List Formats.
     <br><br>
     """
-    
-    
+
     eventlist_read_content = """
     ## Reading EventList
 
@@ -1432,7 +1594,6 @@ def create_loadingdata_help_area():
             "Reading EventList": pn.pane.Markdown(eventlist_read_content),
         },
     )
-
 
 
 def create_loadingdata_plots_area():

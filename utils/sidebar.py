@@ -12,6 +12,12 @@ from modules.QuickLook.PowerColors import (
     create_quicklook_powercolors_area,
 )
 
+from modules.QuickLook.DynamicalPowerSpectrum import (
+    create_quicklook_dynamicalpowerspectrum_header,
+    create_quicklook_dynamicalpowerspectrum_main_area,
+    create_quicklook_dynamicalpowerspectrum_area,
+)
+
 from modules.Home.HomeContent import (
     create_home_header,
     create_home_main_area,
@@ -66,6 +72,7 @@ def create_sidebar(
         ("Cross Spectrum", "QuickLookCrossSpectrum"),
         ("Averaged Cross Spectrum", "QuickLookAvgCrossSpectrum"),
         ("Bispectrum", "QuickLookBispectrum"),
+        ("Dynamical Power Spectrum", "QuickLookDynamicalPowerspectrum"),
         ("Power Colors", "QuickLookPowerColors"),  # New menu item for Power Colors
     ]
 
@@ -298,6 +305,33 @@ def create_sidebar(
                 )
             ]
             plots_container[:] = [create_quicklook_bispectrum_area()]
+            
+        elif clicked == "QuickLookDynamicalPowerspectrum":
+            header[:] = [
+                create_quicklook_dynamicalpowerspectrum_header(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                    float_panel_container=float_panel_container,
+                )
+            ]
+            main_area[:] = [
+                create_quicklook_dynamicalpowerspectrum_main_area(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                    float_panel_container=float_panel_container,
+                )
+            ]
+            plots_container[:] = [create_quicklook_dynamicalpowerspectrum_area()]
 
         elif clicked == "QuickLookPowerColors":
             header[:] = [
