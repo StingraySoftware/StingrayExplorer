@@ -89,7 +89,7 @@ def create_home_main_area() -> MainArea:
             print(f"File '{target_file1}' loaded successfully.")
         except Exception as e:
             print(f"Failed to load file '{target_file1}': {e}")
-    if not any(file_name == "xte_test" for file_name, _ in loaded_event_data):
+    if not any(file_name == "xte_test.evt.gz" for file_name, _ in loaded_event_data):
         try:
             event_list = EventList.read(file_path2, "ogip")
             loaded_event_data.append(("xte_test.evt.gz", event_list))
