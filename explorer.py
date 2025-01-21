@@ -1,5 +1,4 @@
 import panel as pn
-import os
 import holoviews as hv
 from modules.Home.HomeContent import (
     create_home_header,
@@ -9,7 +8,6 @@ from modules.Home.HomeContent import (
     create_home_help_area,
     create_home_footer,
     create_home_plots_area_initial,
-    # create_floating_plot_demo,
 )
 
 from utils.sidebar import create_sidebar
@@ -22,7 +20,7 @@ hv.extension('bokeh')
 
 # Create a boolean status indicator
 busy_indicator = pn.indicators.BooleanStatus(
-    value=True, color="warning", width=30, height=30
+    value=True, color="warning", width=30, height=30,
 )
 
 # Create the header
