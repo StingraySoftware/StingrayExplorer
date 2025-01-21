@@ -6,7 +6,10 @@ import numpy as np
 import warnings
 import tempfile
 import traceback
+import mimetypes
 from bokeh.models import Tooltip
+from astropy.utils.data import download_file
+
 
 # HoloViz Imports
 import panel as pn
@@ -1120,6 +1123,101 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
 
     return tab_content
 
+# TODO: Add better comments, error handlling and docstrings and increase the functionality
+def create_fetch_eventlist_tab(
+    output_box_container, warning_box_container, warning_handler
+):
+    """
+    Create the tab for fetching EventList data from a link.
+
+    Args:
+        output_box_container (OutputBox): The container for output messages.
+        warning_box_container (WarningBox): The container for warning messages.
+        warning_handler (WarningHandler): The handler for warnings.
+
+    Returns:
+        Column: A Panel Column containing the widgets and layout for the fetch tab.
+    """
+    link_input = pn.widgets.TextInput(
+        name="Enter File Link",
+        placeholder="Enter the URL to the EventList file",
+        width=400,
+    )
+    filename_input = pn.widgets.TextInput(
+        name="File Name",
+        placeholder="Provide a name for the EventList",
+        width=400,
+    )
+    format_select = pn.widgets.Select(
+        name="File Format",
+        options=["ogip", "hdf5", "ascii.ecsv", "fits", "pickle"],
+        value="ogip",
+    )
+    fetch_button = pn.widgets.Button(
+        name="Fetch and Load EventList",
+        button_type="primary",
+    )
+
+    def fetch_eventlist(event):
+        if not link_input.value or not filename_input.value:
+            output_box_container[:] = [
+                create_loadingdata_output_box(
+                    "Error: Please provide both the link and file name."
+                )
+            ]
+            return
+
+        try:
+            # Check and correct GitHub links
+            original_link = link_input.value
+            if "github.com" in original_link and not original_link.startswith("https://raw.githubusercontent.com"):
+                corrected_link = original_link.replace(
+                    "https://github.com/", "https://raw.githubusercontent.com/"
+                ).replace("/blob/", "/")
+                output_box_container[:] = [
+                    create_loadingdata_output_box(
+                        f"GitHub link detected. Automatically corrected the link to: {corrected_link}"
+                    )
+                ]
+                link_input.value = corrected_link  # Update the input field with the corrected link
+
+            # Download the file
+            file_path = download_file(link_input.value, cache=True)
+            
+            # FIXME: This is a temporary fix for the issue with the download_file function. Github links only gives pointer and download is not in raw but in html format or something similar. 
+            
+            # Check if the file is an actual data file, not an HTML page
+            if not file_path.endswith(('.evt', '.gz', '.fits', '.hdf5', '.ecsv', '.pkl')):
+                raise ValueError("The downloaded file is not in a supported format. Please verify the URL.")
+
+            # Read the EventList
+            event_list = EventList.read(file_path, format_select.value)
+
+            # Add to global loaded_event_data
+            loaded_event_data.append((filename_input.value.strip(), event_list))
+
+            output_box_container[:] = [
+                create_loadingdata_output_box(
+                    f"EventList '{filename_input.value}' loaded successfully from link."
+                )
+            ]
+        except Exception as e:
+            warning_handler.warn(str(e), category=RuntimeWarning)
+            output_box_container[:] = [
+                create_loadingdata_output_box(f"Error occurred: {e}")
+            ]
+
+    fetch_button.on_click(fetch_eventlist)
+
+    tab_content = pn.Column(
+        pn.pane.Markdown("### Fetch EventList from Link"),
+        link_input,
+        filename_input,
+        format_select,
+        fetch_button,
+    )
+    return tab_content
+
 
 # TODO: ADD better comments, error handlling and docstrings
 def create_event_list_tab(output_box_container, warning_box_container, warning_handler):
@@ -2142,6 +2240,11 @@ def create_loadingdata_main_area(
     warning_handler = create_warning_handler()
     tabs_content = {
         "Read Event List from File": create_loading_tab(
+            output_box_container=output_box_container,
+            warning_box_container=warning_box_container,
+            warning_handler=warning_handler,
+        ),
+        "Fetch EventList from Link": create_fetch_eventlist_tab(
             output_box_container=output_box_container,
             warning_box_container=warning_box_container,
             warning_handler=warning_handler,
