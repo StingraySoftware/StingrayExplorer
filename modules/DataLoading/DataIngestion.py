@@ -3,8 +3,8 @@ import os
 import stat
 import numpy as np
 import warnings
+import tempfile
 from bokeh.models import Tooltip
-
 
 # HoloViz Imports
 import panel as pn
@@ -12,7 +12,6 @@ import panel as pn
 # Stingray Imports
 from stingray.events import EventList
 from stingray import Lightcurve
-from stingray.io import get_file_extension
 
 # Dashboard Classes and Event Data Imports
 from utils.globals import loaded_event_data, loaded_light_curve
@@ -27,7 +26,6 @@ from utils.DashboardClasses import (
 )
 
 # Strings Imports
-from utils.strings import LOADING_DATA_HELP_BOX_STRING
 
 
 # Path to the topmost directory for loaded data
@@ -147,85 +145,6 @@ def read_event_data(
     warning_handler,
 ):
     """
-    Load event data from selected files.
-
-    Args:
-        event: The event object triggering the function.
-        file_selector (FileSelector): The file selector widget.
-        filename_input (TextInput): The input widget for filenames.
-        format_input (TextInput): The input widget for formats.
-        format_checkbox (Checkbox): The checkbox for default format.
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
-        warning_handler (WarningHandler): The handler for warnings.
-
-    Side effects:
-        - Modifies the global `loaded_event_data` list.
-        - Updates the output and warning containers with messages.
-
-    Exceptions:
-        - Displays exceptions in the output box if file loading fails.
-
-    Restrictions:
-        - Requires that the number of formats matches the number of files unless default format is used.
-
-    Example:
-        >>> read_event_data(event, file_selector, filename_input, format_input, format_checkbox, ...)
-        >>> len(loaded_event_data)
-        1  # Assuming one file was loaded
-    """
-    if not file_selector.value:
-        output_box_container[:] = [
-            create_loadingdata_output_box(
-                "No file selected. Please select a file to upload."
-            )
-        ]
-        return
-
-    file_paths = file_selector.value
-    filenames = (
-        [name.strip() for name in filename_input.value.split(",")]
-        if filename_input.value
-        else []
-    )
-    formats = (
-        [fmt.strip() for fmt in format_input.value.split(",")]
-        if format_input.value
-        else []
-    )
-
-    if format_checkbox.value:
-        formats = ["ogip" for _ in range(len(file_paths))]
-
-    if len(filenames) < len(file_paths):
-        filenames.extend(
-            [
-                os.path.basename(path).split(".")[0]
-                for path in file_paths[len(filenames) :]
-            ]
-        )
-    if len(formats) < len(file_paths):
-        output_box_container[:] = [
-            create_loadingdata_output_box(
-                "Please specify formats for all files or check the default format option."
-            )
-        ]
-        return
-
-
-def read_event_data(
-    event,
-    file_selector,
-    filename_input,
-    format_input,
-    format_checkbox,
-    rmf_file_dropper,
-    additional_columns_input,
-    output_box_container,
-    warning_box_container,
-    warning_handler,
-):
-    """
     Load event data from selected files with extended EventList.read functionality,
     supporting FileDropper for RMF files and additional columns.
     """
@@ -255,7 +174,12 @@ def read_event_data(
 
     # Retrieve the RMF file from FileDropper (if any)
     if rmf_file_dropper.value:
-        rmf_file = rmf_file_dropper.value
+        rmf_file = list(rmf_file_dropper.value.values())[0]
+
+        # Save the file data to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".rmf") as tmp_file:
+            tmp_file.write(rmf_file)
+            tmp_file_path = tmp_file.name
 
     # Parse additional columns
     additional_columns = (
@@ -274,19 +198,13 @@ def read_event_data(
                     )
                 ]
                 return
-            # Handle rmf_file separately for 'hea' or 'ogip' formats
-            if file_format in ("hea", "ogip"):
-                event_list = EventList.read(
-                    file_path, fmt=file_format, additional_columns=additional_columns
-                )
-            else:
-                # Directly pass rmf_file content for other formats
-                event_list = EventList.read(
-                    file_path,
-                    fmt=file_format,
-                    rmf_file=rmf_file,
-                    additional_columns=additional_columns,
-                )
+
+            event_list = EventList.read(
+                file_path,
+                fmt=file_format,
+                rmf_file=tmp_file_path if rmf_file_dropper.value else None,
+                additional_columns=additional_columns,
+            )
             loaded_event_data.append((file_name, event_list))
             loaded_files.append(
                 f"File '{file_path}' loaded successfully as '{file_name}' with format '{file_format}'."
@@ -679,7 +597,7 @@ def create_event_list(
     timeref_input,
     timesys_input,
     ephem_input,
-    # rmf_file_input,
+    rmf_file_input,
     skip_checks_checkbox,
     notes_input,
     name_input,
@@ -701,7 +619,7 @@ def create_event_list(
         - Displays exceptions in the warning box if event list creation fails.
     """
     try:
-        
+
         # Mandatory input validation
         if not times_input.value:
             output_box_container[:] = [
@@ -715,11 +633,12 @@ def create_event_list(
                 )
             ]
             return
-        
-        
+
         # Clean and parse inputs, ignoring empty values
         times = [float(t) for t in times_input.value.split(",") if t.strip()]
-        mjdref = float(mjdref_input.value.strip()) if mjdref_input.value.strip() else 0.0
+        mjdref = (
+            float(mjdref_input.value.strip()) if mjdref_input.value.strip() else 0.0
+        )
         energy = (
             [float(e) for e in energy_input.value.split(",") if e.strip()]
             if energy_input.value.strip()
@@ -733,7 +652,8 @@ def create_event_list(
         gti = (
             [
                 [float(g) for g in interval.split()]
-                for interval in gti_input.value.split(";") if interval.strip()
+                for interval in gti_input.value.split(";")
+                if interval.strip()
             ]
             if gti_input.value.strip()
             else None
@@ -751,7 +671,7 @@ def create_event_list(
         timeref = timeref_input.value.strip() or None
         timesys = timesys_input.value.strip() or None
         ephem = ephem_input.value.strip() or None
-        # rmf_file = rmf_file_input.value.strip() or None
+        rmf_file = rmf_file_input.value.strip() or None
         skip_checks = skip_checks_checkbox.value
         notes = notes_input.value.strip() or None
         name = name_input.value.strip() or f"event_list_{len(loaded_event_data)}"
@@ -782,7 +702,7 @@ def create_event_list(
             timeref=timeref,
             timesys=timesys,
             ephem=ephem,
-            # rmf_file=rmf_file,
+            rmf_file=rmf_file,
             skip_checks=skip_checks,
             notes=notes,
         )
@@ -801,7 +721,9 @@ def create_event_list(
     except ValueError as ve:
         warning_handler.warn(str(ve), category=ValueError)
         output_box_container[:] = [
-            create_loadingdata_output_box("An error occurred: Please check your inputs.")
+            create_loadingdata_output_box(
+                "An error occurred: Please check your inputs."
+            )
         ]
     except Exception as e:
         warning_handler.warn(str(e), category=RuntimeError)
@@ -1177,9 +1099,9 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
     ephem_input = pn.widgets.TextInput(
         name="Ephemeris (optional)", placeholder="e.g., DE430"
     )
-    # rmf_file_input = pn.widgets.TextInput(
-    #     name="RMF File (optional)", placeholder="e.g., test.rmf"
-    # )
+    rmf_file_input = pn.widgets.TextInput(
+        name="RMF File (optional)", placeholder="e.g., test.rmf"
+    )
     skip_checks_checkbox = pn.widgets.Checkbox(name="Skip Validity Checks", value=False)
     notes_input = pn.widgets.TextAreaInput(
         name="Notes (optional)", placeholder="Any useful annotations"
@@ -1215,7 +1137,7 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
             timeref_input,
             timesys_input,
             ephem_input,
-            # rmf_file_input,
+            rmf_file_input,
             skip_checks_checkbox,
             notes_input,
             name_input,
@@ -1248,7 +1170,7 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
                 timeref_input,
                 timesys_input,
                 ephem_input,
-                # rmf_file_input,
+                rmf_file_input,
                 skip_checks_checkbox,
                 notes_input,
             ),
@@ -1331,6 +1253,134 @@ def create_simulate_event_list_tab(
     return tab_content
 
 
+def create_eventlist_operations_tab(
+    output_box_container,
+    warning_box_container,
+    warning_handler,
+):
+    """
+    Create the EventList Operations tab with buttons for operations like applying deadtime,
+    filtering energy ranges, and converting PI to energy.
+
+    Args:
+        output_box_container: Container for output messages.
+        warning_box_container: Container for warnings.
+        warning_handler: The custom warning handler.
+
+    Returns:
+        Panel layout for the tab.
+    """
+    # Define widgets for input
+    multi_event_list_select = pn.widgets.MultiSelect(
+        name="Select Event List(s)",
+        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        size=8,
+    )
+    
+    deadtime_input = pn.widgets.FloatInput(
+        name="Deadtime (s)", value=0.01, step=0.001, start=0.001, end=10000.0
+    )
+    energy_range_input = pn.widgets.TextInput(
+        name="Energy Range (keV)", placeholder="e.g., 0.3, 10"
+    )
+    rmf_file_input = pn.widgets.TextInput(
+        name="RMF File Path", placeholder="Path to RMF file for PI to Energy conversion"
+    )
+    dt_input = pn.widgets.FloatInput(
+        name="Bin Size (dt)", value=1.0, step=0.1, start=0.001, end=100.0
+    )
+
+    # Buttons for each operation
+    apply_deadtime_button = pn.widgets.Button(
+        name="Apply Deadtime", button_type="primary"
+    )
+    convert_pi_button = pn.widgets.Button(
+        name="Convert PI to Energy", button_type="primary"
+    )
+    filter_energy_button = pn.widgets.Button(
+        name="Filter by Energy Range", button_type="primary"
+    )
+
+    # Callback: Apply Deadtime
+    def apply_deadtime_callback(event):
+        selected_index = event_list_dropdown.value
+        if selected_index is None:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event list selected.")
+            ]
+            return
+        try:
+            deadtime = deadtime_input.value
+            event_list = loaded_event_data[selected_index][1]
+            filtered_event_list = event_list.apply_deadtime(deadtime, inplace=False)
+            output_box_container[:] = [
+                create_loadingdata_output_box(
+                    f"Deadtime applied successfully. {len(filtered_event_list.time)} events remain."
+                )
+            ]
+        except Exception as e:
+            warning_handler.warn(str(e), category=RuntimeWarning)
+
+    # Callback: Convert PI to Energy
+    def convert_pi_callback(event):
+        selected_index = event_list_dropdown.value
+        if selected_index is None:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event list selected.")
+            ]
+            return
+        try:
+            rmf_file = rmf_file_input.value
+            if not rmf_file:
+                raise ValueError("No RMF file provided.")
+            event_list = loaded_event_data[selected_index][1]
+            event_list.convert_pi_to_energy(rmf_file)
+            output_box_container[:] = [
+                create_loadingdata_output_box("PI successfully converted to Energy.")
+            ]
+        except Exception as e:
+            warning_handler.warn(str(e), category=RuntimeWarning)
+
+    # Callback: Filter by Energy Range
+    def filter_energy_callback(event):
+        selected_index = event_list_dropdown.value
+        if selected_index is None:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event list selected.")
+            ]
+            return
+        try:
+            energy_range = [
+                float(val.strip()) for val in energy_range_input.value.split(",")
+            ]
+            event_list = loaded_event_data[selected_index][1]
+            filtered_event_list = event_list.filter_energy_range(energy_range)
+            output_box_container[:] = [
+                create_loadingdata_output_box(
+                    f"Filtered by energy range. {len(filtered_event_list.time)} events remain."
+                )
+            ]
+        except Exception as e:
+            warning_handler.warn(str(e), category=RuntimeWarning)
+
+    # Assign callbacks to buttons
+    apply_deadtime_button.on_click(apply_deadtime_callback)
+    convert_pi_button.on_click(convert_pi_callback)
+    filter_energy_button.on_click(filter_energy_callback)
+
+    # Layout for the tab
+    tab_content = pn.Column(
+        pn.pane.Markdown("# EventList Operations"),
+        pn.Row(event_list_dropdown),
+        pn.Column(
+            pn.Row(pn.Column(deadtime_input, apply_deadtime_button)),
+            pn.Row(pn.Column(rmf_file_input, convert_pi_button)),
+            pn.Row(pn.Column(energy_range_input, filter_energy_button)),
+        ),
+    )
+    return tab_content
+
+
 def create_loadingdata_main_area(
     header_container,
     main_area_container,
@@ -1373,6 +1423,11 @@ def create_loadingdata_main_area(
             warning_handler=warning_handler,
         ),
         "Simulate Event List": create_simulate_event_list_tab(
+            output_box_container=output_box_container,
+            warning_box_container=warning_box_container,
+            warning_handler=warning_handler,
+        ),
+        "EventList Operations": create_eventlist_operations_tab(
             output_box_container=output_box_container,
             warning_box_container=warning_box_container,
             warning_handler=warning_handler,
