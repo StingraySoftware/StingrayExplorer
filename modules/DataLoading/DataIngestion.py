@@ -1,9 +1,11 @@
 # Standard Imports
 import os
 import stat
+import copy
 import numpy as np
 import warnings
 import tempfile
+import traceback
 from bokeh.models import Tooltip
 
 # HoloViz Imports
@@ -67,24 +69,24 @@ def create_loadingdata_header(
     footer_container,
 ):
     """
-    Create the header for the data loading section.
+        Create the header for the data loading section.
 
-    Args:
-        header_container: The container for the header.
-        main_area_container: The container for the main content area.
-        output_box_container: The container for the output messages.
-        warning_box_container: The container for warning messages.
-        plots_container: The container for plots.
-        help_box_container: The container for the help section.
-        footer_container: The container for the footer.
+        Args:
+            header_container: The container for the header.
+            main_area_container: The container for the main content area.
+            output_box_container: The container for the output messages.
+            warning_box_container: The container for warning messages.
+            plots_container: The container for plots.
+            help_box_container: The container for the help section.
+            footer_container: The container for the footer.
 
-    Returns:
-        MainHeader: An instance of MainHeader with the specified heading.
-
-    Example:
-        >>> header = create_loadingdata_header(header_container, main_area_container, ...)
-        >>> header.heading.value
-        'Data Ingestion and creation'
+        Returns:
+            MainHeader: An instance of MainHeader with the specified heading.
+    # TODO: Add better example for create_loading_header()
+        Example:
+            >>> header = create_loadingdata_header(header_container, main_area_container, ...)
+            >>> header.heading.value
+            'Data Ingestion and creation'
     """
     home_heading_input = pn.widgets.TextInput(name="Heading", value="Data Ingestion")
     return MainHeader(heading=home_heading_input)
@@ -145,6 +147,7 @@ def read_event_data(
     warning_handler,
 ):
     """
+    # TODO: Add better docstring for read_event_data
     Load event data from selected files with extended EventList.read functionality,
     supporting FileDropper for RMF files and additional columns.
     """
@@ -157,21 +160,26 @@ def read_event_data(
         ]
         return
 
+    # TODO: Add try and except block for error handling during selection of file path and display in warning box
     file_paths = file_selector.value
     filenames = (
         [name.strip() for name in filename_input.value.split(",")]
         if filename_input.value
         else []
     )
+
+    # TODO: Add try and except block for error handling during selection of file format and display in warning box
     formats = (
         [fmt.strip() for fmt in format_input.value.split(",")]
         if format_input.value
         else []
     )
 
+    # Use default format if checkbox is checked
     if format_checkbox.value:
         formats = ["ogip" for _ in range(len(file_paths))]
 
+    # TODO: Add try and except block for error handling during selection of RMF file and display in warning box
     # Retrieve the RMF file from FileDropper (if any)
     if rmf_file_dropper.value:
         rmf_file = list(rmf_file_dropper.value.values())[0]
@@ -181,6 +189,7 @@ def read_event_data(
             tmp_file.write(rmf_file)
             tmp_file_path = tmp_file.name
 
+    # TODO: Add try and except block for error handling during selection of additional columns and display in warning box
     # Parse additional columns
     additional_columns = (
         [col.strip() for col in additional_columns_input.value.split(",")]
@@ -198,7 +207,7 @@ def read_event_data(
                     )
                 ]
                 return
-
+            # EventList read method used from stingray.EventList
             event_list = EventList.read(
                 file_path,
                 fmt=file_format,
@@ -237,31 +246,31 @@ def save_loaded_files(
     warning_handler,
 ):
     """
-    Save loaded event data to specified file formats.
+        Save loaded event data to specified file formats.
 
-    Args:
-        event: The event object triggering the function.
-        filename_input (TextInput): The input widget for filenames.
-        format_input (TextInput): The input widget for formats.
-        format_checkbox (Checkbox): The checkbox for default format.
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
-        warning_handler (WarningHandler): The handler for warnings.
+        Args:
+            event: The event object triggering the function.
+            filename_input (TextInput): The input widget for filenames.
+            format_input (TextInput): The input widget for formats.
+            format_checkbox (Checkbox): The checkbox for default format.
+            output_box_container (OutputBox): The container for output messages.
+            warning_box_container (WarningBox): The container for warning messages.
+            warning_handler (WarningHandler): The handler for warnings.
 
-    Side effects:
-        - Saves files to disk in the specified formats.
-        - Updates the output and warning containers with messages.
+        Side effects:
+            - Saves files to disk in the specified formats.
+            - Updates the output and warning containers with messages.
 
-    Exceptions:
-        - Displays exceptions in the warning box if file saving fails.
+        Exceptions:
+            - Displays exceptions in the warning box if file saving fails.
 
-    Restrictions:
-        - Requires that the number of filenames and formats matches the number of loaded files unless default format is used.
-
-    Example:
-        >>> save_loaded_files(event, filename_input, format_input, format_checkbox, ...)
-        >>> os.path.exists('/path/to/saved/file.hdf5')
-        True  # Assuming the file was saved successfully
+        Restrictions:
+            - Requires that the number of filenames and formats matches the number of loaded files unless default format is used.
+    # TODO: Add better example
+        Example:
+            >>> save_loaded_files(event, filename_input, format_input, format_checkbox, ...)
+            >>> os.path.exists('/path/to/saved/file.hdf5')
+            True  # Assuming the file was saved successfully
     """
     if not loaded_event_data:
         output_box_container[:] = [
@@ -274,6 +283,8 @@ def save_loaded_files(
         if filename_input.value
         else [event[0] for event in loaded_event_data]
     )
+
+    # TODO: ADD checks for valid formats
     formats = (
         [fmt.strip() for fmt in format_input.value.split(",")]
         if format_input.value
@@ -348,6 +359,7 @@ def save_loaded_files(
     warning_handler.warnings.clear()
 
 
+# TODO: ADD better comments, error handlling and docstrings
 def delete_selected_files(
     event,
     file_selector,
@@ -433,6 +445,7 @@ def delete_selected_files(
     warning_handler.warnings.clear()
 
 
+# TODO: ADD better comments, error handlling and docstrings
 def preview_loaded_files(
     event,
     output_box_container,
@@ -465,28 +478,59 @@ def preview_loaded_files(
     """
     preview_data = []
 
+    # Add a summary of loaded files and their names
+    if loaded_event_data:
+        preview_data.append(
+            f"Loaded Event Files: {len(loaded_event_data)}\n"
+            f"Event File Names: {[file_name for file_name, _ in loaded_event_data]}\n"
+        )
+    else:
+        preview_data.append("No Event Files Loaded.\n")
+
+    if loaded_light_curve:
+        preview_data.append(
+            f"Loaded Light Curves: {len(loaded_light_curve)}\n"
+            f"Light Curve Names: {[lc_name for lc_name, _ in loaded_light_curve]}\n"
+        )
+    else:
+        preview_data.append("No Light Curves Loaded.\n")
+
     # Preview EventList data
     if loaded_event_data:
         for file_name, event_list in loaded_event_data:
             try:
-                time_data = (
-                    f"Times (first {time_limit}): {event_list.time[:time_limit]}"
-                )
-                mjdref = f"MJDREF: {event_list.mjdref}"
-                gti = f"GTI: {event_list.gti}"
-                pi_data = (
-                    f"PI (first {time_limit}): {event_list.pi[:time_limit]}"
-                    if event_list.pi is not None
-                    else "PI: Not available"
-                )
-                energy_data = (
-                    f"Energy (first {time_limit}): {event_list.energy[:time_limit]}"
-                    if event_list.energy is not None
-                    else "Energy: Not available"
-                )
-                preview_data.append(
-                    f"Event List - {file_name}:\n{time_data}\n{mjdref}\n{gti}\n{pi_data}\n{energy_data}\n"
-                )
+                # Gather available attributes dynamically
+                attributes = [
+                    ("Times (first entries)", event_list.time[:time_limit]),
+                    ("Energy (keV)", getattr(event_list, "energy", "Not available")),
+                    ("PI Channels", getattr(event_list, "pi", "Not available")),
+                    ("MJDREF", event_list.mjdref),
+                    ("Good Time Intervals (GTIs)", event_list.gti),
+                    ("Mission", getattr(event_list, "mission", "Not available")),
+                    ("Instrument", getattr(event_list, "instr", "Not available")),
+                    (
+                        "Detector IDs",
+                        getattr(event_list, "detector_id", "Not available"),
+                    ),
+                    ("Ephemeris", getattr(event_list, "ephem", "Not available")),
+                    ("Time Reference", getattr(event_list, "timeref", "Not available")),
+                    ("Time System", getattr(event_list, "timesys", "Not available")),
+                    ("Header", getattr(event_list, "header", "Not available")),
+                ]
+
+                # Format preview data
+                event_preview = "\n\n\n----------------------\n"
+                event_preview += f"Event List - {file_name}:\n"
+
+                for attr_name, attr_value in attributes:
+                    if isinstance(
+                        attr_value, np.ndarray
+                    ):  # Show limited entries for arrays
+                        attr_value = attr_value[:time_limit]
+                    event_preview += f"{attr_name}: {attr_value}\n\n"
+                event_preview += "----------------------\n\n\n"
+                preview_data.append(event_preview)
+
             except Exception as e:
                 warning_handler.warn(str(e), category=RuntimeWarning)
 
@@ -494,16 +538,52 @@ def preview_loaded_files(
     if loaded_light_curve:
         for lc_name, lightcurve in loaded_light_curve:
             try:
-                time_data = (
-                    f"Times (first {time_limit}): {lightcurve.time[:time_limit]}"
-                )
-                counts_data = (
-                    f"Counts (first {time_limit}): {lightcurve.counts[:time_limit]}"
-                )
-                dt = f"dt: {lightcurve.dt}"
-                preview_data.append(
-                    f"Light Curve - {lc_name}:\n{time_data}\n{counts_data}\n{dt}\n"
-                )
+                attributes = [
+                    ("Times (first entries)", lightcurve.time[:time_limit]),
+                    ("Counts (first entries)", lightcurve.counts[:time_limit]),
+                    (
+                        "Count Errors (first entries)",
+                        getattr(lightcurve, "counts_err", "Not available"),
+                    ),
+                    (
+                        "Background Counts",
+                        getattr(lightcurve, "bg_counts", "Not available"),
+                    ),
+                    (
+                        "Background Ratio",
+                        getattr(lightcurve, "bg_ratio", "Not available"),
+                    ),
+                    (
+                        "Fractional Exposure",
+                        getattr(lightcurve, "frac_exp", "Not available"),
+                    ),
+                    ("Mean Rate", getattr(lightcurve, "meanrate", "Not available")),
+                    ("Mean Counts", getattr(lightcurve, "meancounts", "Not available")),
+                    ("Number of Points", getattr(lightcurve, "n", "Not available")),
+                    ("Time Resolution (dt)", lightcurve.dt),
+                    ("MJDREF", lightcurve.mjdref),
+                    ("Good Time Intervals (GTIs)", lightcurve.gti),
+                    ("Duration (tseg)", getattr(lightcurve, "tseg", "Not available")),
+                    (
+                        "Start Time (tstart)",
+                        getattr(lightcurve, "tstart", "Not available"),
+                    ),
+                    (
+                        "Error Distribution",
+                        getattr(lightcurve, "err_dist", "Not available"),
+                    ),
+                    ("Mission", getattr(lightcurve, "mission", "Not available")),
+                    ("Instrument", getattr(lightcurve, "instr", "Not available")),
+                ]
+                lightcurve_preview = "\n\n----------------------\n"
+                lightcurve_preview += f"Light Curve - {lc_name}:\n"
+
+                for attr_name, attr_value in attributes:
+                    if isinstance(attr_value, np.ndarray):
+                        attr_value = attr_value[:time_limit]
+                    lightcurve_preview += f"{attr_name}: {attr_value}\n"
+                lightcurve_preview += "----------------------\n\n"
+                preview_data.append(lightcurve_preview)
             except Exception as e:
                 warning_handler.warn(str(e), category=RuntimeWarning)
 
@@ -529,6 +609,7 @@ def preview_loaded_files(
     warning_handler.warnings.clear()
 
 
+# TODO: ADD better comments, error handlling and docstrings
 def clear_loaded_files(event, output_box_container, warning_box_container):
     """
     Clear all loaded event data files and light curves from memory.
@@ -580,6 +661,7 @@ def clear_loaded_files(event, output_box_container, warning_box_container):
     warning_box_container[:] = [create_loadingdata_warning_box("No warnings.")]
 
 
+# TODO: ADD better comments, error handlling and docstrings
 def create_event_list(
     event,
     times_input,
@@ -588,7 +670,6 @@ def create_event_list(
     gti_input,
     mjdref_input,
     dt_input,
-    # ncounts_input,
     high_precision_checkbox,
     mission_input,
     instr_input,
@@ -693,7 +774,6 @@ def create_event_list(
             gti=gti,
             mjdref=mjdref,
             dt=dt,
-            # ncounts=ncounts,
             high_precision=high_precision,
             mission=mission,
             instr=instr,
@@ -741,6 +821,7 @@ def create_event_list(
     warning_handler.warnings.clear()
 
 
+# TODO: ADD better comments, error handlling and docstrings
 def simulate_event_list(
     event,
     time_bins_input,
@@ -839,6 +920,7 @@ def simulate_event_list(
     warning_handler.warnings.clear()
 
 
+# TODO: ADD better comments, error handlling and docstrings
 def create_loading_tab(output_box_container, warning_box_container, warning_handler):
     """
     Create the tab for loading event data files.
@@ -1039,6 +1121,7 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
     return tab_content
 
 
+# TODO: ADD better comments, error handlling and docstrings
 def create_event_list_tab(output_box_container, warning_box_container, warning_handler):
     """
     Create the tab for creating an event list with all parameters of the EventList class.
@@ -1072,9 +1155,6 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
     dt_input = pn.widgets.TextInput(
         name="Time Resolution (optional)", placeholder="e.g., 0.01"
     )
-    # ncounts_input = pn.widgets.IntInput(
-    #     name="Number of Counts (deprecated)", placeholder="e.g., 100"
-    # )
     high_precision_checkbox = pn.widgets.Checkbox(
         name="Use High Precision (float128)", value=False
     )
@@ -1128,7 +1208,6 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
             gti_input,
             mjdref_input,
             dt_input,
-            # ncounts_input,
             high_precision_checkbox,
             mission_input,
             instr_input,
@@ -1159,7 +1238,6 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
                 pi_input,
                 gti_input,
                 dt_input,
-                # ncounts_input,
                 high_precision_checkbox,
                 mission_input,
             ),
@@ -1180,6 +1258,7 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
     return tab_content
 
 
+# TODO: ADD better comments, error handlling and docstrings
 def create_simulate_event_list_tab(
     output_box_container, warning_box_container, warning_handler
 ):
@@ -1253,6 +1332,7 @@ def create_simulate_event_list_tab(
     return tab_content
 
 
+# TODO: ADD better comments, error handlling and docstrings
 def create_eventlist_operations_tab(
     output_box_container,
     warning_box_container,
@@ -1276,107 +1356,756 @@ def create_eventlist_operations_tab(
         options={name: i for i, (name, event) in enumerate(loaded_event_data)},
         size=8,
     )
-    
-    deadtime_input = pn.widgets.FloatInput(
-        name="Deadtime (s)", value=0.01, step=0.001, start=0.001, end=10000.0
-    )
-    energy_range_input = pn.widgets.TextInput(
-        name="Energy Range (keV)", placeholder="e.g., 0.3, 10"
-    )
-    rmf_file_input = pn.widgets.TextInput(
-        name="RMF File Path", placeholder="Path to RMF file for PI to Energy conversion"
-    )
-    dt_input = pn.widgets.FloatInput(
-        name="Bin Size (dt)", value=1.0, step=0.1, start=0.001, end=100.0
+    event_list_properties_box = pn.pane.Markdown(
+        "**Select an EventList to view its properties.**"
     )
 
-    # Buttons for each operation
+    deadtime_input = pn.widgets.FloatInput(
+        name="Deadtime", value=0.01, step=0.001, start=0.001, end=10000.0
+    )
+    deadtime_inplace_checkbox = pn.widgets.Checkbox(
+        name="If True, apply the deadtime to the current event list. Otherwise, return a new event list.",
+        value=False,
+    )
     apply_deadtime_button = pn.widgets.Button(
         name="Apply Deadtime", button_type="primary"
     )
+    ## TODO: additional_output: Only returned if return_all checbox is True. See get_deadtime_mask for more details.
+
+    rmf_file_input = pn.widgets.TextInput(
+        name="RMF File Path", placeholder="Path to RMF file for PI to Energy conversion"
+    )
+
+    rmf_newEventList_checkbox = pn.widgets.Checkbox(
+        name="If True, create a new event list with the converted energy values. Otherwise, modify the existing event list in place.",
+        value=True,
+    )
+
     convert_pi_button = pn.widgets.Button(
         name="Convert PI to Energy", button_type="primary"
     )
+
+    energy_range_input = pn.widgets.TextInput(
+        name="Energy Range in (keV) or PI channel if use_pi is True",
+        placeholder="e.g., 0.3, 10",
+    )
+
+    filterEnergy_use_pi_checkbox = pn.widgets.Checkbox(
+        name="Use PI channel instead of energy for filtering", value=False
+    )
+
+    filterEnergy_inplace_checkbox = pn.widgets.Checkbox(
+        name="If True, filter the current event list in place. Otherwise, return a new event list.",
+        value=False,
+    )
+
     filter_energy_button = pn.widgets.Button(
         name="Filter by Energy Range", button_type="primary"
     )
 
+    energy_ranges_input = pn.widgets.TextInput(
+        name="Energy Ranges",
+        placeholder="e.g., [[0.3, 2], [2, 10]]",
+    )
+
+    segment_size_input = pn.widgets.FloatInput(
+        name="Segment Size", value=0.5, step=0.1, start=0.0, end=1e6
+    )
+    color_use_pi_checkbox = pn.widgets.Checkbox(
+        name="Use PI channel instead of energy", value=False
+    )
+    compute_color_button = pn.widgets.Button(
+        name="Compute Color Evolution", button_type="primary"
+    )
+
+    energy_mask_input = pn.widgets.TextInput(
+        name="Energy Range (keV or PI if use_pi=True)", placeholder="e.g., 0.3, 10"
+    )
+    energy_mask_use_pi_checkbox = pn.widgets.Checkbox(
+        name="Use PI channel instead of energy", value=False
+    )
+    get_energy_mask_button = pn.widgets.Button(
+        name="Get Energy Mask", button_type="primary"
+    )
+
+    # Widgets for Intensity Evolution
+    intensity_energy_range_input = pn.widgets.TextInput(
+        name="Energy Range (keV or PI if use_pi=True)", placeholder="e.g., 0.3, 10"
+    )
+    intensity_segment_size_input = pn.widgets.FloatInput(
+        name="Segment Size", value=0.5, step=0.1, start=0.0, end=1e6
+    )
+    intensity_use_pi_checkbox = pn.widgets.Checkbox(
+        name="Use PI channel instead of energy", value=False
+    )
+    compute_intensity_button = pn.widgets.Button(
+        name="Compute Intensity Evolution", button_type="primary"
+    )
+
+    # Widgets for Joining EventLists
+    join_strategy_select = pn.widgets.Select(
+        name="Join Strategy",
+        options=["infer", "intersection", "union", "append", "none"],
+        value="infer",
+    )
+    join_button = pn.widgets.Button(name="Join EventLists", button_type="primary")
+
+    # Widgets for Sorting EventLists
+    sort_inplace_checkbox = pn.widgets.Checkbox(name="Sort in place", value=False)
+    sort_button = pn.widgets.Button(name="Sort EventLists", button_type="primary")
+
+    # Callback to update the properties box
+    def update_event_list_properties(event):
+        selected_indices = multi_event_list_select.value
+        if not selected_indices:
+            event_list_properties_box.object = "**No EventList selected.**"
+            return
+
+        properties = []
+        for selected_index in selected_indices:
+            event_list_name, event_list = loaded_event_data[selected_index]
+            gti_count = len(event_list.gti) if hasattr(event_list, "gti") else "N/A"
+            time_span = (
+                f"{event_list.time[0]:.2f} - {event_list.time[-1]:.2f}"
+                if hasattr(event_list, "time") and len(event_list.time) > 0
+                else "N/A"
+            )
+            energy_info = (
+                "Available"
+                if hasattr(event_list, "energy") and event_list.energy is not None
+                else "Not available"
+            )
+            pi_info = (
+                "Available"
+                if hasattr(event_list, "pi") and event_list.pi is not None
+                else "Not available"
+            )
+
+            properties.append(
+                f"### EventList: {event_list_name}\n"
+                f"- **GTI Count**: {gti_count}\n"
+                f"- **Time Span**: {time_span}\n"
+                f"- **Energy Data**: {energy_info}\n"
+                f"- **PI Data**: {pi_info}\n"
+            )
+
+        event_list_properties_box.object = "\n".join(properties)
+
     # Callback: Apply Deadtime
     def apply_deadtime_callback(event):
-        selected_index = event_list_dropdown.value
-        if selected_index is None:
+        selected_indices = multi_event_list_select.value
+        if selected_indices is None:
             output_box_container[:] = [
                 create_loadingdata_output_box("No event list selected.")
             ]
             return
-        try:
-            deadtime = deadtime_input.value
-            event_list = loaded_event_data[selected_index][1]
-            filtered_event_list = event_list.apply_deadtime(deadtime, inplace=False)
+
+        deadtime = deadtime_input.value
+        inplace = deadtime_inplace_checkbox.value
+        results = []
+
+        for index in selected_indices:
+            try:
+                event_list_name, event_list = loaded_event_data[index]
+                if inplace:
+                    event_list.apply_deadtime(deadtime, inplace=True)
+                    results.append(
+                        f"Modified EventList '{event_list_name}' in place with deadtime={deadtime}s."
+                    )
+                else:
+                    new_event_list = event_list.apply_deadtime(deadtime, inplace=False)
+                    new_name = f"{event_list_name}_{deadtime}"
+                    loaded_event_data.append((new_name, new_event_list))
+                    results.append(
+                        f"Created new EventList '{new_name}' with deadtime={deadtime}s."
+                    )
+            except Exception as e:
+                warning_handler.warn(str(e), category=RuntimeWarning)
+
+        # Update the output box with results
+        if results:
             output_box_container[:] = [
-                create_loadingdata_output_box(
-                    f"Deadtime applied successfully. {len(filtered_event_list.time)} events remain."
-                )
+                create_loadingdata_output_box("\n".join(results))
             ]
-        except Exception as e:
-            warning_handler.warn(str(e), category=RuntimeWarning)
+        else:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event lists processed.")
+            ]
 
     # Callback: Convert PI to Energy
     def convert_pi_callback(event):
-        selected_index = event_list_dropdown.value
-        if selected_index is None:
+        selected_indices = multi_event_list_select.value
+        if selected_indices is None:
             output_box_container[:] = [
                 create_loadingdata_output_box("No event list selected.")
             ]
             return
+
+        if len(selected_indices) > 1:
+            output_box_container[:] = [
+                create_loadingdata_output_box(
+                    "Please select only one event list for PI to Energy conversion."
+                )
+            ]
+            return
+
         try:
             rmf_file = rmf_file_input.value
             if not rmf_file:
                 raise ValueError("No RMF file provided.")
-            event_list = loaded_event_data[selected_index][1]
-            event_list.convert_pi_to_energy(rmf_file)
-            output_box_container[:] = [
-                create_loadingdata_output_box("PI successfully converted to Energy.")
-            ]
+
+            if not os.path.isfile(rmf_file):
+                raise ValueError(
+                    f"RMF file '{rmf_file}' does not exist. Please provide a valid file path."
+                )
+
+            # Perform PI to Energy conversion
+            selected_index = selected_indices[0]
+            event_list_name, event_list = loaded_event_data[selected_index]
+
+            if rmf_newEventList_checkbox.value:
+                new_event_list = copy.deepcopy(
+                    event_list
+                )  # Deepcopy to ensure independence
+                new_event_list.convert_pi_to_energy(rmf_file)
+                new_event_list_name = f"{event_list_name}_converted_energy"
+                loaded_event_data.append(
+                    (new_event_list_name, new_event_list)
+                )  # Add new event list
+                output_box_container[:] = [
+                    create_loadingdata_output_box(
+                        f"New EventList '{new_event_list_name}' created with converted energy values."
+                    )
+                ]
+            else:  # Modify the existing event list in place
+                event_list.convert_pi_to_energy(rmf_file)
+                output_box_container[:] = [
+                    create_loadingdata_output_box(
+                        f"Energy values converted in place for EventList '{event_list_name}'."
+                    )
+                ]
+
         except Exception as e:
             warning_handler.warn(str(e), category=RuntimeWarning)
 
     # Callback: Filter by Energy Range
     def filter_energy_callback(event):
-        selected_index = event_list_dropdown.value
-        if selected_index is None:
+        selected_indices = multi_event_list_select.value
+        if selected_indices is None:
             output_box_container[:] = [
                 create_loadingdata_output_box("No event list selected.")
             ]
             return
         try:
-            energy_range = [
-                float(val.strip()) for val in energy_range_input.value.split(",")
-            ]
-            event_list = loaded_event_data[selected_index][1]
-            filtered_event_list = event_list.filter_energy_range(energy_range)
-            output_box_container[:] = [
-                create_loadingdata_output_box(
-                    f"Filtered by energy range. {len(filtered_event_list.time)} events remain."
+            energy_range_input_value = energy_range_input.value
+            if not energy_range_input_value:
+                raise ValueError(
+                    "Energy range input cannot be empty. Please provide two comma-separated values."
                 )
-            ]
+            try:
+                energy_range = [
+                    float(val.strip()) for val in energy_range_input_value.split(",")
+                ]
+            except ValueError:
+                raise ValueError(
+                    "Invalid energy range input. Please provide two valid numbers separated by a comma."
+                )
+            if len(energy_range) != 2:
+                raise ValueError(
+                    "Energy range must contain exactly two values (min, max)."
+                )
+            if energy_range[0] is None or energy_range[1] is None:
+                raise ValueError("Energy range values cannot be None.")
+            if energy_range[0] >= energy_range[1]:
+                raise ValueError(
+                    "Invalid energy range: Minimum value must be less than maximum value."
+                )
+
+            # Get the options for inplace and use_pi
+            inplace = filterEnergy_inplace_checkbox.value
+            use_pi = filterEnergy_use_pi_checkbox.value
+
+            results = []
+
+            for selected_index in selected_indices:
+                event_list_name, event_list = loaded_event_data[selected_index]
+
+                # Validate energy or PI data
+                if use_pi:
+                    if not hasattr(event_list, "pi") or event_list.pi is None:
+                        message = f"EventList '{event_list_name}' has no valid PI data."
+                        warning_box_container[:] = [
+                            create_loadingdata_warning_box(message)
+                        ]
+                        return
+
+                else:
+                    if not hasattr(event_list, "energy") or event_list.energy is None:
+                        message = (
+                            f"EventList '{event_list_name}' has no valid energy data. "
+                            f"Please ensure the energy data is initialized (e.g., by converting PI to energy)."
+                        )
+                        warning_box_container[:] = [
+                            create_loadingdata_warning_box(message)
+                        ]
+                        return
+
+                if inplace:
+                    # Modify the event list in place
+                    event_list.filter_energy_range(
+                        energy_range, inplace=True, use_pi=use_pi
+                    )
+
+                    results.append(
+                        f"Filtered EventList '{event_list_name}' in place using energy range {energy_range} (use_pi={use_pi})."
+                    )
+                else:
+                    # Create a new event list
+                    filtered_event_list = event_list.filter_energy_range(
+                        energy_range, inplace=False, use_pi=use_pi
+                    )
+                    if use_pi:
+                        new_event_list_name = f"{event_list_name}_filtered_pi_{energy_range[0]}_{energy_range[1]}"
+                    else:
+                        new_event_list_name = f"{event_list_name}_filtered_energy_{energy_range[0]}_{energy_range[1]}"
+                    loaded_event_data.append((new_event_list_name, filtered_event_list))
+
+                    results.append(
+                        f"Created new EventList '{new_event_list_name}' filtered using energy range {energy_range} (use_pi={use_pi})."
+                    )
+
+            # Update the output with the results
+            if results:
+                output_box_container[:] = [
+                    create_loadingdata_output_box("\n".join(results))
+                ]
+            else:
+                output_box_container[:] = [
+                    create_loadingdata_output_box("No event lists were processed.")
+                ]
         except Exception as e:
             warning_handler.warn(str(e), category=RuntimeWarning)
 
+    # Callback: Compute Color Evolution
+    def compute_color_callback(event):
+        selected_indices = multi_event_list_select.value
+        if not selected_indices:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event list selected.")
+            ]
+            return
+
+        try:
+            energy_ranges_input_value = energy_ranges_input.value
+            if not energy_ranges_input_value:
+                raise ValueError(
+                    "Energy ranges input cannot be empty. Provide two energy ranges as [[min1, max1], [min2, max2]]."
+                )
+            try:
+                energy_ranges = eval(energy_ranges_input_value)
+                if (
+                    not isinstance(energy_ranges, list)
+                    or len(energy_ranges) != 2
+                    or not all(len(er) == 2 for er in energy_ranges)
+                ):
+                    raise ValueError(
+                        "Invalid energy ranges format. Provide two energy ranges as [[min1, max1], [min2, max2]]."
+                    )
+                energy_ranges = [[float(x) for x in er] for er in energy_ranges]
+            except Exception:
+                raise ValueError(
+                    "Invalid energy ranges format. Provide two energy ranges as [[min1, max1], [min2, max2]]."
+                )
+
+            segment_size = segment_size_input.value
+            use_pi = color_use_pi_checkbox.value
+
+            results = []
+            for selected_index in selected_indices:
+                event_list_name, event_list = loaded_event_data[selected_index]
+
+                # Validate energy or PI data
+                if use_pi:
+                    if not hasattr(event_list, "pi") or event_list.pi is None:
+                        message = f"EventList '{event_list_name}' has no valid PI data."
+                        warning_box_container[:] = [
+                            create_loadingdata_warning_box(message)
+                        ]
+                        return
+                else:
+                    if not hasattr(event_list, "energy") or event_list.energy is None:
+                        message = (
+                            f"EventList '{event_list_name}' has no valid energy data. "
+                            f"Please ensure the energy data is initialized (e.g., by converting PI to energy)."
+                        )
+                        warning_box_container[:] = [
+                            create_loadingdata_warning_box(message)
+                        ]
+                        return
+
+                # Compute color evolution
+                color_evolution = event_list.get_color_evolution(
+                    energy_ranges, segment_size=segment_size, use_pi=use_pi
+                )
+                results.append(
+                    f"Computed color evolution for EventList '{event_list_name}' with energy ranges {energy_ranges} and segment size {segment_size}."
+                )
+                results.append(f"Color Evolution: {color_evolution}")
+
+            # Update the output with the results
+            if results:
+                output_box_container[:] = [
+                    create_loadingdata_output_box("\n".join(results))
+                ]
+            else:
+                output_box_container[:] = [
+                    create_loadingdata_output_box("No event lists processed.")
+                ]
+
+        except Exception as e:
+            error_message = (
+                f"An error occurred:\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            )
+            print(error_message)
+            warning_handler.warn(str(e), category=RuntimeWarning)
+
+    # Callback for Get Energy Mask
+    def get_energy_mask_callback(event):
+        selected_indices = multi_event_list_select.value
+        if not selected_indices:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event list selected.")
+            ]
+            return
+
+        try:
+            # Parse and validate energy range
+            energy_range_input_value = energy_mask_input.value
+            if not energy_range_input_value:
+                raise ValueError(
+                    "Energy range input cannot be empty. Please provide two comma-separated values."
+                )
+            try:
+                energy_range = [
+                    float(val.strip()) for val in energy_range_input_value.split(",")
+                ]
+            except ValueError:
+                raise ValueError(
+                    "Invalid energy range input. Please provide two valid numbers separated by a comma."
+                )
+            if len(energy_range) != 2:
+                raise ValueError(
+                    "Energy range must contain exactly two values (min, max)."
+                )
+            if energy_range[0] is None or energy_range[1] is None:
+                raise ValueError("Energy range values cannot be None.")
+            if energy_range[0] >= energy_range[1]:
+                raise ValueError(
+                    "Invalid energy range: Minimum value must be less than maximum value."
+                )
+
+            use_pi = energy_mask_use_pi_checkbox.value
+
+            results = []
+            for selected_index in selected_indices:
+                event_list_name, event_list = loaded_event_data[selected_index]
+
+                # Validate energy or PI data
+                if use_pi:
+                    if not hasattr(event_list, "pi") or event_list.pi is None:
+                        message = f"EventList '{event_list_name}' has no valid PI data."
+                        warning_box_container[:] = [
+                            create_loadingdata_warning_box(message)
+                        ]
+                        return
+                else:
+                    if not hasattr(event_list, "energy") or event_list.energy is None:
+                        message = (
+                            f"EventList '{event_list_name}' has no valid energy data. "
+                            f"Please ensure the energy data is initialized (e.g., by converting PI to energy)."
+                        )
+                        warning_box_container[:] = [
+                            create_loadingdata_warning_box(message)
+                        ]
+                        return
+
+                # Get energy mask
+                energy_mask = event_list.get_energy_mask(energy_range, use_pi=use_pi)
+                results.append(
+                    f"Computed energy mask for EventList '{event_list_name}' with energy range {energy_range} (use_pi={use_pi})."
+                )
+                results.append(f"Energy Mask: {energy_mask}")
+
+            # Update the output with results
+            if results:
+                output_box_container[:] = [
+                    create_loadingdata_output_box("\n".join(results))
+                ]
+            else:
+                output_box_container[:] = [
+                    create_loadingdata_output_box("No event lists processed.")
+                ]
+
+        except Exception as e:
+            error_message = (
+                f"An error occurred:\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            )
+            print(error_message)
+            warning_handler.warn(error_message, category=RuntimeWarning)
+
+    # Callback for Intensity Evolution
+    def compute_intensity_callback(event):
+        selected_indices = multi_event_list_select.value
+        if not selected_indices:
+            output_box_container[:] = [
+                create_loadingdata_output_box("No event list selected.")
+            ]
+            return
+
+        try:
+            # Parse and validate energy range
+            energy_range_input_value = intensity_energy_range_input.value
+            if not energy_range_input_value:
+                raise ValueError(
+                    "Energy range input cannot be empty. Please provide two comma-separated values."
+                )
+            try:
+                energy_range = [
+                    float(val.strip()) for val in energy_range_input_value.split(",")
+                ]
+            except ValueError:
+                raise ValueError(
+                    "Invalid energy range input. Please provide two valid numbers separated by a comma."
+                )
+            if len(energy_range) != 2:
+                raise ValueError(
+                    "Energy range must contain exactly two values (min, max)."
+                )
+            if energy_range[0] is None or energy_range[1] is None:
+                raise ValueError("Energy range values cannot be None.")
+            if energy_range[0] >= energy_range[1]:
+                raise ValueError(
+                    "Invalid energy range: Minimum value must be less than maximum value."
+                )
+
+            segment_size = intensity_segment_size_input.value
+            use_pi = intensity_use_pi_checkbox.value
+
+            results = []
+            for selected_index in selected_indices:
+                event_list_name, event_list = loaded_event_data[selected_index]
+
+                # Validate energy or PI data
+                if use_pi:
+                    if not hasattr(event_list, "pi") or event_list.pi is None:
+                        message = f"EventList '{event_list_name}' has no valid PI data."
+                        warning_box_container[:] = [
+                            create_loadingdata_warning_box(message)
+                        ]
+                        return
+                else:
+                    if not hasattr(event_list, "energy") or event_list.energy is None:
+                        message = (
+                            f"EventList '{event_list_name}' has no valid energy data. "
+                            f"Please ensure the energy data is initialized (e.g., by converting PI to energy)."
+                        )
+                        warning_box_container[:] = [
+                            create_loadingdata_warning_box(message)
+                        ]
+                        return
+
+                # Compute intensity evolution
+                intensity_evolution = event_list.get_intensity_evolution(
+                    energy_range, segment_size=segment_size, use_pi=use_pi
+                )
+                results.append(
+                    f"Computed intensity evolution for EventList '{event_list_name}' with energy range {energy_range} and segment size {segment_size}."
+                )
+                results.append(f"Intensity Evolution: {intensity_evolution}")
+
+            # Update the output with results
+            if results:
+                output_box_container[:] = [
+                    create_loadingdata_output_box("\n".join(results))
+                ]
+            else:
+                output_box_container[:] = [
+                    create_loadingdata_output_box("No event lists processed.")
+                ]
+
+        except Exception as e:
+            error_message = (
+                f"An error occurred:\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            )
+            print(error_message)
+            warning_handler.warn(error_message, category=RuntimeWarning)
+
+    # Callback for Joining EventLists
+    def join_eventlists_callback(event):
+        selected_indices = multi_event_list_select.value
+        if len(selected_indices) < 2:
+            warning_box_container[:] = [
+                create_loadingdata_warning_box(
+                    "Please select at least two EventLists to join."
+                )
+            ]
+            return
+
+        try:
+            strategy = join_strategy_select.value
+            # Retrieve the selected event lists
+            selected_event_lists = [loaded_event_data[i][1] for i in selected_indices]
+            selected_names = [loaded_event_data[i][0] for i in selected_indices]
+
+            # Perform the join operation
+            result_event_list = selected_event_lists[0]
+            for other_event_list in selected_event_lists[1:]:
+                result_event_list = result_event_list.join(
+                    other_event_list, strategy=strategy
+                )
+
+            # Generate a new name for the joined EventList
+            new_event_list_name = f"joined_{'_'.join(selected_names)}_{strategy}"
+            loaded_event_data.append((new_event_list_name, result_event_list))
+
+            # Update the output container with success message
+            output_box_container[:] = [
+                create_loadingdata_output_box(
+                    f"Joined EventLists: {', '.join(selected_names)} using strategy '{strategy}'.\n"
+                    f"New EventList saved as '{new_event_list_name}'."
+                )
+            ]
+
+        except Exception as e:
+            error_message = (
+                f"An error occurred:\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            )
+            print(error_message)
+            warning_handler.warn(error_message, category=RuntimeWarning)
+
+    # Callback for Sorting EventLists
+    def sort_eventlists_callback(event):
+        selected_indices = multi_event_list_select.value
+        if not selected_indices:
+            warning_box_container[:] = [
+                create_loadingdata_warning_box(
+                    "Please select at least one EventList to sort."
+                )
+            ]
+            return
+
+        inplace = sort_inplace_checkbox.value
+        results = []
+
+        try:
+            for selected_index in selected_indices:
+                event_list_name, event_list = loaded_event_data[selected_index]
+
+                if inplace:
+                    # Sort in place
+                    event_list.sort(inplace=True)
+                    results.append(f"Sorted EventList '{event_list_name}' in place.")
+                else:
+                    # Sort and create a new EventList
+                    sorted_event_list = event_list.sort(inplace=False)
+                    new_event_list_name = f"{event_list_name}_sorted"
+                    loaded_event_data.append((new_event_list_name, sorted_event_list))
+                    results.append(
+                        f"Created a new sorted EventList '{new_event_list_name}' from '{event_list_name}'."
+                    )
+
+            # Update output container with results
+            output_box_container[:] = [
+                create_loadingdata_output_box("\n".join(results))
+            ]
+
+        except Exception as e:
+            error_message = (
+                f"An error occurred:\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            )
+            print(error_message)
+            warning_handler.warn(error_message, category=RuntimeWarning)
+
     # Assign callbacks to buttons
+    multi_event_list_select.param.watch(update_event_list_properties, "value")
     apply_deadtime_button.on_click(apply_deadtime_callback)
     convert_pi_button.on_click(convert_pi_callback)
     filter_energy_button.on_click(filter_energy_callback)
+    compute_color_button.on_click(compute_color_callback)
+    get_energy_mask_button.on_click(get_energy_mask_callback)
+    compute_intensity_button.on_click(compute_intensity_callback)
+    join_button.on_click(join_eventlists_callback)
+    sort_button.on_click(sort_eventlists_callback)
 
     # Layout for the tab
     tab_content = pn.Column(
         pn.pane.Markdown("# EventList Operations"),
-        pn.Row(event_list_dropdown),
-        pn.Column(
-            pn.Row(pn.Column(deadtime_input, apply_deadtime_button)),
-            pn.Row(pn.Column(rmf_file_input, convert_pi_button)),
-            pn.Row(pn.Column(energy_range_input, filter_energy_button)),
+        pn.Row(
+            multi_event_list_select,
+            event_list_properties_box,
         ),
+        pn.Column(
+            pn.pane.Markdown("## Apply Deadtime"),
+            pn.Row(
+                pn.Column(
+                    deadtime_input, deadtime_inplace_checkbox, apply_deadtime_button
+                )
+            ),
+            pn.pane.Markdown("## Convert PI to Energy"),
+            pn.Row(
+                pn.Column(rmf_file_input, rmf_newEventList_checkbox, convert_pi_button)
+            ),
+            pn.pane.Markdown("## Filter by Energy Range"),
+            pn.Row(
+                pn.Column(
+                    energy_range_input,
+                    filterEnergy_inplace_checkbox,
+                    filterEnergy_use_pi_checkbox,
+                    filter_energy_button,
+                )
+            ),
+            pn.pane.Markdown("## Compute Color Evolution"),
+            pn.Row(
+                pn.Column(
+                    energy_ranges_input,
+                    segment_size_input,
+                    color_use_pi_checkbox,
+                    compute_color_button,
+                )
+            ),
+            pn.pane.Markdown("## Get Energy Mask"),
+            pn.Row(
+                pn.Column(
+                    energy_mask_input,
+                    energy_mask_use_pi_checkbox,
+                    get_energy_mask_button,
+                )
+            ),
+            pn.pane.Markdown("## Compute Intensity Evolution"),
+            pn.Row(
+                pn.Column(
+                    intensity_energy_range_input,
+                    intensity_segment_size_input,
+                    intensity_use_pi_checkbox,
+                    compute_intensity_button,
+                )
+            ),
+            pn.pane.Markdown("## Join EventLists"),
+            pn.Row(
+                pn.Column(
+                    join_strategy_select,
+                    join_button,
+                )
+            ),
+            pn.pane.Markdown("## Sort EventLists"),
+            pn.Row(
+                pn.Column(
+                    sort_inplace_checkbox,
+                    sort_button,
+                )
+            ),
+        ),
+        pn.pane.Markdown("<br/>"),
     )
     return tab_content
 

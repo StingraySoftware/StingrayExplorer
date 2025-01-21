@@ -4,5 +4,6 @@ files/data/*.fits filter=lfs diff=lfs merge=lfs -text
 files/data/*.rmf filter=lfs diff=lfs merge=lfs -text
 files/data/*.evt filter=lfs diff=lfs merge=lfs -text
 files/data/*.gz filter=lfs diff=lfs merge=lfs -text
+files/data/*.evt.gz filter=lfs diff=lfs merge=lfs -text
 assets/images/*.png filter=lfs diff=lfs merge=lfs -text
 assets/images/*.webp filter=lfs diff=lfs merge=lfs -text
