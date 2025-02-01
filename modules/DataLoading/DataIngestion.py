@@ -1157,6 +1157,13 @@ def create_fetch_eventlist_tab(
         name="Fetch and Load EventList",
         button_type="primary",
     )
+    
+    tooltip_link = pn.widgets.TooltipIcon(
+        value=Tooltip(
+            content="""When using urls from github use raw links.""",
+            position="bottom",
+        )
+    )
 
     def fetch_eventlist(event):
         if not link_input.value or not filename_input.value:
@@ -1209,7 +1216,7 @@ def create_fetch_eventlist_tab(
 
     tab_content = pn.Column(
         pn.pane.Markdown("### Fetch EventList from Link"),
-        link_input,
+        pn.Row(link_input, tooltip_link),
         filename_input,
         format_select,
         fetch_button,
