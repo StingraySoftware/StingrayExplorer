@@ -1123,6 +1123,7 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
 
     return tab_content
 
+
 # TODO: Add better comments, error handlling and docstrings and increase the functionality
 def create_fetch_eventlist_tab(
     output_box_container, warning_box_container, warning_handler
@@ -1170,7 +1171,9 @@ def create_fetch_eventlist_tab(
         try:
             # Check and correct GitHub links
             original_link = link_input.value
-            if "github.com" in original_link and not original_link.startswith("https://raw.githubusercontent.com"):
+            if "github.com" in original_link and not original_link.startswith(
+                "https://raw.githubusercontent.com"
+            ):
                 corrected_link = original_link.replace(
                     "https://github.com/", "https://raw.githubusercontent.com/"
                 ).replace("/blob/", "/")
@@ -1179,16 +1182,22 @@ def create_fetch_eventlist_tab(
                         f"GitHub link detected. Automatically corrected the link to: {corrected_link}"
                     )
                 ]
-                link_input.value = corrected_link  # Update the input field with the corrected link
+                link_input.value = (
+                    corrected_link  # Update the input field with the corrected link
+                )
 
             # Download the file
             file_path = download_file(link_input.value, cache=True)
-            
-            # FIXME: This is a temporary fix for the issue with the download_file function. Github links only gives pointer and download is not in raw but in html format or something similar. 
-            
+
+            # FIXME: This is a temporary fix for the issue with the download_file function. Github links only gives pointer and download is not in raw but in html format or something similar.
+
             # Check if the file is an actual data file, not an HTML page
-            if not file_path.endswith(('.evt', '.gz', '.fits', '.hdf5', '.ecsv', '.pkl')):
-                raise ValueError("The downloaded file is not in a supported format. Please verify the URL.")
+            if not file_path.endswith(
+                (".evt", ".gz", ".fits", ".hdf5", ".ecsv", ".pkl")
+            ):
+                raise ValueError(
+                    "The downloaded file is not in a supported format. Please verify the URL."
+                )
 
             # Read the EventList
             event_list = EventList.read(file_path, format_select.value)
