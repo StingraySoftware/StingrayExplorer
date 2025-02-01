@@ -6,9 +6,8 @@ import numpy as np
 import warnings
 import tempfile
 import traceback
-import mimetypes
+import requests
 from bokeh.models import Tooltip
-from astropy.utils.data import download_file
 
 
 # HoloViz Imports
@@ -1169,38 +1168,24 @@ def create_fetch_eventlist_tab(
             return
 
         try:
-            # Check and correct GitHub links
-            original_link = link_input.value
-            if "github.com" in original_link and not original_link.startswith(
-                "https://raw.githubusercontent.com"
-            ):
-                corrected_link = original_link.replace(
-                    "https://github.com/", "https://raw.githubusercontent.com/"
-                ).replace("/blob/", "/")
-                output_box_container[:] = [
-                    create_loadingdata_output_box(
-                        f"GitHub link detected. Automatically corrected the link to: {corrected_link}"
-                    )
-                ]
-                link_input.value = (
-                    corrected_link  # Update the input field with the corrected link
-                )
+            link = link_input.value.strip()
 
-            # Download the file
-            file_path = download_file(link_input.value, cache=True)
+            # Download the file to a temporary file
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                temp_filename = tmp_file.name
 
-            # FIXME: This is a temporary fix for the issue with the download_file function. Github links only gives pointer and download is not in raw but in html format or something similar.
+            response = requests.get(link, stream=True)
+            if response.status_code != 200:
+                raise ValueError(f"Failed to download file. Status code: {response.status_code}")
 
-            # Check if the file is an actual data file, not an HTML page
-            if not file_path.endswith(
-                (".evt", ".gz", ".fits", ".hdf5", ".ecsv", ".pkl")
-            ):
-                raise ValueError(
-                    "The downloaded file is not in a supported format. Please verify the URL."
-                )
+            # Save file
+            with open(temp_filename, "wb") as f:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
 
             # Read the EventList
-            event_list = EventList.read(file_path, format_select.value)
+            event_list = EventList.read(temp_filename, format_select.value)
 
             # Add to global loaded_event_data
             loaded_event_data.append((filename_input.value.strip(), event_list))
@@ -1215,6 +1200,10 @@ def create_fetch_eventlist_tab(
             output_box_container[:] = [
                 create_loadingdata_output_box(f"Error occurred: {e}")
             ]
+        finally:
+            # Ensure the temporary file is deleted after processing
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
 
     fetch_button.on_click(fetch_eventlist)
 
