@@ -1,5 +1,4 @@
 import panel as pn
-import importlib
 
 from modules.QuickLook.Bispectrum import (
     create_quicklook_bispectrum_header,
@@ -35,6 +34,16 @@ from modules.DataLoading.DataIngestion import (
     create_loadingdata_help_area,
     create_loadingdata_plots_area,
 )
+
+from modules.QuickLook.EventList import (
+    create_eventlist_header,
+    create_eventlist_main_area,
+    create_eventlist_output_box,
+    create_eventlist_warning_box,
+    create_eventlist_help_area,
+    create_eventlist_plots_area,
+)
+
 from modules.QuickLook.LightCurve import (
     create_quicklook_lightcurve_header,
     create_quicklook_lightcurve_main_area,
@@ -62,10 +71,19 @@ from modules.QuickLook.AverageCrossSpectrum import (
 )
 from assets.icons.svg import HOME_ICON_SVG, LOAD_DATA_ICON_SVG
 
+
 def create_sidebar(
-    main_area, header, footer, output_box, warning_box, help_box, plots_container, float_panel_container
+    main_area,
+    header,
+    footer,
+    output_box,
+    warning_box,
+    help_box,
+    plots_container,
+    float_panel_container,
 ):
     menu_items_quicklook_stingray = [
+        ("Event List", "QuickLookEventList"),
         ("Light Curve", "QuickLookLightCurve"),
         ("Power Spectrum", "QuickLookPowerspectra"),
         ("Averaged Power Spectrum", "QuickLookAvgPowerspectra"),
@@ -73,7 +91,7 @@ def create_sidebar(
         ("Averaged Cross Spectrum", "QuickLookAvgCrossSpectrum"),
         ("Bispectrum", "QuickLookBispectrum"),
         ("Dynamical Power Spectrum", "QuickLookDynamicalPowerspectrum"),
-        ("Power Colors", "QuickLookPowerColors"),  # New menu item for Power Colors
+        ("Power Colors", "QuickLookPowerColors"),  
     ]
 
     # Home Button
@@ -149,7 +167,37 @@ def create_sidebar(
     # Quicklook Button changing main content
     def handle_quicklook_button_selection(event):
         clicked = event.new
-        if clicked == "QuickLookLightCurve":
+        
+        if clicked == "QuickLookEventList":
+            header[:] = [
+                create_eventlist_header(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                    float_panel_container=float_panel_container,
+                )
+            ]
+            main_area[:] = [
+                create_eventlist_main_area(
+                    header_container=header,
+                    main_area_container=main_area,
+                    output_box_container=output_box,
+                    warning_box_container=warning_box,
+                    plots_container=plots_container,
+                    help_box_container=help_box,
+                    footer_container=footer,
+                    float_panel_container=float_panel_container,
+                )
+            ]
+            plots_container[:] = [create_eventlist_plots_area()]
+            
+            
+            
+        elif clicked == "QuickLookLightCurve":
             header[:] = [
                 create_quicklook_lightcurve_header(
                     header_container=header,
@@ -305,7 +353,7 @@ def create_sidebar(
                 )
             ]
             plots_container[:] = [create_quicklook_bispectrum_area()]
-            
+
         elif clicked == "QuickLookDynamicalPowerspectrum":
             header[:] = [
                 create_quicklook_dynamicalpowerspectrum_header(
@@ -343,7 +391,7 @@ def create_sidebar(
                     plots_container=plots_container,
                     help_box_container=help_box,
                     footer_container=footer,
-                    float_panel_container=float_panel_container,  # Ensure this is passed
+                    float_panel_container=float_panel_container,  
                 )
             ]
             main_area[:] = [
@@ -355,11 +403,10 @@ def create_sidebar(
                     plots_container=plots_container,
                     help_box_container=help_box,
                     footer_container=footer,
-                    float_panel_container=float_panel_container,  # Ensure this is passed
+                    float_panel_container=float_panel_container, 
                 )
             ]
             plots_container[:] = [create_quicklook_powercolors_area()]
-
 
     quicklook_stingray_button.on_click(handle_quicklook_button_selection)
 
