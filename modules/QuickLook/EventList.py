@@ -49,7 +49,6 @@ def create_warning_handler():
     return warning_handler
 
 
-
 """ Header Section """
 
 
@@ -83,7 +82,9 @@ def create_eventlist_header(
             >>> header.heading.value
             'Data Ingestion and creation'
     """
-    home_heading_input = pn.widgets.TextInput(name="Heading", value="QuickLook EventList")
+    home_heading_input = pn.widgets.TextInput(
+        name="Heading", value="QuickLook EventList"
+    )
     return MainHeader(heading=home_heading_input)
 
 
@@ -266,9 +267,7 @@ def create_event_list(
     except ValueError as ve:
         warning_handler.warn(str(ve), category=ValueError)
         output_box_container[:] = [
-            create_eventlist_output_box(
-                "An error occurred: Please check your inputs."
-            )
+            create_eventlist_output_box("An error occurred: Please check your inputs.")
         ]
     except Exception as e:
         warning_handler.warn(str(e), category=RuntimeError)
@@ -623,6 +622,16 @@ def create_eventlist_operations_tab(
     event_list_properties_box = pn.pane.Markdown(
         "**Select an EventList to view its properties.**"
     )
+    
+    multi_light_curve_select = pn.widgets.MultiSelect(
+        name="Select Light Curve(s)",
+        options={name: i for i, (name, lc) in enumerate(loaded_light_curve)},
+        size=8,
+    )
+    
+    light_curve_properties_box = pn.pane.Markdown(
+        "**Select a LightCurve to view its properties.**"
+    )
 
     deadtime_input = pn.widgets.FloatInput(
         name="Deadtime", value=0.01, step=0.001, start=0.001, end=10000.0
@@ -754,6 +763,25 @@ def create_eventlist_operations_tab(
             )
 
         event_list_properties_box.object = "\n".join(properties)
+        
+    # Callback to update the lightcurve properties box
+    def update_light_curve_properties(event):
+        selected_indices = multi_light_curve_select.value
+        if not selected_indices:
+            light_curve_properties_box.object = "**No LightCurve selected.**"
+            return
+
+        properties = []
+        for selected_index in selected_indices:
+            light_curve_name, light_curve = loaded_light_curve[selected_index]
+            properties.append(
+                f"### LightCurve: {light_curve_name}\n"
+                f"- **Counts**: {light_curve.counts}\n"
+                f"- **Time Span**: {light_curve.time[0]:.2f} - {light_curve.time[-1]:.2f}\n"
+                f"- **Time Resolution**: {light_curve.dt:.2f}\n"
+            )
+
+        light_curve_properties_box.object = "\n".join(properties)
 
     # Callback: Apply Deadtime
     def apply_deadtime_callback(event):
@@ -788,9 +816,7 @@ def create_eventlist_operations_tab(
 
         # Update the output box with results
         if results:
-            output_box_container[:] = [
-                create_eventlist_output_box("\n".join(results))
-            ]
+            output_box_container[:] = [create_eventlist_output_box("\n".join(results))]
         else:
             output_box_container[:] = [
                 create_eventlist_output_box("No event lists processed.")
@@ -1279,9 +1305,7 @@ def create_eventlist_operations_tab(
                     )
 
             # Update output container with results
-            output_box_container[:] = [
-                create_eventlist_output_box("\n".join(results))
-            ]
+            output_box_container[:] = [create_eventlist_output_box("\n".join(results))]
 
         except Exception as e:
             error_message = (
@@ -1292,6 +1316,7 @@ def create_eventlist_operations_tab(
 
     # Assign callbacks to buttons
     multi_event_list_select.param.watch(update_event_list_properties, "value")
+    multi_light_curve_select.param.watch(update_light_curve_properties, "value")
     apply_deadtime_button.on_click(apply_deadtime_callback)
     convert_pi_button.on_click(convert_pi_callback)
     filter_energy_button.on_click(filter_energy_callback)
@@ -1304,70 +1329,107 @@ def create_eventlist_operations_tab(
     # Layout for the tab
     tab_content = pn.Column(
         pn.pane.Markdown("# EventList Operations"),
-        pn.Row(
+        pn.FlexBox(
             multi_event_list_select,
             event_list_properties_box,
+            multi_light_curve_select,
+            light_curve_properties_box,
+            flex_direction="row",
         ),
         pn.Column(
-            pn.pane.Markdown("## Apply Deadtime"),
-            pn.Row(
-                pn.Column(
-                    deadtime_input, deadtime_inplace_checkbox, apply_deadtime_button
-                )
-            ),
-            pn.pane.Markdown("## Convert PI to Energy"),
-            pn.Row(
-                pn.Column(rmf_file_input, rmf_newEventList_checkbox, convert_pi_button)
-            ),
-            pn.pane.Markdown("## Filter by Energy Range"),
-            pn.Row(
-                pn.Column(
-                    energy_range_input,
-                    filterEnergy_inplace_checkbox,
-                    filterEnergy_use_pi_checkbox,
-                    filter_energy_button,
-                )
-            ),
-            pn.pane.Markdown("## Compute Color Evolution"),
-            pn.Row(
-                pn.Column(
-                    energy_ranges_input,
-                    segment_size_input,
-                    color_use_pi_checkbox,
-                    compute_color_button,
-                )
-            ),
-            pn.pane.Markdown("## Get Energy Mask"),
-            pn.Row(
-                pn.Column(
-                    energy_mask_input,
-                    energy_mask_use_pi_checkbox,
-                    get_energy_mask_button,
-                )
-            ),
-            pn.pane.Markdown("## Compute Intensity Evolution"),
-            pn.Row(
-                pn.Column(
-                    intensity_energy_range_input,
-                    intensity_segment_size_input,
-                    intensity_use_pi_checkbox,
-                    compute_intensity_button,
-                )
-            ),
-            pn.pane.Markdown("## Join EventLists"),
-            pn.Row(
-                pn.Column(
-                    join_strategy_select,
-                    join_button,
-                )
-            ),
-            pn.pane.Markdown("## Sort EventLists"),
-            pn.Row(
-                pn.Column(
-                    sort_inplace_checkbox,
-                    sort_button,
-                )
-            ),
+            pn.FlexBox(
+                pn.FlexBox(
+                    pn.Column(
+                        pn.pane.Markdown("## Apply Deadtime"),
+                        deadtime_input,
+                        deadtime_inplace_checkbox,
+                        apply_deadtime_button,
+                        width=400,
+                        height=300, 
+                    ),
+                    pn.Column(
+                        pn.pane.Markdown("## Convert PI to Energy"),
+                        rmf_file_input,
+                        rmf_newEventList_checkbox,
+                        convert_pi_button,
+                        width=400,
+                        height=300,
+                    ),
+                    flex_direction="row",
+                    flex_wrap="nowrap",
+                    align_items="flex-start",
+                    justify_content="flex-start",
+                    gap="50px",
+                ),
+                pn.FlexBox(
+                    pn.Column(
+                        pn.pane.Markdown("## Filter by Energy Range"),
+                        energy_range_input,
+                        filterEnergy_inplace_checkbox,
+                        filterEnergy_use_pi_checkbox,
+                        filter_energy_button,
+                        width=400,
+                        height=300,
+                    ),
+                    pn.Column(
+                        pn.pane.Markdown("## Compute Color Evolution"),
+                        energy_ranges_input,
+                        segment_size_input,
+                        color_use_pi_checkbox,
+                        compute_color_button,
+                        width=400,
+                        height=300,
+                    ),
+                    pn.Column(
+                        pn.pane.Markdown("## Get Energy Mask"),
+                        energy_mask_input,
+                        energy_mask_use_pi_checkbox,
+                        get_energy_mask_button,
+                        width=400,
+                        height=300,
+                    ),
+                    flex_direction="row",
+                    flex_wrap="nowrap",
+                    align_items="flex-start",
+                    justify_content="flex-start",
+                    gap="50px",
+                ),
+                pn.FlexBox(
+                    pn.Column(
+                        pn.pane.Markdown("## Compute Intensity Evolution"),
+                        intensity_energy_range_input,
+                        intensity_segment_size_input,
+                        intensity_use_pi_checkbox,
+                        compute_intensity_button,
+                        width=400,
+                        height=300,
+                    ),
+                    pn.Column(
+                        pn.pane.Markdown("## Join EventLists"),
+                        join_strategy_select,
+                        join_button,
+                        width=400,
+                        height=300,
+                    ),
+                    pn.Column(
+                        pn.pane.Markdown("## Sort EventLists"),
+                        sort_inplace_checkbox,
+                        sort_button,
+                        width=400,
+                        height=300,
+                    ),
+                    flex_direction="row",
+                    flex_wrap="nowrap",
+                    align_items="flex-start",
+                    justify_content="flex-start",
+                    gap="50px",
+                ),
+                flex_direction="row",
+                flex_wrap="wrap",
+                align_items="center",
+                justify_content="center",
+                
+            )
         ),
         pn.pane.Markdown("<br/>"),
     )
@@ -1382,7 +1444,7 @@ def create_eventlist_main_area(
     plots_container,
     help_box_container,
     footer_container,
-    float_panel_container, 
+    float_panel_container,
 ):
     """
     Create the main area for the data loading tab, including all sub-tabs.
@@ -1423,7 +1485,6 @@ def create_eventlist_main_area(
         ),
     }
     return MainArea(tabs_content=tabs_content)
-
 
 
 def create_eventlist_help_area():
