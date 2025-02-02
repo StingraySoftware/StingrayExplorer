@@ -8,7 +8,7 @@ pn.extension("floatpanel")
 class MainHeader(pn.viewable.Viewer):
     """
     MainHeader class represents the header section of the dashboard.
-    It includes a heading, subheading, and a series of buttons with configurable actions.
+    It includes a heading and subheading but removes buttons.
     """
 
     # Parameters for the header and subheading text
@@ -19,58 +19,6 @@ class MainHeader(pn.viewable.Viewer):
         default="Default Subheading", doc="The subheading text", allow_refs=True
     )
 
-    # Parameters for the names of up to 12 buttons
-    button_1_name: str = param.String(
-        default="Button 1", doc="Name for Button 1", allow_refs=True
-    )
-    button_2_name: str = param.String(
-        default="Button 2", doc="Name for Button 2", allow_refs=True
-    )
-    button_3_name: str = param.String(
-        default="Button 3", doc="Name for Button 3", allow_refs=True
-    )
-    button_4_name: str = param.String(
-        default="Button 4", doc="Name for Button 4", allow_refs=True
-    )
-    button_5_name: str = param.String(
-        default="Button 5", doc="Name for Button 5", allow_refs=True
-    )
-    button_6_name: str = param.String(
-        default="Button 6", doc="Name for Button 6", allow_refs=True
-    )
-    button_7_name: str = param.String(
-        default="Button 7", doc="Name for Button 7", allow_refs=True
-    )
-    button_8_name: str = param.String(
-        default="Button 8", doc="Name for Button 8", allow_refs=True
-    )
-    button_9_name: str = param.String(
-        default="Button 9", doc="Name for Button 9", allow_refs=True
-    )
-    button_10_name: str = param.String(
-        default="Button 10", doc="Name for Button 10", allow_refs=True
-    )
-    button_11_name: str = param.String(
-        default="Button 11", doc="Name for Button 11", allow_refs=True
-    )
-    button_12_name: str = param.String(
-        default="Button 12", doc="Name for Button 12", allow_refs=True
-    )
-
-    # Parameters for the actions associated with each button
-    button_1_action = param.Parameter(doc="Action for Button 1")
-    button_2_action = param.Parameter(doc="Action for Button 2")
-    button_3_action = param.Parameter(doc="Action for Button 3")
-    button_4_action = param.Parameter(doc="Action for Button 4")
-    button_5_action = param.Parameter(doc="Action for Button 5")
-    button_6_action = param.Parameter(doc="Action for Button 6")
-    button_7_action = param.Parameter(doc="Action for Button 7")
-    button_8_action = param.Parameter(doc="Action for Button 8")
-    button_9_action = param.Parameter(doc="Action for Button 9")
-    button_10_action = param.Parameter(doc="Action for Button 10")
-    button_11_action = param.Parameter(doc="Action for Button 11")
-    button_12_action = param.Parameter(doc="Action for Button 12")
-
     def __init__(self, **params):
         """
         Initializes the MainHeader class with the provided parameters.
@@ -79,7 +27,7 @@ class MainHeader(pn.viewable.Viewer):
 
     def __panel__(self):
         """
-        Returns the Panel layout for the header, including the heading, subheading, and buttons.
+        Returns the Panel layout for the header, including the heading and subheading.
         """
         # Create HTML panes for heading and subheading
         heading_pane = pn.pane.HTML(
@@ -90,158 +38,12 @@ class MainHeader(pn.viewable.Viewer):
             pn.bind(lambda subheading: f"<h4>{subheading}</h4>", self.param.subheading)
         )
 
-        # Create buttons based on the provided names and actions
-        buttons = []
-        if self.button_1_name and self.button_1_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_1_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_1_action,
-                )
-            )
-        if self.button_2_name and self.button_2_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_2_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_2_action,
-                )
-            )
-        if self.button_3_name and self.button_3_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_3_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_3_action,
-                )
-            )
-        if self.button_4_name and self.button_4_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_4_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_4_action,
-                )
-            )
-        if self.button_5_name and self.button_5_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_5_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_5_action,
-                )
-            )
-        if self.button_6_name and self.button_6_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_6_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_6_action,
-                )
-            )
-        if self.button_7_name and self.button_7_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_7_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_7_action,
-                )
-            )
-        if self.button_8_name and self.button_8_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_8_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_8_action,
-                )
-            )
-        if self.button_9_name and self.button_9_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_9_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_9_action,
-                )
-            )
-        if self.button_10_name and self.button_10_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_10_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_10_action,
-                )
-            )
-        if self.button_11_name and self.button_11_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_11_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_11_action,
-                )
-            )
-        if self.button_12_name and self.button_12_action:
-            buttons.append(
-                pn.widgets.Button(
-                    name=self.button_12_name,
-                    button_type="primary",
-                    width=70,
-                    height=30,
-                    margin=(5, 5),
-                    on_click=self.button_12_action,
-                )
-            )
-
         # Create the layout for the header
         layout_items = [heading_pane]
         if self.subheading and self.subheading != "Default Subheading":
             layout_items.append(subheading_pane)
 
-        # Create the layout for the header
-        layout = pn.Row(
-            pn.Column(*layout_items),
-            pn.FlexBox(
-                *buttons,
-                align_items="center",
-                justify_content="end",
-                flex_wrap="wrap",
-            ),
-        )
-
-        return layout
+        return pn.Column(*layout_items)
 
 
 class MainArea(pn.viewable.Viewer):

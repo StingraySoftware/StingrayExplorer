@@ -8,6 +8,7 @@ from modules.Home.HomeContent import (
     create_home_help_area,
     create_home_footer,
     create_home_plots_area_initial,
+    create_home_resource_monitor,
 )
 
 from utils.sidebar import create_sidebar
@@ -16,15 +17,20 @@ from utils.sidebar import create_sidebar
 # Initialize panel extension
 pn.extension('floatpanel', 'mathjax')
 pn.extension('filedropper')
+pn.extension('echarts')
+pn.extension(nthreads=0)
 hv.extension('bokeh')
 
 # Create a boolean status indicator
 busy_indicator = pn.indicators.BooleanStatus(
-    value=True, color="warning", width=30, height=30,
+    value=True, color="warning", width=30, height=30
 )
 
 # Create the header
 header = create_home_header()
+
+# Create resource monitor
+resource_monitor = create_home_resource_monitor()
 
 # Create the main area
 main_area = create_home_main_area()
@@ -47,6 +53,7 @@ plots_area = create_home_plots_area_initial()
 
 # Containers for changing the layouts dynamically
 header_container = pn.Column(header)
+resource_monitor_container = pn.Column(resource_monitor)
 main_area_container = pn.Column(main_area)
 output_box_container = pn.Column(output_box)
 warning_box_container = pn.Column(warning_box)
@@ -60,6 +67,7 @@ float_panel_container = pn.Column(pn.pane.Markdown("This is not a bug that this 
 
 sidebar = create_sidebar(
     main_area=main_area_container,
+    resource_usage=resource_monitor_container,
     header=header_container,
     footer=footer_container,
     output_box=output_box_container,
@@ -122,7 +130,8 @@ layout = pn.template.FastGridTemplate(
     base_target="_self",
 )
 
-layout.main[0:10, 0:12] = header_container
+layout.main[0:10, 0:6] = header_container
+layout.main[0:10, 6:12] = resource_monitor_container
 layout.main[10:55, 0:8] = main_area_container
 layout.main[10:33, 8:12] = output_box_container
 layout.main[33:55, 8:12] = warning_box_container

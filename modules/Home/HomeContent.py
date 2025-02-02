@@ -1,12 +1,13 @@
 # Standard Imports
 import os
 import numpy as np
+import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.offsetbox import AnchoredText
+import psutil
 
 # HoloViz Imports
 import panel as pn
-
 
 # Stingray Imports
 from stingray.events import EventList
@@ -36,6 +37,7 @@ from utils.strings import (
     HOME_WARNING_BOX_STRING,
 )
 
+matplotlib.use("Agg")
 
 """ Header Section """
 
@@ -57,7 +59,68 @@ def create_home_header() -> MainHeader:
     return MainHeader(heading=home_heading_input, subheading=home_subheading_input)
 
 
-""" Main Area Section """
+# Function to create a resource monitor
+def create_home_resource_monitor() -> MainHeader:
+    cpu_gauge = pn.indicators.Gauge(
+        name="CPU",
+        title_size=12,
+        value=0,
+        bounds=(0, 100),
+        format="{value}%",
+        sizing_mode="fixed",
+        show_ticks=False,
+        show_labels=False,
+        width=190,
+        height=190,
+        annulus_width=5,
+        custom_opts={
+        "series": [{
+            "radius": "75%",  # Adjust outer size
+        }]
+    }
+    )
+    memory_gauge = pn.indicators.Gauge(
+        name="RAM",
+        title_size=12,
+        value=0,
+        bounds=(0, 100),
+        format="{value}%",
+        sizing_mode="fixed",
+        show_ticks=False,
+        show_labels=False,
+        width=190,
+        height=190,
+        annulus_width=5,
+        custom_opts={
+        "series": [{
+            "radius": "75%",  # Adjust outer size
+        }]
+    }
+    )
+
+    # Function to fetch system resource usage
+    def fetch_resources(event):
+        cpu = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory().percent
+
+        cpu_gauge.value = cpu
+        memory_gauge.value = memory
+
+    # Button to update system monitoring
+    fetch_button = pn.widgets.Button(
+        name="Check System Resources", button_type="primary"
+    )
+    fetch_button.on_click(fetch_resources)
+
+    # Resource monitoring container
+    resource_monitoring = pn.FlexBox(
+
+        cpu_gauge,
+        memory_gauge,
+        fetch_button,
+        align_items="center",        
+    )
+    return resource_monitoring
 
 
 def create_home_main_area() -> MainArea:
@@ -335,10 +398,8 @@ def create_home_help_area() -> HelpBox:
     HelpBox
         An instance of HelpBox with combined help content.
     """
-    
-    tabs_content = {
-        "1st": pn.pane.Markdown("")
-    }
+
+    tabs_content = {"1st": pn.pane.Markdown("")}
     # help_content = f"{HOME_HELP_BOX_STRING}\n\n{DASHBOARD_HELP_CONTENT}"
     return HelpBox(tabs_content=tabs_content, title="Help Section")
 

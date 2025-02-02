@@ -25,6 +25,7 @@ from modules.Home.HomeContent import (
     create_home_help_area,
     create_home_footer,
     create_home_plots_area,
+    create_home_resource_monitor,
 )
 from modules.DataLoading.DataIngestion import (
     create_loadingdata_header,
@@ -75,6 +76,7 @@ from assets.icons.svg import HOME_ICON_SVG, LOAD_DATA_ICON_SVG
 def create_sidebar(
     main_area,
     header,
+    resource_usage, 
     footer,
     output_box,
     warning_box,
@@ -130,6 +132,7 @@ def create_sidebar(
         help_box[:] = [create_home_help_area()]
         footer[:] = [create_home_footer()]
         plots_container[:] = [create_home_plots_area()]
+        resource_usage[:] = [create_home_resource_monitor()]
 
     home_button.on_click(handle_home_button_selection)
 
