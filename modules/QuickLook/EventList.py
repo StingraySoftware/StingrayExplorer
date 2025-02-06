@@ -292,7 +292,6 @@ def simulate_event_list(
     max_counts_input,
     dt_input,
     name_input,
-    method_selector,
     output_box_container,
     warning_box_container,
     warning_handler,
@@ -353,14 +352,10 @@ def simulate_event_list(
 
         # Simulate the light curve
         times = np.arange(time_bins)
-        counts = np.floor(np.random.rand(time_bins) * max_counts)
+        counts = np.random.randint(0, max_counts, size=time_bins)
         lc = Lightcurve(times, counts, dt=dt, skip_checks=True)
 
-        if method_selector.value == "Standard Method":
-            event_list = EventList.from_lc(lc)
-        else:
-            event_list = EventList()
-            event_list.simulate_times(lc)
+        event_list = EventList.from_lc(lc)
 
         name = name_input.value
         loaded_event_data.append((name, event_list))
@@ -541,24 +536,27 @@ def create_simulate_event_list_tab(
         >>> isinstance(tab, pn.Column)
         True
     """
-    simulation_title = pn.pane.Markdown("# Simulating Event Lists")
+    simulation_title = pn.pane.Markdown("# Simulating Random Event Lists")
     time_bins_input = pn.widgets.IntInput(
-        name="Number of Time Bins", value=10, step=1, start=1, end=10000
+        name="Number of Time Bins", value=10, step=1, start=1, end=1000000
     )
     max_counts_input = pn.widgets.IntInput(
-        name="Max Counts per Bin", value=5, step=1, start=1, end=10000
+        name="Max Possible Counts per Bin", value=5, step=1, start=1, end=100000
     )
     dt_input = pn.widgets.FloatInput(
         name="Delta Time (dt)", value=1.0, step=0.1, start=0.001, end=10000.0
-    )
-    method_selector = pn.widgets.Select(
-        name="Method", options=["Standard Method", "Inverse CDF Method"]
     )
     sim_name_input = pn.widgets.TextInput(
         name="Simulated Event List Name", placeholder="e.g., my_sim_event_list"
     )
     simulate_button = pn.widgets.Button(
         name="Simulate Event List", button_type="primary"
+    )
+    simulate_button_tooltip = pn.widgets.TooltipIcon(
+        value=Tooltip(
+            content="""Simulate a random light curve and then use it to get the EventList from the specified parameters.""",
+            position="bottom",
+        )
     )
 
     def on_simulate_button_click(event):
@@ -575,7 +573,6 @@ def create_simulate_event_list_tab(
             max_counts_input,
             dt_input,
             sim_name_input,
-            method_selector,
             output_box_container,
             warning_box_container,
             warning_handler,
@@ -588,7 +585,6 @@ def create_simulate_event_list_tab(
         time_bins_input,
         max_counts_input,
         dt_input,
-        method_selector,
         sim_name_input,
         simulate_button,
     )
@@ -622,13 +618,13 @@ def create_eventlist_operations_tab(
     event_list_properties_box = pn.pane.Markdown(
         "**Select an EventList to view its properties.**"
     )
-    
+
     multi_light_curve_select = pn.widgets.MultiSelect(
         name="Select Light Curve(s)",
         options={name: i for i, (name, lc) in enumerate(loaded_light_curve)},
         size=8,
     )
-    
+
     light_curve_properties_box = pn.pane.Markdown(
         "**Select a LightCurve to view its properties.**"
     )
@@ -763,7 +759,7 @@ def create_eventlist_operations_tab(
             )
 
         event_list_properties_box.object = "\n".join(properties)
-        
+
     # Callback to update the lightcurve properties box
     def update_light_curve_properties(event):
         selected_indices = multi_light_curve_select.value
@@ -1329,23 +1325,26 @@ def create_eventlist_operations_tab(
     # Layout for the tab
     tab_content = pn.Column(
         pn.pane.Markdown("# EventList Operations"),
-        pn.FlexBox(
-            multi_event_list_select,
-            event_list_properties_box,
-            multi_light_curve_select,
-            light_curve_properties_box,
-            flex_direction="row",
+        pn.Row(
+            pn.Column(
+                multi_event_list_select,
+                event_list_properties_box,
+            ),
+            pn.Column(
+                multi_light_curve_select,
+                light_curve_properties_box,
+            ),
         ),
         pn.Column(
             pn.FlexBox(
-                pn.FlexBox(
+                
                     pn.Column(
                         pn.pane.Markdown("## Apply Deadtime"),
                         deadtime_input,
                         deadtime_inplace_checkbox,
                         apply_deadtime_button,
                         width=400,
-                        height=300, 
+                        height=300,
                     ),
                     pn.Column(
                         pn.pane.Markdown("## Convert PI to Energy"),
@@ -1355,13 +1354,9 @@ def create_eventlist_operations_tab(
                         width=400,
                         height=300,
                     ),
-                    flex_direction="row",
-                    flex_wrap="nowrap",
-                    align_items="flex-start",
-                    justify_content="flex-start",
-                    gap="50px",
-                ),
-                pn.FlexBox(
+                   
+                
+                
                     pn.Column(
                         pn.pane.Markdown("## Filter by Energy Range"),
                         energy_range_input,
@@ -1388,13 +1383,8 @@ def create_eventlist_operations_tab(
                         width=400,
                         height=300,
                     ),
-                    flex_direction="row",
-                    flex_wrap="nowrap",
-                    align_items="flex-start",
-                    justify_content="flex-start",
-                    gap="50px",
-                ),
-                pn.FlexBox(
+                    
+                
                     pn.Column(
                         pn.pane.Markdown("## Compute Intensity Evolution"),
                         intensity_energy_range_input,
@@ -1418,17 +1408,11 @@ def create_eventlist_operations_tab(
                         width=400,
                         height=300,
                     ),
-                    flex_direction="row",
-                    flex_wrap="nowrap",
-                    align_items="flex-start",
-                    justify_content="flex-start",
-                    gap="50px",
-                ),
+                    
                 flex_direction="row",
                 flex_wrap="wrap",
                 align_items="center",
                 justify_content="center",
-                
             )
         ),
         pn.pane.Markdown("<br/>"),
