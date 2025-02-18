@@ -1,3 +1,22 @@
+"""
+Stingray Explorer Main Application File
+
+This module serves as the entry point for the Stingray Explorer dashboard application.
+It handles the initialization of the Panel/Holoviews environment and sets up the 
+dashboard layout and components.
+
+The dashboard provides an interactive interface for analyzing X-ray astronomy data
+using the Stingray library, with various visualization and analysis tools.
+
+Key Components:
+- Header: Main navigation and branding
+- Sidebar: Control panel for data loading and analysis
+- Main Area: Primary workspace for data visualization
+- Plots Area: Container for generated plots and charts
+- Resource Monitor: System resource usage display
+- Help/Info Sections: Documentation and support resources
+"""
+
 import panel as pn
 import holoviews as hv
 from modules.Home.HomeContent import (
@@ -14,44 +33,44 @@ from modules.Home.HomeContent import (
 from utils.sidebar import create_sidebar
 
 
-# Initialize panel extension
+# Initialize Panel and Holoviews extensions with required features
 pn.extension('floatpanel', 'mathjax')
 pn.extension('filedropper')
 pn.extension('echarts')
 pn.extension(nthreads=0)
 hv.extension('bokeh')
 
-# Create a boolean status indicator
+# Create a boolean status indicator to show system activity
 busy_indicator = pn.indicators.BooleanStatus(
     value=True, color="warning", width=30, height=30
 )
 
-# Create the header
+# Create the main dashboard header with branding and navigation
 header = create_home_header()
 
-# Create resource monitor
+# Create resource monitor to display system usage statistics
 resource_monitor = create_home_resource_monitor()
 
-# Create the main area
+# Create the main workspace area for data visualization and analysis
 main_area = create_home_main_area()
 
-# Create the output box
+# Create the output console for displaying analysis results and messages
 output_box = create_home_output_box()
 
-# Create the warning box
+# Create the warning box for displaying important alerts and notifications
 warning_box = create_home_warning_box()
 
-# Create the help box
+# Create the help box containing documentation and support resources
 help_box = create_home_help_area()
 
-# Create the footer
+# Create the footer with copyright and additional information
 footer = create_home_footer()
 
-# Plots Area 
+# Create the plots area container for visualization outputs
 plots_area = create_home_plots_area_initial()
 
 
-# Containers for changing the layouts dynamically
+# Create containers for each section to enable dynamic layout management
 header_container = pn.Column(header)
 resource_monitor_container = pn.Column(resource_monitor)
 main_area_container = pn.Column(main_area)
@@ -62,9 +81,10 @@ help_box_container = pn.Column(help_box)
 footer_container = pn.Column(footer)
 float_panel_container = pn.Column(pn.pane.Markdown("This is not a bug that this container is scrolling, it's a container to hold Floating Plots. You can ignore it completely."))
 
-# Floating Plot Demo
+# Floating plot container for additional visualization options
 # floating_plot_demo = create_floating_plot_demo(floating_panel_container)
 
+# Create the sidebar with navigation and control elements
 sidebar = create_sidebar(
     main_area=main_area_container,
     resource_usage=resource_monitor_container,
@@ -78,7 +98,18 @@ sidebar = create_sidebar(
 )
 
 
-# Create a FastGridTemplate layout
+"""
+Create the main dashboard layout using Panel's FastGridTemplate
+
+The layout organizes all components into a responsive grid system with:
+- Header at the top
+- Sidebar on the left
+- Main content area in the center
+- Plots and output sections below
+- Footer at the bottom
+
+The grid is fully responsive and adapts to different screen sizes.
+"""
 layout = pn.template.FastGridTemplate(
     # Basic Panel layout components
     main=[],
@@ -141,5 +172,5 @@ layout.main[140:170, 0:12] = footer_container
 layout.main[170:170, 0:12] = float_panel_container
 
 
-# Serve the layout
+# Make the layout available for serving
 layout.servable()
