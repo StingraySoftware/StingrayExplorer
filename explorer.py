@@ -105,7 +105,8 @@ The layout organizes all components into a responsive grid system with:
 - Header at the top
 - Sidebar on the left
 - Main content area in the center
-- Plots and output sections below
+- Output and warning box on the right of main layout
+- Plots and help section below the main content
 - Footer at the bottom
 
 The grid is fully responsive and adapts to different screen sizes.
