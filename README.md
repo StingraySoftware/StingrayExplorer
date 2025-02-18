@@ -10,371 +10,449 @@ thumbnail: >-
   https://cdn-uploads.huggingface.co/production/uploads/668d17c6e6887d1f6afde2a6/4q5lnlS6-eJ_JBh8tW3_I.png
 short_description: Stingray Explorer Dashboard Demo
 ---
+
 # StingrayExplorer
 
-StingrayExplorer is a data analysis tool designed for quick visualization and exploration of astronomical time series data. It leverages the Stingray library to compute power spectra, cross spectra, and more, with a user-friendly dashboard built using Panel.
+StingrayExplorer is a comprehensive data analysis and visualization dashboard designed for X-ray astronomy time series data. Built on top of the Stingray library, it provides an intuitive graphical interface for analyzing event lists, generating light curves, computing various types of spectra, and performing advanced timing analysis.
 
-## Project Structure
+## Overview
 
-```
-.
-├── CODE_OF_CONDUCT.md
-├── Dockerfile
-├── LICENSE
-├── README.md
-├── assets
-│   ├── audio
-│   ├── icons
-│   │   ├── __pycache__
-│   │   │   └── svg.cpython-311.pyc
-│   │   └── svg.py
-│   ├── images
-│   │   ├── holoviz_logo.png
-│   │   ├── holoviz_logo_minimised.png
-│   │   ├── stingray_explorer.png
-│   │   ├── stingray_explorer.webp
-│   │   ├── stingray_explorer_minimised.png
-│   │   ├── stingray_logo.png
-│   │   └── stingray_logo_minimised.png
-│   ├── stylesheets
-│   │   └── explorer.css
-│   └── videos
-├── docs
-│   ├── Makefile
-│   ├── build
-│   │   ├── doctrees
-│   │   │   ├── DataLoading.doctree
-│   │   │   ├── Home.doctree
-│   │   │   ├── QuickLook.doctree
-│   │   │   ├── environment.pickle
-│   │   │   ├── index.doctree
-│   │   │   └── modules.doctree
-│   │   └── html
-│   │       ├── DataLoading.html
-│   │       ├── Home.html
-│   │       ├── QuickLook.html
-│   │       ├── _modules
-│   │       │   ├── index.html
-│   │       │   └── modules
-│   │       │       ├── DataLoading
-│   │       │       │   └── DataIngestion.html
-│   │       │       ├── Home
-│   │       │       │   └── HomeContent.html
-│   │       │       └── QuickLook
-│   │       │           ├── AverageCrossSpectrum.html
-│   │       │           ├── AveragePowerSpectrum.html
-│   │       │           ├── Bispectrum.html
-│   │       │           ├── CrossSpectrum.html
-│   │       │           ├── LightCurve.html
-│   │       │           ├── PowerColors.html
-│   │       │           └── PowerSpectrum.html
-│   │       ├── _sources
-│   │       │   ├── DataLoading.rst.txt
-│   │       │   ├── Home.rst.txt
-│   │       │   ├── QuickLook.rst.txt
-│   │       │   ├── index.rst.txt
-│   │       │   └── modules.rst.txt
-│   │       ├── _static
-│   │       │   ├── _sphinx_javascript_frameworks_compat.js
-│   │       │   ├── basic.css
-│   │       │   ├── css
-│   │       │   │   ├── badge_only.css
-│   │       │   │   ├── fonts
-│   │       │   │   │   ├── Roboto-Slab-Bold.woff
-│   │       │   │   │   ├── Roboto-Slab-Bold.woff2
-│   │       │   │   │   ├── Roboto-Slab-Regular.woff
-│   │       │   │   │   ├── Roboto-Slab-Regular.woff2
-│   │       │   │   │   ├── fontawesome-webfont.eot
-│   │       │   │   │   ├── fontawesome-webfont.svg
-│   │       │   │   │   ├── fontawesome-webfont.ttf
-│   │       │   │   │   ├── fontawesome-webfont.woff
-│   │       │   │   │   ├── fontawesome-webfont.woff2
-│   │       │   │   │   ├── lato-bold-italic.woff
-│   │       │   │   │   ├── lato-bold-italic.woff2
-│   │       │   │   │   ├── lato-bold.woff
-│   │       │   │   │   ├── lato-bold.woff2
-│   │       │   │   │   ├── lato-normal-italic.woff
-│   │       │   │   │   ├── lato-normal-italic.woff2
-│   │       │   │   │   ├── lato-normal.woff
-│   │       │   │   │   └── lato-normal.woff2
-│   │       │   │   └── theme.css
-│   │       │   ├── doctools.js
-│   │       │   ├── documentation_options.js
-│   │       │   ├── file.png
-│   │       │   ├── fonts
-│   │       │   │   ├── Lato
-│   │       │   │   │   ├── lato-bold.eot
-│   │       │   │   │   ├── lato-bold.ttf
-│   │       │   │   │   ├── lato-bold.woff
-│   │       │   │   │   ├── lato-bold.woff2
-│   │       │   │   │   ├── lato-bolditalic.eot
-│   │       │   │   │   ├── lato-bolditalic.ttf
-│   │       │   │   │   ├── lato-bolditalic.woff
-│   │       │   │   │   ├── lato-bolditalic.woff2
-│   │       │   │   │   ├── lato-italic.eot
-│   │       │   │   │   ├── lato-italic.ttf
-│   │       │   │   │   ├── lato-italic.woff
-│   │       │   │   │   ├── lato-italic.woff2
-│   │       │   │   │   ├── lato-regular.eot
-│   │       │   │   │   ├── lato-regular.ttf
-│   │       │   │   │   ├── lato-regular.woff
-│   │       │   │   │   └── lato-regular.woff2
-│   │       │   │   └── RobotoSlab
-│   │       │   │       ├── roboto-slab-v7-bold.eot
-│   │       │   │       ├── roboto-slab-v7-bold.ttf
-│   │       │   │       ├── roboto-slab-v7-bold.woff
-│   │       │   │       ├── roboto-slab-v7-bold.woff2
-│   │       │   │       ├── roboto-slab-v7-regular.eot
-│   │       │   │       ├── roboto-slab-v7-regular.ttf
-│   │       │   │       ├── roboto-slab-v7-regular.woff
-│   │       │   │       └── roboto-slab-v7-regular.woff2
-│   │       │   ├── jquery.js
-│   │       │   ├── js
-│   │       │   │   ├── badge_only.js
-│   │       │   │   ├── theme.js
-│   │       │   │   └── versions.js
-│   │       │   ├── language_data.js
-│   │       │   ├── minus.png
-│   │       │   ├── plus.png
-│   │       │   ├── pygments.css
-│   │       │   ├── searchtools.js
-│   │       │   └── sphinx_highlight.js
-│   │       ├── genindex.html
-│   │       ├── index.html
-│   │       ├── modules.html
-│   │       ├── objects.inv
-│   │       ├── py-modindex.html
-│   │       ├── search.html
-│   │       └── searchindex.js
-│   ├── files
-│   │   └── loaded-data
-│   ├── make.bat
-│   ├── requirements.txt
-│   └── source
-│       ├── DataLoading.rst
-│       ├── Home.rst
-│       ├── QuickLook.rst
-│       ├── _static
-│       ├── _templates
-│       ├── conf.py
-│       ├── index.rst
-│       └── modules.rst
-├── environment.yml
-├── explorer.py
-├── files
-│   ├── data
-│   │   ├── LightCurve_bexvar.fits
-│   │   ├── data_small.hdf5
-│   │   ├── data_smaller.hdf5
-│   │   ├── lcurveA.fits
-│   │   ├── lcurve_new.fits
-│   │   ├── monol_testA.evt
-│   │   ├── monol_testA_calib.evt
-│   │   ├── monol_testA_calib_unsrt.evt
-│   │   ├── nomission.evt
-│   │   ├── xte_gx_test.evt.gz
-│   │   └── xte_test.evt.gz
-│   └── loaded-data
-├── modules
-│   ├── DataLoading
-│   │   ├── DataIngestion.py
-│   │   ├── __init__.py
-│   │   └── __pycache__
-│   │       ├── DataIngestion.cpython-311.pyc
-│   │       └── __init__.cpython-311.pyc
-│   ├── Home
-│   │   ├── HomeContent.py
-│   │   ├── __init__.py
-│   │   └── __pycache__
-│   │       ├── Home.cpython-311.pyc
-│   │       ├── HomeContent.cpython-311.pyc
-│   │       └── __init__.cpython-311.pyc
-│   └── QuickLook
-│       ├── AverageCrossSpectrum.py
-│       ├── AveragePowerSpectrum.py
-│       ├── Bispectrum.py
-│       ├── CrossSpectrum.py
-│       ├── LightCurve.py
-│       ├── PowerColors.py
-│       ├── PowerSpectrum.py
-│       ├── __init__.py
-│       └── __pycache__
-│           ├── AverageCrossSpectrum.cpython-311.pyc
-│           ├── AveragePowerSpectrum.cpython-311.pyc
-│           ├── Bispectrum.cpython-311.pyc
-│           ├── CrossSpectrum.cpython-311.pyc
-│           ├── LightCurve.cpython-311.pyc
-│           ├── PowerColors.cpython-311.pyc
-│           ├── PowerSpectrum.cpython-311.pyc
-│           └── __init__.cpython-311.pyc
-├── pyproject.toml
-├── setup.py
-├── tests
-│   ├── test_dataloading
-│   │   ├── __pycache__
-│   │   │   └── test_dataingestion.cpython-311-pytest-8.2.1.pyc
-│   │   └── test_dataingestion.py
-│   ├── test_quicklook
-│   └── test_utils
-└── utils
-    ├── DashboardClasses.py
-    ├── __pycache__
-    │   ├── dashboardClasses.cpython-311.pyc
-    │   ├── globals.cpython-311.pyc
-    │   ├── sidebar.cpython-311.pyc
-    │   └── strings.cpython-311.pyc
-    ├── globals.py
-    ├── sidebar.py
-    └── strings.py
+StingrayExplorer combines the powerful timing analysis capabilities of the Stingray library with a modern, interactive dashboard built using Panel and HoloViz. It enables astronomers to:
 
-47 directories, 162 files
-```
+- Load and analyze event lists from various X-ray telescopes
+- Generate and manipulate light curves
+- Compute power spectra, cross spectra, and bispectra
+- Analyze dynamical power spectra and power colors
+- Visualize results through interactive plots
+- Export analysis results in multiple formats
 
-## Installation
+The dashboard is designed to be user-friendly while providing access to advanced features for experienced users.
+
+## Key Features
+
+### Data Loading and Management
+- Support for multiple file formats (FITS, HDF5, ASCII, etc.)
+- Batch loading of multiple event lists
+- Automatic GTI (Good Time Interval) handling
+- Energy calibration using RMF (Response Matrix File)
+- File preview and metadata inspection
+
+### Event List Analysis
+- Event list creation and simulation
+- Deadtime correction
+- Energy filtering and PI channel conversion
+- Event list joining and sorting
+- Color and intensity evolution analysis
+
+### Spectral Analysis
+- Power spectrum computation
+- Cross spectrum analysis
+- Averaged power/cross spectra
+- Bispectrum calculation
+- Dynamical power spectrum visualization
+- Power color analysis
+
+### Interactive Visualization
+- Real-time plot updates
+- Customizable plot layouts
+- Floating plot panels
+- Interactive plot manipulation
+- Multiple visualization options
+
+### System Features
+- Resource monitoring (CPU, RAM usage)
+- Warning and error handling
+- Comprehensive help documentation
+- Responsive layout design
+
+## Architecture
+
+The project follows a modular architecture with clear separation of concerns:
+
+### Core Components
+
+1. **explorer.py**: Main entry point and dashboard initialization
+   - Panel/HoloViz setup
+   - Layout configuration
+   - Component integration
+
+2. **modules/**: Core functionality modules
+   - **DataLoading/**: Data ingestion and management
+   - **Home/**: Dashboard home page and navigation
+   - **QuickLook/**: Analysis tools and visualizations
+     - EventList handling
+     - Light curve generation
+     - Spectral analysis
+     - Power color computation
+
+3. **utils/**: Utility classes and functions
+   - **DashboardClasses.py**: Reusable UI components
+   - **sidebar.py**: Navigation and control
+   - **globals.py**: Global state management
+   - **strings.py**: Text content
+
+4. **assets/**: Static resources
+   - Images and icons
+   - CSS stylesheets
+   - Documentation assets
+
+5. **files/**: Data storage
+   - Sample data files
+   - User-loaded data
+   - Analysis outputs
+
+### Technology Stack
+
+- **Backend**: Python 3.11+
+- **Frontend**: Panel, HoloViz
+- **Data Analysis**: Stingray, NumPy, Astropy
+- **Visualization**: Bokeh, Matplotlib
+- **Deployment**: Docker, Hugging Face Spaces
+
+## Installation Guide
 
 ### Prerequisites
 
 - Python 3.11 or above
-- Panel
-- Holoviews
-- Stingray
-- Other dependencies listed in `environment.yml`
+- Conda package manager
+- Git (for cloning the repository)
 
-### Setup
+### Dependencies
+
+Core packages:
+- Panel >= 1.3.0
+- HoloViews >= 1.18.0
+- Stingray >= 0.3
+- NumPy >= 1.24.0
+- Astropy >= 5.0
+- Matplotlib >= 3.7.0
+- Bokeh >= 3.3.0
+
+### Setup Instructions
 
 1. Clone the repository:
+   ```bash
+   git clone https://github.com/kartikmandar-GSOC24/StingrayExplorer.git
+   cd StingrayExplorer
+   ```
 
-    ```
-    git clone https://github.com/kartikmandar-GSOC24/StingrayExplorer.git
-    ```
+2. Create and activate the conda environment:
+   ```bash
+   conda env create -f environment.yml
+   conda activate stingray-env
+   ```
 
-2. Navigate to the project directory:
+3. Verify installation:
+   ```bash
+   python -c "import stingray; import panel; import holoviews"
+   ```
 
-    ```
-    cd StingrayExplorer
-    ```
+### Troubleshooting Dependencies
 
-3. Create and activate the conda environment:
+If you encounter dependency conflicts:
 
-    ```bash
-    conda env create -f environment.yml
-    conda activate stingray-env
-    ```
-Note: In case of dependencies clashing refer to individual dependencies and see if the version is correct for Stingray installation. \
-The most important dependencies are as follows:\
-stingray, holoviews, panel\
-You would need to install the various dependencies to install all this. 
+1. Check individual package versions:
+   ```bash
+   conda list stingray
+   conda list panel
+   conda list holoviews
+   ```
 
-If the import errors are still persisting, see what libraries absence is causing the import and install them from pip or conda forge. 
+2. Try installing missing dependencies:
+   ```bash
+   conda install -c conda-forge <package_name>
+   # or
+   pip install <package_name>
+   ```
 
-If nothing else works, contact me at kartik4321mandar@gmail.com or in the Stingray slack channel @kartikmandar
+3. Common issues:
+   - Stingray version compatibility
+   - Panel/HoloViews version mismatch
+   - Missing system libraries
 
-## Deployment
+4. Support channels:
+   - Email: kartik4321mandar@gmail.com
+   - Stingray Slack: @kartikmandar
+   - GitHub Issues
 
-The dashboard can now be deployed using Docker and is live on Hugging Face Spaces at [https://kartikmandar-stingrayexplorer.hf.space/explorer](https://kartikmandar-stingrayexplorer.hf.space/explorer).
+## Deployment Options
 
-The Hugging Face Spaces repository is located at: [https://huggingface.co/spaces/kartikmandar/StingrayExplorer](https://huggingface.co/spaces/kartikmandar/StingrayExplorer).
+### Local Development Server
 
-A live demo of the application is also embedded on my website for easy access: [https://www.kartikmandar.com/gsoc-2024/stingray-explorer](https://www.kartikmandar.com/gsoc-2024/stingray-explorer).
-
-### How to Deploy and Build Using Docker
-
-To deploy the dashboard using Docker, follow these steps:
-
-### Build the Docker Image:  
-Navigate to the project directory and build the Docker image using the following command:
-
+Run the application locally:
 ```bash
-docker build -t stingray-explorer .
-```
-
-### Run the Docker Container
-
-After building the image, run the container with the following command:
-
-```bash
-docker run -p 7860:7860 stingray-explorer
-```
-
-
-
-
-## GitHub Actions Integration
-
-The Hugging Face Spaces repository is synced with the main GitHub repository using GitHub Actions. This sync occurs automatically for every commit pushed to the `main` branch.
-
-
-## Usage
-
-To run the StingrayExplorer application, execute inside StingrayExplorer:
-
-```
 panel serve explorer.py --autoreload --static-dirs assets=./assets
 ```
 
-This will start a Panel server and launch the application in your default web browser.
+This starts a development server with:
+- Auto-reloading on file changes
+- Static file serving
+- Debug information
+- Default port 5006
 
-## Modules
+### Docker Deployment
 
-### `explorer.py`
+1. Build the image:
+   ```bash
+   docker build -t stingray-explorer .
+   ```
 
-The main entry point of the application. It initializes the Panel server and sets up the layout of the dashboard.
+2. Run the container:
+   ```bash
+   docker run -p 7860:7860 stingray-explorer
+   ```
 
-### `assets/`
+3. Access the application at `http://localhost:7860`
 
-Contains static assets like icons, images, stylesheets, audio, and video files used in the dashboard.
+### Hugging Face Spaces
 
-### `files/`
+The dashboard is deployed on Hugging Face Spaces:
+- Live demo: [https://kartikmandar-stingrayexplorer.hf.space/explorer](https://kartikmandar-stingrayexplorer.hf.space/explorer)
+- Repository: [https://huggingface.co/spaces/kartikmandar/StingrayExplorer](https://huggingface.co/spaces/kartikmandar/StingrayExplorer)
+- Website demo: [https://www.kartikmandar.com/gsoc-2024/stingray-explorer](https://www.kartikmandar.com/gsoc-2024/stingray-explorer)
 
-Contains example data files and event lists that can be loaded into the application for analysis.
+### Continuous Integration
 
-### `modules/`
+GitHub Actions automatically sync changes to Hugging Face Spaces:
+- Triggers on pushes to `main` branch
+- Builds and deploys Docker image
+- Updates Hugging Face Space
 
-#### `DataLoading/`
+## Usage Guide
 
-- **DataIngestion.py**: Handles the loading and preprocessing of event list data.
+### Quick Start
 
-#### `Home/`
+1. Launch the application:
+   ```bash
+   panel serve explorer.py --autoreload --static-dirs assets=./assets
+   ```
 
-- **HomeContent.py**: Contains the components and layout for the home screen of the dashboard.
+2. Navigate to `http://localhost:5006` in your browser
 
-#### `QuickLook/`
+3. Basic workflow:
+   - Use the sidebar navigation
+   - Load data files
+   - Generate visualizations
+   - Export results
 
-- **AverageCrossSpectrum.py**: Module for computing and visualizing averaged cross spectra.
-- **AveragePowerSpectrum.py**: Module for computing and visualizing averaged power spectra.
-- **CrossSpectrum.py**: Module for computing and visualizing cross spectra.
-- **LightCurve.py**: Module for generating and displaying light curves.
-- **PowerSpectrum.py**: Module for generating and displaying power spectra.
+### Data Loading
 
-### `utils/`
+1. Click "Read Data" in the sidebar
+2. Choose from multiple options:
+   - Load local files
+   - Fetch from URL
+   - Use sample data
 
-- **DashboardClasses.py**: Contains reusable classes for constructing the dashboard layout and components.
-- **globals.py**: Stores global variables and state used across different modules.
-- **sidebar.py**: Manages the sidebar navigation and interactions.
-- **strings.py**: Contains strings and messages used in the application.
+Supported formats:
+- FITS event files
+- HDF5 files
+- ASCII tables
+- ECSV files
 
-## Features
+### Analysis Tools
 
-- **Quick Visualization**: Easily generate and visualize light curves, power spectra, and cross spectra.
-- **Data Loading**: Load and analyze different event list data sets.
-- **Interactive UI**: Use a user-friendly interface to interact with the data and view results in real-time.
-- **Floating Panels**: Separate panels for different plots and data frames, allowing for a customizable layout.
+1. **Event List Operations**
+   - Create/simulate event lists
+   - Apply deadtime corrections
+   - Filter by energy range
+   - Convert PI to energy
 
-## Contributing
+2. **Light Curve Analysis**
+   - Generate light curves
+   - Apply GTI filters
+   - Compute statistics
+   - Plot time series
 
-If you would like to contribute to this project, please follow the steps below:
+3. **Spectral Analysis**
+   - Compute power spectra
+   - Generate cross spectra
+   - Calculate bispectra
+   - Analyze power colors
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature-branch`).
-3. Make your changes and commit them (`git commit -m 'Add new feature'`).
-4. Push to the branch (`git push origin feature-branch`).
-5. Create a new Pull Request.
+4. **Advanced Features**
+   - Dynamical power spectra
+   - Color evolution
+   - Intensity analysis
+   - Custom plotting
 
-## License
+### Visualization Options
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+1. **Plot Types**
+   - Time series
+   - Spectral plots
+   - Contour plots
+   - Scatter plots
 
-## Acknowledgments
+2. **Interactive Features**
+   - Zoom/pan
+   - Hover tooltips
+   - Plot customization
+   - Export options
 
-- The Stingray library for providing tools for X-ray astronomy data analysis.
-- Panel and Holoviews (HoloViz ecosystem) for enabling interactive data visualization in Python.
+3. **Layout Options**
+   - Floating panels
+   - Grid arrangements
+   - Multiple views
+   - Responsive design
+
+### Data Export
+
+- Save plots as PNG/SVG
+- Export data as CSV/FITS
+- Save analysis results
+- Generate reports
+
+## Development Guide
+
+### Setting Up Development Environment
+
+1. Fork and clone the repository
+2. Create development environment:
+   ```bash
+   conda env create -f environment.yml
+   conda activate stingray-env
+   ```
+3. Install development dependencies:
+   ```bash
+   pip install -r docs/requirements.txt
+   ```
+
+### Project Structure
+
+```
+stingray-explorer/
+├── explorer.py          # Main application entry point
+├── modules/            # Core functionality modules
+│   ├── DataLoading/   # Data ingestion components
+│   ├── Home/          # Dashboard home components
+│   └── QuickLook/     # Analysis tools
+├── utils/             # Utility functions and classes
+├── assets/            # Static resources
+├── files/            # Data files
+└── tests/            # Test suite
+```
+
+### Development Workflow
+
+1. Create feature branch:
+   ```bash
+   git checkout -b feature/new-feature
+   ```
+
+2. Make changes and test:
+   ```bash
+   # Run tests
+   pytest tests/
+   
+   # Start development server
+   panel serve explorer.py --autoreload
+   ```
+
+3. Submit pull request:
+   - Fork repository
+   - Push changes
+   - Create PR with description
+
+### Coding Standards
+
+- Follow PEP 8 style guide
+- Add docstrings (NumPy format)
+- Write unit tests
+- Update documentation
+
+### Testing
+
+Run test suite:
+```bash
+pytest tests/
+```
+
+Test coverage:
+```bash
+pytest --cov=./ tests/
+```
+
+## Troubleshooting Guide
+
+### Common Issues
+
+1. **Installation Problems**
+   - Dependency conflicts
+   - Python version mismatch
+   - Missing system libraries
+
+   Solution: Check versions, use conda-forge channel
+
+2. **Import Errors**
+   - Missing packages
+   - Version incompatibilities
+   - Path issues
+
+   Solution: Verify environment, check imports
+
+3. **Runtime Errors**
+   - Memory issues
+   - Performance problems
+   - Display errors
+
+   Solution: Monitor resources, check logs
+
+4. **Data Loading Issues**
+   - File format problems
+   - Permission errors
+   - Corrupt files
+
+   Solution: Verify file integrity, check formats
+
+### Performance Optimization
+
+1. **Memory Management**
+   - Use chunked loading
+   - Clear unused data
+   - Monitor memory usage
+
+2. **Speed Improvements**
+   - Enable caching
+   - Optimize computations
+   - Use efficient algorithms
+
+3. **Display Performance**
+   - Limit plot sizes
+   - Use appropriate renderers
+   - Optimize updates
+
+### Getting Help
+
+1. **Documentation**
+   - Read the docs
+   - Check examples
+   - Review tutorials
+
+2. **Support Channels**
+   - GitHub Issues
+   - Email support
+   - Slack channel
+
+3. **Debugging**
+   - Check logs
+   - Use debugger
+   - Print statements
+
+## License and Credits
+
+### License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
+
+### Credits
+
+- **Stingray Library**: Core timing analysis functionality
+- **Panel/HoloViz**: Interactive visualization framework
+- **Contributors**: See [GitHub contributors page](https://github.com/kartikmandar-GSOC24/StingrayExplorer/graphs/contributors)
+
+### Acknowledgments
+
+- The Stingray development team
+- HoloViz community
+- X-ray astronomy community
+- Google Summer of Code program
