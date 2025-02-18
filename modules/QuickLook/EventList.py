@@ -838,16 +838,33 @@ def create_eventlist_operations_tab(
         try:
             rmf_file = rmf_file_input.value
             if not rmf_file:
-                raise ValueError("No RMF file provided.")
+                warning_box_container[:] = [
+                    create_eventlist_warning_box(
+                        "Warning: No RMF file provided. Conversion cannot proceed."
+                    )
+                ]
+                return
 
             if not os.path.isfile(rmf_file):
-                raise ValueError(
-                    f"RMF file '{rmf_file}' does not exist. Please provide a valid file path."
-                )
+                warning_box_container[:] = [
+                    create_eventlist_warning_box(
+                        f"Warning: RMF file '{rmf_file}' does not exist. Please provide a valid file path."
+                    )
+                ]
+                return
 
             # Perform PI to Energy conversion
             selected_index = selected_indices[0]
             event_list_name, event_list = loaded_event_data[selected_index]
+
+            # Check if PI data is available
+            if not hasattr(event_list, "pi") or event_list.pi is None:
+                warning_box_container[:] = [
+                    create_eventlist_warning_box(
+                        f"Warning: EventList '{event_list_name}' has no valid PI data. Cannot convert to Energy."
+                    )
+                ]
+                return
 
             if rmf_newEventList_checkbox.value:
                 new_event_list = copy.deepcopy(
@@ -984,9 +1001,12 @@ def create_eventlist_operations_tab(
         try:
             energy_ranges_input_value = energy_ranges_input.value
             if not energy_ranges_input_value:
-                raise ValueError(
-                    "Energy ranges input cannot be empty. Provide two energy ranges as [[min1, max1], [min2, max2]]."
-                )
+                warning_box_container[:] = [
+                    create_eventlist_warning_box(
+                        "Warning: Energy ranges input cannot be empty. Provide two energy ranges as [[min1, max1], [min2, max2]]."
+                    )
+                ]
+                return
             try:
                 energy_ranges = eval(energy_ranges_input_value)
                 if (
@@ -994,14 +1014,20 @@ def create_eventlist_operations_tab(
                     or len(energy_ranges) != 2
                     or not all(len(er) == 2 for er in energy_ranges)
                 ):
-                    raise ValueError(
-                        "Invalid energy ranges format. Provide two energy ranges as [[min1, max1], [min2, max2]]."
-                    )
+                    warning_box_container[:] = [
+                        create_eventlist_warning_box(
+                            "Warning: Invalid energy ranges format. Provide two energy ranges as [[min1, max1], [min2, max2]]."
+                        )
+                    ]
+                    return
                 energy_ranges = [[float(x) for x in er] for er in energy_ranges]
             except Exception:
-                raise ValueError(
-                    "Invalid energy ranges format. Provide two energy ranges as [[min1, max1], [min2, max2]]."
-                )
+                warning_box_container[:] = [
+                    create_eventlist_warning_box(
+                        "Warning: Invalid energy ranges format. Provide two energy ranges as [[min1, max1], [min2, max2]]."
+                    )
+                ]
+                return
 
             segment_size = segment_size_input.value
             use_pi = color_use_pi_checkbox.value
@@ -1337,78 +1363,71 @@ def create_eventlist_operations_tab(
         ),
         pn.Column(
             pn.FlexBox(
-                
-                    pn.Column(
-                        pn.pane.Markdown("## Apply Deadtime"),
-                        deadtime_input,
-                        deadtime_inplace_checkbox,
-                        apply_deadtime_button,
-                        width=400,
-                        height=300,
-                    ),
-                    pn.Column(
-                        pn.pane.Markdown("## Convert PI to Energy"),
-                        rmf_file_input,
-                        rmf_newEventList_checkbox,
-                        convert_pi_button,
-                        width=400,
-                        height=300,
-                    ),
-                   
-                
-                
-                    pn.Column(
-                        pn.pane.Markdown("## Filter by Energy Range"),
-                        energy_range_input,
-                        filterEnergy_inplace_checkbox,
-                        filterEnergy_use_pi_checkbox,
-                        filter_energy_button,
-                        width=400,
-                        height=300,
-                    ),
-                    pn.Column(
-                        pn.pane.Markdown("## Compute Color Evolution"),
-                        energy_ranges_input,
-                        segment_size_input,
-                        color_use_pi_checkbox,
-                        compute_color_button,
-                        width=400,
-                        height=300,
-                    ),
-                    pn.Column(
-                        pn.pane.Markdown("## Get Energy Mask"),
-                        energy_mask_input,
-                        energy_mask_use_pi_checkbox,
-                        get_energy_mask_button,
-                        width=400,
-                        height=300,
-                    ),
-                    
-                
-                    pn.Column(
-                        pn.pane.Markdown("## Compute Intensity Evolution"),
-                        intensity_energy_range_input,
-                        intensity_segment_size_input,
-                        intensity_use_pi_checkbox,
-                        compute_intensity_button,
-                        width=400,
-                        height=300,
-                    ),
-                    pn.Column(
-                        pn.pane.Markdown("## Join EventLists"),
-                        join_strategy_select,
-                        join_button,
-                        width=400,
-                        height=300,
-                    ),
-                    pn.Column(
-                        pn.pane.Markdown("## Sort EventLists"),
-                        sort_inplace_checkbox,
-                        sort_button,
-                        width=400,
-                        height=300,
-                    ),
-                    
+                pn.Column(
+                    pn.pane.Markdown("## Apply Deadtime"),
+                    deadtime_input,
+                    deadtime_inplace_checkbox,
+                    apply_deadtime_button,
+                    width=400,
+                    height=300,
+                ),
+                pn.Column(
+                    pn.pane.Markdown("## Convert PI to Energy"),
+                    rmf_file_input,
+                    rmf_newEventList_checkbox,
+                    convert_pi_button,
+                    width=400,
+                    height=300,
+                ),
+                pn.Column(
+                    pn.pane.Markdown("## Filter by Energy Range"),
+                    energy_range_input,
+                    filterEnergy_inplace_checkbox,
+                    filterEnergy_use_pi_checkbox,
+                    filter_energy_button,
+                    width=400,
+                    height=300,
+                ),
+                pn.Column(
+                    pn.pane.Markdown("## Compute Color Evolution"),
+                    energy_ranges_input,
+                    segment_size_input,
+                    color_use_pi_checkbox,
+                    compute_color_button,
+                    width=400,
+                    height=300,
+                ),
+                pn.Column(
+                    pn.pane.Markdown("## Get Energy Mask"),
+                    energy_mask_input,
+                    energy_mask_use_pi_checkbox,
+                    get_energy_mask_button,
+                    width=400,
+                    height=300,
+                ),
+                pn.Column(
+                    pn.pane.Markdown("## Compute Intensity Evolution"),
+                    intensity_energy_range_input,
+                    intensity_segment_size_input,
+                    intensity_use_pi_checkbox,
+                    compute_intensity_button,
+                    width=400,
+                    height=300,
+                ),
+                pn.Column(
+                    pn.pane.Markdown("## Join EventLists"),
+                    join_strategy_select,
+                    join_button,
+                    width=400,
+                    height=300,
+                ),
+                pn.Column(
+                    pn.pane.Markdown("## Sort EventLists"),
+                    sort_inplace_checkbox,
+                    sort_button,
+                    width=400,
+                    height=300,
+                ),
                 flex_direction="row",
                 flex_wrap="wrap",
                 align_items="center",
