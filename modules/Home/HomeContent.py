@@ -15,7 +15,7 @@ from stingray.gti import get_gti_lengths, get_btis, get_total_gti_length
 
 # Dashboard Classes and Event Data Imports
 from utils.globals import loaded_event_data
-from utils.DashboardClasses import (
+from utils.dashboardClasses import (
     MainHeader,
     MainArea,
     OutputBox,
