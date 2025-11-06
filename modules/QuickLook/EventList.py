@@ -17,8 +17,8 @@ import panel as pn
 from stingray.events import EventList
 from stingray import Lightcurve
 
-# Dashboard Classes and Event Data Imports
-from utils.globals import loaded_event_data, loaded_light_curve
+# Dashboard Classes and State Management Imports
+from utils.state_manager import state_manager
 from utils.DashboardClasses import (
     MainHeader,
     MainArea,
@@ -221,10 +221,10 @@ def create_event_list(
         rmf_file = rmf_file_input.value.strip() or None
         skip_checks = skip_checks_checkbox.value
         notes = notes_input.value.strip() or None
-        name = name_input.value.strip() or f"event_list_{len(loaded_event_data)}"
+        name = name_input.value.strip() or f"event_list_{len(state_manager.get_event_data())}"
 
         # Check for duplicates
-        if any(name == event[0] for event in loaded_event_data):
+        if state_manager.has_event_data(name):
             output_box_container[:] = [
                 create_eventlist_output_box(
                     f"A file with the name '{name}' already exists in memory. Please provide a different name."
@@ -254,7 +254,7 @@ def create_event_list(
         )
 
         # Store the EventList
-        loaded_event_data.append((name, event_list))
+        state_manager.add_event_data(name, event_list)
 
         output_box_container[:] = [
             create_eventlist_output_box(
@@ -337,7 +337,7 @@ def simulate_event_list(
             ]
             return
 
-        if any(name_input.value == event[0] for event in loaded_event_data):
+        if state_manager.has_event_data(name_input.value):
             output_box_container[:] = [
                 create_eventlist_output_box(
                     f"A file with the name '{name_input.value}' already exists in memory. Please provide a different name."
@@ -358,7 +358,7 @@ def simulate_event_list(
         event_list = EventList.from_lc(lc)
 
         name = name_input.value
-        loaded_event_data.append((name, event_list))
+        state_manager.add_event_data(name, event_list)
 
         output_box_container[:] = [
             create_eventlist_output_box(
@@ -612,7 +612,7 @@ def create_eventlist_operations_tab(
     # Define widgets for input
     multi_event_list_select = pn.widgets.MultiSelect(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
         size=8,
     )
     event_list_properties_box = pn.pane.Markdown(
@@ -621,7 +621,7 @@ def create_eventlist_operations_tab(
 
     multi_light_curve_select = pn.widgets.MultiSelect(
         name="Select Light Curve(s)",
-        options={name: i for i, (name, lc) in enumerate(loaded_light_curve)},
+        options={name: i for i, (name, lc) in enumerate(state_manager.get_light_curve())},
         size=8,
     )
 
@@ -732,7 +732,7 @@ def create_eventlist_operations_tab(
 
         properties = []
         for selected_index in selected_indices:
-            event_list_name, event_list = loaded_event_data[selected_index]
+            event_list_name, event_list = state_manager.get_event_data()[selected_index]
             gti_count = len(event_list.gti) if hasattr(event_list, "gti") else "N/A"
             time_span = (
                 f"{event_list.time[0]:.2f} - {event_list.time[-1]:.2f}"
@@ -769,7 +769,7 @@ def create_eventlist_operations_tab(
 
         properties = []
         for selected_index in selected_indices:
-            light_curve_name, light_curve = loaded_light_curve[selected_index]
+            light_curve_name, light_curve = state_manager.get_light_curve()[selected_index]
             properties.append(
                 f"### LightCurve: {light_curve_name}\n"
                 f"- **Counts**: {light_curve.counts}\n"
@@ -794,7 +794,7 @@ def create_eventlist_operations_tab(
 
         for index in selected_indices:
             try:
-                event_list_name, event_list = loaded_event_data[index]
+                event_list_name, event_list = state_manager.get_event_data()[index]
                 if inplace:
                     event_list.apply_deadtime(deadtime, inplace=True)
                     results.append(
@@ -803,7 +803,7 @@ def create_eventlist_operations_tab(
                 else:
                     new_event_list = event_list.apply_deadtime(deadtime, inplace=False)
                     new_name = f"{event_list_name}_{deadtime}"
-                    loaded_event_data.append((new_name, new_event_list))
+                    state_manager.add_event_data(new_name, new_event_list)
                     results.append(
                         f"Created new EventList '{new_name}' with deadtime={deadtime}s."
                     )
@@ -855,7 +855,7 @@ def create_eventlist_operations_tab(
 
             # Perform PI to Energy conversion
             selected_index = selected_indices[0]
-            event_list_name, event_list = loaded_event_data[selected_index]
+            event_list_name, event_list = state_manager.get_event_data()[selected_index]
 
             # Check if PI data is available
             if not hasattr(event_list, "pi") or event_list.pi is None:
@@ -872,7 +872,7 @@ def create_eventlist_operations_tab(
                 )  # Deepcopy to ensure independence
                 new_event_list.convert_pi_to_energy(rmf_file)
                 new_event_list_name = f"{event_list_name}_converted_energy"
-                loaded_event_data.append(
+                state_manager.add_event_data(
                     (new_event_list_name, new_event_list)
                 )  # Add new event list
                 output_box_container[:] = [
@@ -931,7 +931,7 @@ def create_eventlist_operations_tab(
             results = []
 
             for selected_index in selected_indices:
-                event_list_name, event_list = loaded_event_data[selected_index]
+                event_list_name, event_list = state_manager.get_event_data()[selected_index]
 
                 # Validate energy or PI data
                 if use_pi:
@@ -971,7 +971,7 @@ def create_eventlist_operations_tab(
                         new_event_list_name = f"{event_list_name}_filtered_pi_{energy_range[0]}_{energy_range[1]}"
                     else:
                         new_event_list_name = f"{event_list_name}_filtered_energy_{energy_range[0]}_{energy_range[1]}"
-                    loaded_event_data.append((new_event_list_name, filtered_event_list))
+                    state_manager.add_event_data((new_event_list_name, filtered_event_list))
 
                     results.append(
                         f"Created new EventList '{new_event_list_name}' filtered using energy range {energy_range} (use_pi={use_pi})."
@@ -1034,7 +1034,7 @@ def create_eventlist_operations_tab(
 
             results = []
             for selected_index in selected_indices:
-                event_list_name, event_list = loaded_event_data[selected_index]
+                event_list_name, event_list = state_manager.get_event_data()[selected_index]
 
                 # Validate energy or PI data
                 if use_pi:
@@ -1120,7 +1120,7 @@ def create_eventlist_operations_tab(
 
             results = []
             for selected_index in selected_indices:
-                event_list_name, event_list = loaded_event_data[selected_index]
+                event_list_name, event_list = state_manager.get_event_data()[selected_index]
 
                 # Validate energy or PI data
                 if use_pi:
@@ -1205,7 +1205,7 @@ def create_eventlist_operations_tab(
 
             results = []
             for selected_index in selected_indices:
-                event_list_name, event_list = loaded_event_data[selected_index]
+                event_list_name, event_list = state_manager.get_event_data()[selected_index]
 
                 # Validate energy or PI data
                 if use_pi:
@@ -1266,8 +1266,9 @@ def create_eventlist_operations_tab(
         try:
             strategy = join_strategy_select.value
             # Retrieve the selected event lists
-            selected_event_lists = [loaded_event_data[i][1] for i in selected_indices]
-            selected_names = [loaded_event_data[i][0] for i in selected_indices]
+            all_event_data = state_manager.get_event_data()
+            selected_event_lists = [all_event_data[i][1] for i in selected_indices]
+            selected_names = [all_event_data[i][0] for i in selected_indices]
 
             # Perform the join operation
             result_event_list = selected_event_lists[0]
@@ -1278,7 +1279,7 @@ def create_eventlist_operations_tab(
 
             # Generate a new name for the joined EventList
             new_event_list_name = f"joined_{'_'.join(selected_names)}_{strategy}"
-            loaded_event_data.append((new_event_list_name, result_event_list))
+            state_manager.add_event_data(new_event_list_name, result_event_list)
 
             # Update the output container with success message
             output_box_container[:] = [
@@ -1311,7 +1312,7 @@ def create_eventlist_operations_tab(
 
         try:
             for selected_index in selected_indices:
-                event_list_name, event_list = loaded_event_data[selected_index]
+                event_list_name, event_list = state_manager.get_event_data()[selected_index]
 
                 if inplace:
                     # Sort in place
@@ -1321,7 +1322,7 @@ def create_eventlist_operations_tab(
                     # Sort and create a new EventList
                     sorted_event_list = event_list.sort(inplace=False)
                     new_event_list_name = f"{event_list_name}_sorted"
-                    loaded_event_data.append((new_event_list_name, sorted_event_list))
+                    state_manager.add_event_data((new_event_list_name, sorted_event_list))
                     results.append(
                         f"Created a new sorted EventList '{new_event_list_name}' from '{event_list_name}'."
                     )

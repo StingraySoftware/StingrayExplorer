@@ -17,8 +17,8 @@ import panel as pn
 from stingray.events import EventList
 from stingray import Lightcurve
 
-# Dashboard Classes and Event Data Imports
-from utils.globals import loaded_event_data, loaded_light_curve
+# Dashboard Classes and State Management Imports
+from utils.state_manager import state_manager
 from utils.DashboardClasses import (
     MainHeader,
     MainArea,
@@ -202,7 +202,8 @@ def read_event_data(
     try:
         loaded_files = []
         for file_path, file_name, file_format in zip(file_paths, filenames, formats):
-            if any(file_name == event[0] for event in loaded_event_data):
+            # Check if event data with this name already exists
+            if state_manager.has_event_data(file_name):
                 output_box_container[:] = [
                     create_loadingdata_output_box(
                         f"A file with the name '{file_name}' already exists in memory. Please provide a different name."
@@ -216,7 +217,8 @@ def read_event_data(
                 rmf_file=tmp_file_path if rmf_file_dropper.value else None,
                 additional_columns=additional_columns,
             )
-            loaded_event_data.append((file_name, event_list))
+            # Add to state manager instead of global list
+            state_manager.add_event_data(file_name, event_list)
             loaded_files.append(
                 f"File '{file_path}' loaded successfully as '{file_name}' with format '{file_format}'."
             )
@@ -274,7 +276,10 @@ def save_loaded_files(
             >>> os.path.exists('/path/to/saved/file.hdf5')
             True  # Assuming the file was saved successfully
     """
-    if not loaded_event_data:
+    # Get all event data from state manager
+    all_event_data = state_manager.get_event_data()
+
+    if not all_event_data:
         output_box_container[:] = [
             create_loadingdata_output_box("No files loaded to save.")
         ]
@@ -283,7 +288,7 @@ def save_loaded_files(
     filenames = (
         [name.strip() for name in filename_input.value.split(",")]
         if filename_input.value
-        else [event[0] for event in loaded_event_data]
+        else [event[0] for event in all_event_data]
     )
 
     # TODO: ADD checks for valid formats
@@ -294,21 +299,21 @@ def save_loaded_files(
     )
 
     if format_checkbox.value:
-        formats = ["hdf5" for _ in range(len(loaded_event_data))]
+        formats = ["hdf5" for _ in range(len(all_event_data))]
 
-    if len(filenames) < len(loaded_event_data):
+    if len(filenames) < len(all_event_data):
         output_box_container[:] = [
             create_loadingdata_output_box("Please specify names for all loaded files.")
         ]
         return
-    if len(filenames) != len(loaded_event_data):
+    if len(filenames) != len(all_event_data):
         output_box_container[:] = [
             create_loadingdata_output_box(
                 "Please ensure that the number of names matches the number of loaded files."
             )
         ]
         return
-    if len(formats) < len(loaded_event_data):
+    if len(formats) < len(all_event_data):
         output_box_container[:] = [
             create_loadingdata_output_box(
                 "Please specify formats for all loaded files or check the default format option."
@@ -319,7 +324,7 @@ def save_loaded_files(
     saved_files = []
     try:
         for (loaded_name, event_list), file_name, file_format in zip(
-            loaded_event_data, filenames, formats
+            all_event_data, filenames, formats
         ):
             if os.path.exists(
                 os.path.join(loaded_data_path, f"{file_name}.{file_format}")
@@ -480,26 +485,30 @@ def preview_loaded_files(
     """
     preview_data = []
 
+    # Get all data from state manager
+    all_event_data = state_manager.get_event_data()
+    all_light_curves = state_manager.get_light_curve()
+
     # Add a summary of loaded files and their names
-    if loaded_event_data:
+    if all_event_data:
         preview_data.append(
-            f"Loaded Event Files: {len(loaded_event_data)}\n"
-            f"Event File Names: {[file_name for file_name, _ in loaded_event_data]}\n"
+            f"Loaded Event Files: {len(all_event_data)}\n"
+            f"Event File Names: {[file_name for file_name, _ in all_event_data]}\n"
         )
     else:
         preview_data.append("No Event Files Loaded.\n")
 
-    if loaded_light_curve:
+    if all_light_curves:
         preview_data.append(
-            f"Loaded Light Curves: {len(loaded_light_curve)}\n"
-            f"Light Curve Names: {[lc_name for lc_name, _ in loaded_light_curve]}\n"
+            f"Loaded Light Curves: {len(all_light_curves)}\n"
+            f"Light Curve Names: {[lc_name for lc_name, _ in all_light_curves]}\n"
         )
     else:
         preview_data.append("No Light Curves Loaded.\n")
 
     # Preview EventList data
-    if loaded_event_data:
-        for file_name, event_list in loaded_event_data:
+    if all_event_data:
+        for file_name, event_list in all_event_data:
             try:
                 # Gather available attributes dynamically
                 attributes = [
@@ -537,8 +546,8 @@ def preview_loaded_files(
                 warning_handler.warn(str(e), category=RuntimeWarning)
 
     # Preview Lightcurve data
-    if loaded_light_curve:
-        for lc_name, lightcurve in loaded_light_curve:
+    if all_light_curves:
+        for lc_name, lightcurve in all_light_curves:
             try:
                 attributes = [
                     ("Times (first entries)", lightcurve.time[:time_limit]),
@@ -635,18 +644,20 @@ def clear_loaded_files(event, output_box_container, warning_box_container):
         >>> clear_loaded_files(event, output_box_container, warning_box_container)
         "Loaded event files have been cleared."
     """
-    global loaded_event_data, loaded_light_curve
+    event_data_count = len(state_manager.get_event_data())
+    light_curve_count = len(state_manager.get_light_curve())
+
     event_data_cleared = False
     light_curve_data_cleared = False
 
     # Clear EventList data
-    if loaded_event_data:
-        loaded_event_data.clear()
+    if event_data_count > 0:
+        state_manager.clear_event_data()
         event_data_cleared = True
 
     # Clear Lightcurve data
-    if loaded_light_curve:
-        loaded_light_curve.clear()
+    if light_curve_count > 0:
+        state_manager.clear_light_curves()
         light_curve_data_cleared = True
 
     # Create appropriate messages based on what was cleared
@@ -937,8 +948,8 @@ def create_fetch_eventlist_tab(
             # Read the EventList
             event_list = EventList.read(temp_filename, format_select.value)
 
-            # Add to global loaded_event_data
-            loaded_event_data.append((filename_input.value.strip(), event_list))
+            # Add to state manager
+            state_manager.add_event_data(filename_input.value.strip(), event_list)
 
             output_box_container[:] = [
                 create_loadingdata_output_box(
