@@ -229,7 +229,7 @@ class Footer(pn.viewable.Viewer):
         """
         # Logo
         logo = pn.pane.PNG(
-            "../assets/images/stingray_explorer.png",
+            "./assets/images/stingray_explorer.png",
             width=120,
             height=120,
             align="center",

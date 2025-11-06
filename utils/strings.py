@@ -132,7 +132,7 @@ HOME_FOOTER_STRING = """
 HOME_STINGRAY_TAB_STRING = """
 <h2> Stingray: Next-Generation Spectral Timing </h2>
 
-![Stingray-logo](../assets/images/stingray_logo_minimised.png)
+![Stingray-logo](./assets/images/stingray_logo_minimised.png)
 
 Stingray is a Python library designed to perform time series analysis and related tasks on astronomical light curves. It supports a range of commonly-used Fourier analysis techniques, as well as extensions for analyzing pulsar data, simulating data sets, and statistical modeling. Stingray is designed to be easy to extend and easy to incorporate into data analysis workflows and pipelines.
 

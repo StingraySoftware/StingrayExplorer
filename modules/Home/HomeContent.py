@@ -6,6 +6,9 @@ from matplotlib import pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 import psutil
 
+# Get the current process for resource monitoring
+_current_process = psutil.Process(os.getpid())
+
 # HoloViz Imports
 import panel as pn
 
@@ -53,72 +56,115 @@ def create_home_header() -> MainHeader:
     """
     home_heading_input = pn.widgets.TextInput(name="Heading", value=HOME_HEADER_STRING)
     home_subheading_input = pn.widgets.TextInput(
-        name="Subheading", value="Stingray GUI using HoloViz"
+        name="Subheading", value="Stingray Graphical User Interface"
     )
 
     return MainHeader(heading=home_heading_input, subheading=home_subheading_input)
 
 
 # Function to create a resource monitor
-def create_home_resource_monitor() -> MainHeader:
+def create_home_resource_monitor():
     cpu_gauge = pn.indicators.Gauge(
         name="CPU",
-        title_size=12,
+        title_size=11,
         value=0,
         bounds=(0, 100),
         format="{value}%",
         sizing_mode="fixed",
         show_ticks=False,
         show_labels=False,
-        width=190,
-        height=190,
-        annulus_width=5,
+        width=180,
+        height=148,
+        annulus_width=2,
         custom_opts={
         "series": [{
-            "radius": "75%",  # Adjust outer size
+            "radius": "100%",  # Adjust outer size
         }]
     }
     )
     memory_gauge = pn.indicators.Gauge(
         name="RAM",
-        title_size=12,
+        title_size=11,
         value=0,
         bounds=(0, 100),
         format="{value}%",
         sizing_mode="fixed",
         show_ticks=False,
         show_labels=False,
-        width=190,
-        height=190,
-        annulus_width=5,
+        width=180,
+        height=148,
+        annulus_width=2,
         custom_opts={
         "series": [{
-            "radius": "75%",  # Adjust outer size
+            "radius": "100%",  # Adjust outer size
         }]
     }
     )
 
-    # Function to fetch system resource usage
+    # Get system information for display
+    total_ram_bytes = psutil.virtual_memory().total
+    total_ram_gb = total_ram_bytes / (1024 ** 3)  # Convert bytes to GB
+    cpu_cores = psutil.cpu_count(logical=False)  # Physical cores
+    cpu_threads = psutil.cpu_count(logical=True)  # Logical cores (threads)
+
+    # Create system info text - CPU on top, RAM below
+    cpu_info_text = pn.pane.Markdown(
+        f"""**CPU:** {cpu_cores} cores ({cpu_threads} threads)""",
+        sizing_mode="fixed",
+        align="center",
+        styles={"font-size": "12px", "text-align": "center", "margin": "0px", "padding": "0px"},
+        margin=0,
+    )
+
+    ram_info_text = pn.pane.Markdown(
+        f"""**Total RAM:** {total_ram_gb:.1f} GB""",
+        sizing_mode="fixed",
+        align="center",
+        styles={"font-size": "12px", "text-align": "center", "margin": "0px", "padding": "0px"},
+        margin=0,
+    )
+
+    # Function to fetch StingrayExplorer process resource usage
+    # Uses a callback parameter to get the gauges from the button's click event
     def fetch_resources(event):
-        cpu = psutil.cpu_percent(interval=1)
-        memory = psutil.virtual_memory().percent
+        # Get CPU usage for this process only (over 1 second interval)
+        cpu = _current_process.cpu_percent(interval=1)
+        # Get memory usage for this process only (as percentage of total system RAM)
+        memory = _current_process.memory_percent()
 
-        cpu_gauge.value = cpu
-        memory_gauge.value = memory
+        # Round to 1 decimal place for proper display in the gauge
+        cpu_rounded = round(cpu, 1)
+        memory_rounded = round(memory, 1)
 
-    # Button to update system monitoring
+        # Update the gauge values
+        cpu_gauge.value = cpu_rounded
+        memory_gauge.value = memory_rounded
+
+    # Button to update resource monitoring (StingrayExplorer process only)
     fetch_button = pn.widgets.Button(
-        name="Check System Resources", button_type="primary"
+        name="Check Dashboard Resources", button_type="primary"
     )
     fetch_button.on_click(fetch_resources)
 
-    # Resource monitoring container
-    resource_monitoring = pn.FlexBox(
+    # Button and info section (vertical layout: CPU, RAM, Button)
+    button_info_section = pn.FlexBox(
+        cpu_info_text,
+        ram_info_text,
+        fetch_button,
+        flex_direction="column",
+        align_items="center",
+        justify_content="center",
+        gap="2px",
+    )
 
+    # Resource monitoring container (horizontal layout)
+    resource_monitoring = pn.FlexBox(
         cpu_gauge,
         memory_gauge,
-        fetch_button,
-        align_items="center",        
+        button_info_section,
+        flex_direction="row",
+        align_items="center",
+        justify_content="center",
     )
     return resource_monitoring
 
