@@ -28,7 +28,8 @@ RUN conda run -n stingray_env pip install --no-cache-dir astropy \
     param \
     pandas \
     h5py \
-    datashader
+    datashader \
+    psutil
 
 # Set environment variables
 ENV NUMBA_CACHE_DIR=/tmp/numba_cache
