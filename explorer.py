@@ -34,16 +34,16 @@ from utils.sidebar import create_sidebar
 
 
 # Initialize Panel and Holoviews extensions with required features
-pn.extension('floatpanel', 'mathjax')
-pn.extension('filedropper')
-pn.extension('echarts')
-pn.extension(nthreads=0)
+# Note: 'filedropper' is required for FileDropper widgets used in data loading
+pn.extension('floatpanel', 'mathjax', 'echarts', 'filedropper', nthreads=0)
 hv.extension('bokeh')
 
 # Create a boolean status indicator to show system activity
-busy_indicator = pn.indicators.BooleanStatus(
-    value=True, color="warning", width=30, height=30
-)
+# Note: In Panel 1.8+, we don't pass custom busy indicators to avoid param warnings
+# The template will use its default busy indicator
+# busy_status = pn.indicators.BooleanStatus(
+#     value=True, color="warning", width=30, height=30
+# )
 
 # Create the main dashboard header with branding and navigation
 header = create_home_header()
@@ -125,7 +125,7 @@ layout = pn.template.FastGridTemplate(
     favicon="./assets/images/stingray_explorer.png",
     # sidebar_footer="Sidebar Footer",
     # config= (TemplateConfig): Contains configuration options similar to pn.config but applied to the current Template only. (Currently only css_files is supported) But css_files are now deprecated.
-    busy_indicator=busy_indicator,
+    # busy_indicator removed to avoid param warnings in Panel 1.8+ (uses default)
     # For configuring the grid
     cols={"lg": 12, "md": 12, "sm": 12, "xs": 4, "xxs": 2},
     breakpoints={"lg": 1200, "md": 996, "sm": 768, "xs": 480, "xxs": 0},
