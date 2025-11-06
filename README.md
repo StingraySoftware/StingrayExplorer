@@ -249,6 +249,19 @@ Supported formats:
 - ASCII tables
 - ECSV files
 
+#### Sample Data Files
+
+The repository includes small sample data files (< 1MB total) in `files/data/` for basic testing:
+- Small event lists (.evt files)
+- Example light curves (.fits files)
+
+**Note**: Large sample files (HDF5, RMF > 10MB) are not included in the repository to keep the codebase lightweight and deployable on free-tier hosting platforms like Hugging Face Spaces.
+
+For full-scale analysis:
+- Upload your own data files using the "Read Data" feature
+- Load data directly from URLs
+- Download X-ray astronomy datasets from archives like [HEASARC](https://heasarc.gsfc.nasa.gov/)
+
 ### Analysis Tools
 
 1. **Event List Operations**
