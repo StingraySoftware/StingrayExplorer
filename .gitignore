@@ -4,3 +4,12 @@ __pycache__/
 files/loaded-data/
 .vscode/
 docs/build/
+
+# Large data files - excluded to keep repository size minimal
+# Users should upload their own data or download samples separately
+files/data/*.hdf5
+files/data/*.rmf
+files/data/SE1_*.evt.gz
+files/data/data_small*.hdf5
+files/data/data_smaller*.hdf5
+files/data/test.rmf
