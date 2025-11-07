@@ -1,6 +1,6 @@
 import panel as pn
 import holoviews as hv
-from utils.globals import loaded_event_data
+from utils.state_manager import state_manager
 import pandas as pd
 import warnings
 import hvplot.pandas
@@ -104,7 +104,7 @@ def create_avg_powerspectrum_tab(
     # Define Widgets
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
     )
 
     dt_input = pn.widgets.FloatInput(
@@ -125,7 +125,7 @@ def create_avg_powerspectrum_tab(
 
     multi_event_select = pn.widgets.MultiSelect(
         name="Or Select Event List(s) to Combine",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
         size=8,
     )
 
@@ -171,9 +171,9 @@ def create_avg_powerspectrum_tab(
 
         if selected_index is not None:
 
-            event_list_name = loaded_event_data[selected_index][0]
+            event_list_name = state_manager.get_event_data()[selected_index][0]
 
-            event_list = loaded_event_data[selected_index][1]
+            event_list = state_manager.get_event_data()[selected_index][1]
 
             start_time = event_list.time[0]
 
@@ -192,7 +192,7 @@ def create_avg_powerspectrum_tab(
     # Internal functions to encapsulate functionality
     def create_dataframe(selected_event_list_index, dt, norm, segment_size):
         if selected_event_list_index is not None:
-            event_list = loaded_event_data[selected_event_list_index][1]
+            event_list = state_manager.get_event_data()[selected_event_list_index][1]
 
             # Create an AveragedPowerspectrum object using from_lightcurve
             try:
@@ -338,7 +338,7 @@ def create_avg_powerspectrum_tab(
         )
 
     def generate_avg_powerspectrum(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -356,7 +356,7 @@ def create_avg_powerspectrum_tab(
         segment_size = segment_size_input.value
         df, ps = create_dataframe(selected_event_list_index, dt, norm, segment_size)
         if df is not None:
-            plot_title = f"Averaged Power Spectrum for {loaded_event_data[selected_event_list_index][0]}"
+            plot_title = f"Averaged Power Spectrum for {state_manager.get_event_data()[selected_event_list_index][0]}"
             plot_hv = create_holoviews_plots(
                 ps, title=plot_title, dt=dt, norm=norm, segment_size=segment_size
             )
@@ -391,7 +391,7 @@ def create_avg_powerspectrum_tab(
             ]
 
     def show_dataframe(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -411,7 +411,7 @@ def create_avg_powerspectrum_tab(
         if df is not None:
             dataframe_output = create_dataframe_panes(
                 df,
-                f"{loaded_event_data[selected_event_list_index][0]}",
+                f"{state_manager.get_event_data()[selected_event_list_index][0]}",
                 dt,
                 norm,
                 segment_size,
@@ -420,7 +420,7 @@ def create_avg_powerspectrum_tab(
                 float_panel_container.append(
                     create_floatpanel_area(
                         content=dataframe_output,
-                        title=f"DataFrame for {loaded_event_list[selected_event_list_index][0]}",
+                        title=f"DataFrame for {state_manager.get_event_data()[selected_event_list_index][0]}",
                     )
                 )
             else:
@@ -450,7 +450,7 @@ def create_avg_powerspectrum_tab(
             segment_size = segment_size_input.value
             df, ps = create_dataframe(index, dt, norm, segment_size)
             if df is not None:
-                event_list_name = loaded_event_data[index][0]
+                event_list_name = state_manager.get_event_data()[index][0]
                 plot_hv = create_holoviews_plots_no_colorbar(
                     ps,
                     title=event_list_name,

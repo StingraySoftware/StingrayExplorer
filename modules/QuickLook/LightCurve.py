@@ -2,7 +2,7 @@ import panel as pn
 import holoviews as hv
 import holoviews.operation.datashader as hd
 from holoviews.operation.timeseries import rolling, rolling_outlier_std
-from utils.globals import loaded_event_data, loaded_light_curve
+from utils.state_manager import state_manager
 import pandas as pd
 import warnings
 import hvplot.pandas
@@ -98,7 +98,7 @@ def create_lightcurve_tab(
 
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
     )
 
     dt_input = pn.widgets.FloatInput(
@@ -111,7 +111,7 @@ def create_lightcurve_tab(
 
     multi_event_select = pn.widgets.MultiSelect(
         name="Or Select Event List(s) to Combine",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
         size=8,
     )
 
@@ -141,8 +141,8 @@ def create_lightcurve_tab(
     def update_time_info(event):
         selected_index = event_list_dropdown.value
         if selected_index is not None:
-            event_list_name = loaded_event_data[selected_index][0]
-            event_list = loaded_event_data[selected_index][1]
+            event_list_name = state_manager.get_event_data()[selected_index][0]
+            event_list = state_manager.get_event_data()[selected_index][1]
             start_time = event_list.time[0]
             end_time = event_list.time[-1]
             time_info_pane.object = (
@@ -260,7 +260,7 @@ def create_lightcurve_tab(
 
     def create_dataframe(selected_event_list_index, dt, eventlist_name):
         if selected_event_list_index is not None:
-            event_list = loaded_event_data[selected_event_list_index][1]
+            event_list = state_manager.get_event_data()[selected_event_list_index][1]
 
 
             # Parse GTIs from input if provided
@@ -287,9 +287,9 @@ def create_lightcurve_tab(
 
             lightcurve_name = f"{eventlist_name}_lightcurve"
 
-            # Append the generated light curve to loaded_light_curve if the checkbox is checked
+            # Add the generated light curve to state manager if the checkbox is checked
             if save_lightcurve_checkbox.value:
-                loaded_light_curve.append((lightcurve_name, lc_new))
+                state_manager.add_light_curve(lightcurve_name, lc_new)
 
             df = pd.DataFrame(
                 {
@@ -306,7 +306,7 @@ def create_lightcurve_tab(
         return FloatingPlot(title, content)
 
     def show_dataframe(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -322,7 +322,7 @@ def create_lightcurve_tab(
         dt = dt_input.value
         df = create_dataframe(selected_event_list_index, dt)
         if df is not None:
-            event_list_name = loaded_event_data[selected_event_list_index][0]
+            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
             dataframe_output = create_dataframe_panes(df, f"{event_list_name}", dt)
             if dataframe_checkbox.value:
                 float_panel_container.append(
@@ -339,7 +339,7 @@ def create_lightcurve_tab(
             ]
 
     def generate_lightcurve(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -356,10 +356,10 @@ def create_lightcurve_tab(
         df = create_dataframe(
             selected_event_list_index,
             dt,
-            loaded_event_data[selected_event_list_index][0],
+            state_manager.get_event_data()[selected_event_list_index][0],
         )
         if df is not None:
-            event_list_name = loaded_event_data[selected_event_list_index][0]
+            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
             plot_hv = create_holoviews_plots(df, label=event_list_name, dt=dt)
             holoviews_output = create_holoviews_panes(plot=plot_hv)
 
@@ -406,7 +406,7 @@ def create_lightcurve_tab(
             dt = dt_input.value
             df = create_dataframe(index, dt)
             if df is not None:
-                event_list_name = loaded_event_data[index][0]
+                event_list_name = state_manager.get_event_data()[index][0]
                 plot_hv = create_holoviews_plots_no_colorbar(
                     df, label=event_list_name, dt=dt, color_key=color_key[index]
                 )

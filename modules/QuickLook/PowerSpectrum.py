@@ -1,6 +1,6 @@
 import panel as pn
 import holoviews as hv
-from utils.globals import loaded_event_data
+from utils.state_manager import state_manager
 import pandas as pd
 import warnings
 import holoviews.operation.datashader as hd
@@ -85,7 +85,7 @@ def create_powerspectrum_tab(
 ):
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
     )
 
     dt_input = pn.widgets.FloatInput(
@@ -104,7 +104,7 @@ def create_powerspectrum_tab(
 
     multi_event_select = pn.widgets.MultiSelect(
         name="Or Select Event List(s) to Combine",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
         size=8,
     )
 
@@ -140,8 +140,8 @@ def create_powerspectrum_tab(
     def update_time_info(event):
         selected_index = event_list_dropdown.value
         if selected_index is not None:
-            event_list_name = loaded_event_data[selected_index][0]
-            event_list = loaded_event_data[selected_index][1]
+            event_list_name = state_manager.get_event_data()[selected_index][0]
+            event_list = state_manager.get_event_data()[selected_index][1]
             start_time = event_list.time[0]
             end_time = event_list.time[-1]
             time_info_pane.object = (
@@ -298,7 +298,7 @@ def create_powerspectrum_tab(
 
     def create_dataframe(selected_event_list_index, dt, norm):
         if selected_event_list_index is not None:
-            event_list = loaded_event_data[selected_event_list_index][1]
+            event_list = state_manager.get_event_data()[selected_event_list_index][1]
 
             # Create a PowerSpectrum object using from_events
             ps = Powerspectrum.from_events(events=event_list, dt=dt, norm=norm)
@@ -334,7 +334,7 @@ def create_powerspectrum_tab(
         return FloatingPlot(content=content, title=title)
 
     def show_dataframe(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -351,7 +351,7 @@ def create_powerspectrum_tab(
         norm = norm_select.value
         df, ps = create_dataframe(selected_event_list_index, dt, norm)
         if df is not None:
-            event_list_name = loaded_event_data[selected_event_list_index][0]
+            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
             dataframe_title = f"{event_list_name} (dt={dt}, norm={norm})"
             dataframe_output = create_dataframe_panes(df, dataframe_title)
             if dataframe_checkbox.value:
@@ -369,7 +369,7 @@ def create_powerspectrum_tab(
             ]
 
     def generate_powerspectrum(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -387,7 +387,7 @@ def create_powerspectrum_tab(
         df, ps = create_dataframe(selected_event_list_index, dt, norm)
         
         if df is not None:
-            event_list_name = loaded_event_data[selected_event_list_index][0]
+            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
             label = f"{event_list_name} (dt={dt}, norm={norm})"
             
             # Create the original plot
@@ -469,7 +469,7 @@ def create_powerspectrum_tab(
             norm = norm_select.value
             df, ps = create_dataframe(index, dt, norm)
             if df is not None:
-                event_list_name = loaded_event_data[index][0]
+                event_list_name = state_manager.get_event_data()[index][0]
 
                 label = f"{event_list_name} (dt={dt}, norm={norm})"
                 plot_hv = create_holoviews_plots_no_colorbar(

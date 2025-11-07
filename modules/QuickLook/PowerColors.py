@@ -7,7 +7,7 @@ from stingray.power_colors import (
     plot_hues,
     DEFAULT_COLOR_CONFIGURATION,
 )
-from utils.globals import loaded_event_data
+from utils.state_manager import state_manager
 import warnings
 from utils.DashboardClasses import (
     MainHeader,
@@ -48,14 +48,14 @@ def create_powercolors_tab(
 ):
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
     )
 
     segment_size_input = pn.widgets.IntInput(name="Segment Size", value=256, step=1)
     rebin_intervals_input = pn.widgets.IntInput(name="Rebin Intervals", value=2, step=1)
 
     def generate_powercolors(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             warning_box_container[:] = [
                 create_loadingdata_warning_box("No loaded event data available.")
             ]
@@ -70,7 +70,7 @@ def create_powercolors_tab(
 
         try:
             # Convert EventList to LightCurve
-            event_list = loaded_event_data[selected_event_list_index][1]
+            event_list = state_manager.get_event_data()[selected_event_list_index][1]
             lightcurve = event_list.to_lc(dt=1 / 256)
 
             segment_size = segment_size_input.value

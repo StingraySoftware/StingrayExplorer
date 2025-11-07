@@ -17,7 +17,7 @@ from stingray.events import EventList
 from stingray.gti import get_gti_lengths, get_btis, get_total_gti_length
 
 # Dashboard Classes and Event Data Imports
-from utils.globals import loaded_event_data
+from utils.state_manager import state_manager
 from utils.DashboardClasses import (
     MainHeader,
     MainArea,
@@ -189,17 +189,17 @@ def create_home_main_area() -> MainArea:
     file_path2 = os.path.join(data_dir, target_file2)
 
     # Check if the file is already loaded
-    if not any(file_name == "nomission" for file_name, _ in loaded_event_data):
+    if not state_manager.has_event_data("nomission"):
         try:
             event_list = EventList.read(file_path1, "ogip")
-            loaded_event_data.append(("nomission", event_list))
+            state_manager.add_event_data("nomission", event_list)
             print(f"File '{target_file1}' loaded successfully.")
         except Exception as e:
             print(f"Failed to load file '{target_file1}': {e}")
-    if not any(file_name == "xte_test.evt.gz" for file_name, _ in loaded_event_data):
+    if not state_manager.has_event_data("xte_test.evt.gz"):
         try:
             event_list = EventList.read(file_path2, "ogip")
-            loaded_event_data.append(("xte_test.evt.gz", event_list))
+            state_manager.add_event_data("xte_test.evt.gz", event_list)
             print(f"File '{target_file2}' loaded successfully.")
         except Exception as e:
             print(f"Failed to load file '{target_file2}': {e}")

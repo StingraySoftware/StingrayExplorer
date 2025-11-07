@@ -120,9 +120,9 @@ layout = pn.template.FastGridTemplate(
     # Parameters for the FastGridTemplate
     site="",  # Not shown as already doing in title
     site_url="StingrayExplorer",
-    logo="./assets/images/stingray_explorer.png",
+    logo="assets/images/stingray_explorer.png",
     title="Stingray Explorer",
-    favicon="./assets/images/stingray_explorer.png",
+    favicon="assets/images/stingray_explorer.png",
     # sidebar_footer="Sidebar Footer",
     # config= (TemplateConfig): Contains configuration options similar to pn.config but applied to the current Template only. (Currently only css_files is supported) But css_files are now deprecated.
     # busy_indicator removed to avoid param warnings in Panel 1.8+ (uses default)

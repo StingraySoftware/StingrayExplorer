@@ -1,6 +1,6 @@
 import panel as pn
 import holoviews as hv
-from utils.globals import loaded_event_data
+from utils.state_manager import state_manager
 import pandas as pd
 import numpy as np
 import warnings
@@ -104,7 +104,7 @@ def create_bispectrum_tab(
     
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
     )
     dt_input = pn.widgets.FloatInput(name="Select dt", value=1.0, step=0.0001, start=0.0001, end=1000.0)
     maxlag_input = pn.widgets.IntInput(name="Max Lag", value=25, step=1, start=1, end=100)
@@ -120,7 +120,7 @@ def create_bispectrum_tab(
     
     def create_bispectrum(selected_event_index, dt, maxlag, scale, window):
         try:
-            event_list = loaded_event_data[selected_event_index][1]
+            event_list = state_manager.get_event_data()[selected_event_index][1]
             # Use `to_lc` for efficient light curve creation
             lc = event_list.to_lc(dt=dt)
 
@@ -182,7 +182,7 @@ def create_bispectrum_tab(
         if selected_event_list_index is not None:
             try:
                 # Fetch the selected EventList
-                event_list = loaded_event_data[selected_event_list_index][1]
+                event_list = state_manager.get_event_data()[selected_event_list_index][1]
 
                 # Convert EventList to Lightcurve
                 lc = event_list.to_lc(dt=dt)
@@ -233,7 +233,7 @@ def create_bispectrum_tab(
         return FloatingPlot(content=content, title=title)
 
     def show_dataframe(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -252,7 +252,7 @@ def create_bispectrum_tab(
         window = window_select.value
         df, bs = create_dataframe(selected_event_list_index, dt, maxlag, scale, window)
         if df is not None:
-            event_list_name = loaded_event_data[selected_event_list_index][0]
+            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
             dataframe_title = f"{event_list_name} (dt={dt}, maxlag={maxlag}, scale={scale}, window={window})"
             dataframe_output = create_dataframe_panes(df, dataframe_title)
             if dataframe_checkbox.value:
@@ -271,7 +271,7 @@ def create_bispectrum_tab(
 
 
     def generate_bispectrum(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [pn.pane.Markdown("No event data available.")]
             return
 
@@ -290,7 +290,7 @@ def create_bispectrum_tab(
         if bs:
             pane = visualize_bispectrum(bs, vis_type)
             if pane:
-                title = f"Bispectrum ({vis_type}) for Event {loaded_event_data[selected_index][0]}"
+                title = f"Bispectrum ({vis_type}) for Event {state_manager.get_event_data()[selected_index][0]}"
                 if floatpanel_checkbox.value:
                     float_panel_container.append(FloatingPlot(title=title, content=pane))
                 else:

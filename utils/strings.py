@@ -132,7 +132,7 @@ HOME_FOOTER_STRING = """
 HOME_STINGRAY_TAB_STRING = """
 <h2> Stingray: Next-Generation Spectral Timing </h2>
 
-![Stingray-logo](./assets/images/stingray_logo_minimised.png)
+![Stingray-logo](/assets/images/stingray_logo_minimised.png?v=2)
 
 Stingray is a Python library designed to perform time series analysis and related tasks on astronomical light curves. It supports a range of commonly-used Fourier analysis techniques, as well as extensions for analyzing pulsar data, simulating data sets, and statistical modeling. Stingray is designed to be easy to extend and easy to incorporate into data analysis workflows and pipelines.
 
@@ -189,7 +189,7 @@ Windows uses an internal 32-bit representation for int. This might create numeri
 HOME_HOLOVIZ_TAB_STRING = """
 <h2> High-level tools to simplify visualization in Python </h2>
 
-![HoloViz-logo](../assets/images/holoviz_logo_minimised.png)
+![HoloViz-logo](/assets/images/holoviz_logo_minimised.png)
 
 **HoloViz provides:**
 
@@ -244,7 +244,7 @@ HoloViz tools provide extensive support for Jupyter notebooks, as well as for st
 HOME_DASHBOARD_TAB_STRING = """
 <h2> Dashboard Overview </h2>
 
-![Stingray-Explorer-logo](../assets/images/stingray_explorer_minimised.png)
+![Stingray-Explorer-logo](/assets/images/stingray_explorer_minimised.png)
 
 The Dashboard tab in Stingray Explorer provides a unified interface for interactive exploration and analysis of X-ray astronomical data. It enables users to leverage advanced Fourier and time-series analysis tools seamlessly integrated with visualization capabilities.
 

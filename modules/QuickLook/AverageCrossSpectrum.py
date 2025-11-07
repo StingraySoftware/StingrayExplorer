@@ -1,6 +1,6 @@
 import panel as pn
 import holoviews as hv
-from utils.globals import loaded_event_data
+from utils.state_manager import state_manager
 import pandas as pd
 import numpy as np
 import warnings
@@ -65,12 +65,12 @@ def create_avg_cross_spectrum_tab(
     # Define Widgets
     event_list_dropdown_1 = pn.widgets.Select(
         name="Select Event List 1",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
     )
 
     event_list_dropdown_2 = pn.widgets.Select(
         name="Select Event List 2",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
     )
 
     dt_slider = pn.widgets.FloatSlider(
@@ -101,8 +101,8 @@ def create_avg_cross_spectrum_tab(
 
     def create_dataframe(selected_event_list_index_1, selected_event_list_index_2, dt, norm, segment_size):
         if selected_event_list_index_1 is not None and selected_event_list_index_2 is not None:
-            event_list_1 = loaded_event_data[selected_event_list_index_1][1]
-            event_list_2 = loaded_event_data[selected_event_list_index_2][1]
+            event_list_1 = state_manager.get_event_data()[selected_event_list_index_1][1]
+            event_list_2 = state_manager.get_event_data()[selected_event_list_index_2][1]
 
             # Create an AveragedCrossspectrum object using from_lightcurve
             try:
@@ -175,7 +175,7 @@ def create_avg_cross_spectrum_tab(
         )
 
     def generate_avg_cross_spectrum(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -194,7 +194,7 @@ def create_avg_cross_spectrum_tab(
         segment_size = segment_size_input.value
         df, cs = create_dataframe(selected_event_list_index_1, selected_event_list_index_2, dt, norm, segment_size)
         if df is not None:
-            plot_title = f"Averaged Cross Spectrum for {loaded_event_data[selected_event_list_index_1][0]} vs {loaded_event_data[selected_event_list_index_2][0]}"
+            plot_title = f"Averaged Cross Spectrum for {state_manager.get_event_data()[selected_event_list_index_1][0]} vs {state_manager.get_event_data()[selected_event_list_index_2][0]}"
             plot_hv = create_holoviews_plots(cs, title=plot_title, dt=dt, norm=norm, segment_size=segment_size)
             holoviews_output = create_holoviews_panes(plot_hv)
 
@@ -225,7 +225,7 @@ def create_avg_cross_spectrum_tab(
             ]
 
     def show_dataframe(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -244,12 +244,12 @@ def create_avg_cross_spectrum_tab(
         segment_size = segment_size_input.value
         df, cs = create_dataframe(selected_event_list_index_1, selected_event_list_index_2, dt, norm, segment_size)
         if df is not None:
-            dataframe_output = create_dataframe_panes(df, f"{loaded_event_data[selected_event_list_index_1][0]} vs {loaded_event_data[selected_event_list_index_2][0]}", dt, norm, segment_size)
+            dataframe_output = create_dataframe_panes(df, f"{state_manager.get_event_data()[selected_event_list_index_1][0]} vs {state_manager.get_event_data()[selected_event_list_index_2][0]}", dt, norm, segment_size)
             if dataframe_checkbox.value:
                 float_panel_container.append(
                     create_floatpanel_area(
                         content=dataframe_output,
-                        title=f"DataFrame for {loaded_event_data[selected_event_list_index_1][0]} vs {loaded_event_data[selected_event_list_index_2][0]}",
+                        title=f"DataFrame for {state_manager.get_event_data()[selected_event_list_index_1][0]} vs {state_manager.get_event_data()[selected_event_list_index_2][0]}",
                     )
                 )
             else:

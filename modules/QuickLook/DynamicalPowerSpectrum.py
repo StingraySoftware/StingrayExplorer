@@ -15,7 +15,7 @@ from utils.DashboardClasses import (
     FloatingPlot,
     PlotsContainer,
 )
-from utils.globals import loaded_event_data
+from utils.state_manager import state_manager
 import hvplot.pandas
 import holoviews.operation.datashader as hd
 
@@ -73,7 +73,7 @@ def create_dynamicalpowerspectrum_tab(
 ):
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(loaded_event_data)},
+        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
     )
 
     segment_size_input = pn.widgets.FloatInput(name="Segment Size", value=10, step=1)
@@ -104,7 +104,7 @@ def create_dynamicalpowerspectrum_tab(
 
     def create_dataframe(selected_event_list_index, dt, segment_size, norm):
         if selected_event_list_index is not None:
-            event_list = loaded_event_data[selected_event_list_index][1]
+            event_list = state_manager.get_event_data()[selected_event_list_index][1]
             lc = event_list.to_lc(dt=dt)
             dps = DynamicalPowerspectrum(lc, segment_size=segment_size, norm=norm)
             return dps
@@ -123,7 +123,7 @@ def create_dynamicalpowerspectrum_tab(
         return pn.pane.DataFrame(data, width=600, height=400)
 
     def generate_dynamicalpowerspectrum(event=None):
-        if not loaded_event_data:
+        if not state_manager.get_event_data():
             output_box_container[:] = [
                 create_loadingdata_output_box("No loaded event data available.")
             ]
@@ -150,7 +150,7 @@ def create_dynamicalpowerspectrum_tab(
         norm = norm_select.value
 
         # Directly create DynamicalPowerspectrum
-        event_list = loaded_event_data[selected_event_list_index][1]
+        event_list = state_manager.get_event_data()[selected_event_list_index][1]
         lc = event_list.to_lc(dt=dt)
         dps = DynamicalPowerspectrum(lc, segment_size=segment_size, norm=norm)
         if dps:
