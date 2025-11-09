@@ -15,7 +15,7 @@ from utils.DashboardClasses import (
     FloatingPlot,
     PlotsContainer,
 )
-from utils.state_manager import state_manager
+from utils.app_context import AppContext
 import hvplot.pandas
 import holoviews.operation.datashader as hd
 
@@ -30,16 +30,7 @@ def create_warning_handler():
 """ Header Section """
 
 
-def create_quicklook_dynamicalpowerspectrum_header(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_quicklook_dynamicalpowerspectrum_header(context: AppContext):
     header_input = pn.widgets.TextInput(
         name="Heading", value="QuickLook Dynamical Power Spectrum"
     )
@@ -64,16 +55,12 @@ def create_loadingdata_warning_box(content):
 
 
 def create_dynamicalpowerspectrum_tab(
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
-    plots_container,
-    header_container,
-    float_panel_container,
 ):
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
 
     segment_size_input = pn.widgets.FloatInput(name="Segment Size", value=10, step=1)
@@ -102,12 +89,25 @@ def create_dynamicalpowerspectrum_tab(
         name="Add DataFrame to FloatingPanel", value=False
     )
 
-    def create_dataframe(selected_event_list_index, dt, segment_size, norm):
+    def create_dynamical_powerspectrum(selected_event_list_index, dt, segment_size, norm):
         if selected_event_list_index is not None:
-            event_list = state_manager.get_event_data()[selected_event_list_index][1]
-            lc = event_list.to_lc(dt=dt)
-            dps = DynamicalPowerspectrum(lc, segment_size=segment_size, norm=norm)
-            return dps
+            event_list = context.state.get_event_data()[selected_event_list_index][1]
+
+            # Use spectrum service to create dynamical power spectrum
+            result = context.services.spectrum.create_dynamical_power_spectrum(
+                event_list=event_list,
+                dt=dt,
+                segment_size=segment_size,
+                norm=norm
+            )
+
+            if result["success"]:
+                return result["data"]
+            else:
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {result['message']}")
+                )
+                return None
         return None
 
     def create_holoviews_panes(plot):
@@ -123,36 +123,48 @@ def create_dynamicalpowerspectrum_tab(
         return pn.pane.DataFrame(data, width=600, height=400)
 
     def generate_dynamicalpowerspectrum(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index = event_list_dropdown.value
         if selected_event_list_index is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event list selected.")
-            ]
+            )
             return
 
         # Check for conflicting rebin selections
         if rebin_freq_checkbox.value and rebin_time_checkbox.value:
-            warning_box_container[:] = [
+            context.update_container('warning_box',
                 create_loadingdata_warning_box(
                     "Error: You cannot select both 'Rebin Frequency' and 'Rebin Time' simultaneously."
                 )
-            ]
+            )
             return
-        
+
         dt = dt_input.value
         segment_size = segment_size_input.value
         norm = norm_select.value
 
-        # Directly create DynamicalPowerspectrum
-        event_list = state_manager.get_event_data()[selected_event_list_index][1]
-        lc = event_list.to_lc(dt=dt)
-        dps = DynamicalPowerspectrum(lc, segment_size=segment_size, norm=norm)
+        # Use spectrum service to create DynamicalPowerspectrum
+        event_list = context.state.get_event_data()[selected_event_list_index][1]
+        result = context.services.spectrum.create_dynamical_power_spectrum(
+            event_list=event_list,
+            dt=dt,
+            segment_size=segment_size,
+            norm=norm
+        )
+
+        if not result["success"]:
+            context.update_container('output_box',
+                create_loadingdata_output_box(f"Error: {result['message']}")
+            )
+            return
+
+        dps = result["data"]
         if dps:
             # Create Matplotlib plots
             fig, ax = plt.subplots()
@@ -171,9 +183,9 @@ def create_dynamicalpowerspectrum_tab(
             base_plot = pn.pane.Matplotlib(fig, width=600, height=400)
             # Add the base plot to the floating panel or plot area
             if floatpanel_plots_checkbox.value:
-                float_panel_container.append(FloatingPlot(title="Base Dynamical Power Spectrum", content=base_plot))
+                context.append_to_container('float_panel', FloatingPlot(title="Base Dynamical Power Spectrum", content=base_plot))
             else:
-                plots_container.append(base_plot)
+                context.append_to_container('plots', base_plot)
 
             # Rebin Frequency if checkbox is enabled
             if rebin_freq_checkbox.value:
@@ -190,9 +202,9 @@ def create_dynamicalpowerspectrum_tab(
                 rebin_freq_plot = pn.pane.Matplotlib(fig, width=600, height=400)
 
                 if floatpanel_plots_checkbox.value:
-                    float_panel_container.append(FloatingPlot(title="Rebinned Frequency", content=rebin_freq_plot))
+                    context.append_to_container('float_panel', FloatingPlot(title="Rebinned Frequency", content=rebin_freq_plot))
                 else:
-                    plots_container.append(rebin_freq_plot)
+                    context.append_to_container('plots', rebin_freq_plot)
 
             # Rebin Time if checkbox is enabled
             if rebin_time_checkbox.value:
@@ -208,9 +220,9 @@ def create_dynamicalpowerspectrum_tab(
                 rebin_time_plot = pn.pane.Matplotlib(fig, width=600, height=400)
 
                 if floatpanel_plots_checkbox.value:
-                    float_panel_container.append(FloatingPlot(title="Rebinned Time", content=rebin_time_plot))
+                    context.append_to_container('float_panel', FloatingPlot(title="Rebinned Time", content=rebin_time_plot))
                 else:
-                    plots_container.append(rebin_time_plot)
+                    context.append_to_container('plots', rebin_time_plot)
 
             # Trace Maximum Power if checkbox is enabled
             if trace_checkbox.value:
@@ -226,9 +238,9 @@ def create_dynamicalpowerspectrum_tab(
                 trace_plot = pn.pane.Matplotlib(fig, width=600, height=400)
 
                 if floatpanel_plots_checkbox.value:
-                    float_panel_container.append(FloatingPlot(title="Feature Trace Overlay", content=trace_plot))
+                    context.append_to_container('float_panel', FloatingPlot(title="Feature Trace Overlay", content=trace_plot))
                 else:
-                    plots_container.append(trace_plot)
+                    context.append_to_container('plots', trace_plot)
 
 
     generate_dynamicalpowerspectrum_button = pn.widgets.Button(
@@ -253,25 +265,12 @@ def create_dynamicalpowerspectrum_tab(
     return tab_content
 
 
-def create_quicklook_dynamicalpowerspectrum_main_area(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_quicklook_dynamicalpowerspectrum_main_area(context: AppContext):
     warning_handler = create_warning_handler()
     tabs_content = {
         "Dynamical Power Spectrum": create_dynamicalpowerspectrum_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
-            plots_container=plots_container,
-            header_container=header_container,
-            float_panel_container=float_panel_container,
         ),
     }
 

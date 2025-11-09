@@ -7,7 +7,7 @@ from stingray.power_colors import (
     plot_hues,
     DEFAULT_COLOR_CONFIGURATION,
 )
-from utils.state_manager import state_manager
+from utils.app_context import AppContext
 import warnings
 from utils.DashboardClasses import (
     MainHeader,
@@ -28,9 +28,7 @@ def create_warning_handler():
     return warning_handler
 
 """ Header Section """
-def create_quicklook_powercolors_header(
-    header_container, main_area_container, output_box_container, warning_box_container, plots_container, help_box_container, footer_container, float_panel_container
-):
+def create_quicklook_powercolors_header(context: AppContext):
     header_input = pn.widgets.TextInput(name="Heading", value="QuickLook Power Colors")
     return MainHeader(heading=header_input)
 
@@ -44,39 +42,51 @@ def create_loadingdata_warning_box(content):
 
 """ Main Area Section """
 def create_powercolors_tab(
-    output_box_container, warning_box_container, warning_handler, plots_container, float_panel_container
+    context: AppContext,
+    warning_handler,
 ):
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
 
     segment_size_input = pn.widgets.IntInput(name="Segment Size", value=256, step=1)
     rebin_intervals_input = pn.widgets.IntInput(name="Rebin Intervals", value=2, step=1)
 
     def generate_powercolors(event=None):
-        if not state_manager.get_event_data():
-            warning_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('warning_box',
                 create_loadingdata_warning_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index = event_list_dropdown.value
         if selected_event_list_index is None:
-            warning_box_container[:] = [
+            context.update_container('warning_box',
                 create_loadingdata_warning_box("No event list selected.")
-            ]
+            )
             return
 
         try:
-            # Convert EventList to LightCurve
-            event_list = state_manager.get_event_data()[selected_event_list_index][1]
-            lightcurve = event_list.to_lc(dt=1 / 256)
-
+            # Get EventList and create DynamicalPowerspectrum using service
+            event_list = context.state.get_event_data()[selected_event_list_index][1]
             segment_size = segment_size_input.value
-            dynps = DynamicalPowerspectrum(
-                lightcurve, segment_size=segment_size, sample_time=1 / 256, norm="leahy"
+
+            # Use spectrum service to create dynamical power spectrum
+            result = context.services.spectrum.create_dynamical_power_spectrum(
+                event_list=event_list,
+                dt=1 / 256,
+                segment_size=segment_size,
+                norm="leahy"
             )
+
+            if not result["success"]:
+                context.update_container('warning_box',
+                    create_loadingdata_warning_box(f"Error: {result['message']}")
+                )
+                return
+
+            dynps = result["data"]
 
             # Rebin the dynamical power spectrum
             rebin_intervals = rebin_intervals_input.value
@@ -116,19 +126,19 @@ def create_powercolors_tab(
             polar_plot = pn.pane.Matplotlib(fig3, width=600, height=400)
 
             # Add to floating panel or main plot area
-            float_panel_container.append(
+            context.append_to_container('float_panel',
                 FloatingPlot(title="Power Colors", content=power_colors_plot)
             )
-            float_panel_container.append(
+            context.append_to_container('float_panel',
                 FloatingPlot(title="Hues", content=hues_plot)
             )
-            float_panel_container.append(
+            context.append_to_container('float_panel',
                 FloatingPlot(title="Polar Plot", content=polar_plot)
             )
         except Exception as e:
-            warning_box_container[:] = [
+            context.update_container('warning_box',
                 create_loadingdata_warning_box(f"Error: {str(e)}")
-            ]
+            )
 
     generate_powercolors_button = pn.widgets.Button(
         name="Generate Power Colors", button_type="primary"
@@ -143,17 +153,12 @@ def create_powercolors_tab(
     )
     return tab_content
 
-def create_quicklook_powercolors_main_area(
-    header_container, main_area_container, output_box_container, warning_box_container, plots_container, help_box_container, footer_container, float_panel_container
-):
+def create_quicklook_powercolors_main_area(context: AppContext):
     warning_handler = create_warning_handler()
     tabs_content = {
         "Power Colors": create_powercolors_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
-            plots_container=plots_container,
-            float_panel_container=float_panel_container,
         ),
     }
     return MainArea(tabs_content=tabs_content)

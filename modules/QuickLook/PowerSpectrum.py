@@ -1,6 +1,6 @@
 import panel as pn
 import holoviews as hv
-from utils.state_manager import state_manager
+from utils.app_context import AppContext
 import pandas as pd
 import warnings
 import holoviews.operation.datashader as hd
@@ -16,7 +16,6 @@ from utils.DashboardClasses import (
     FloatingPlot,
     PlotsContainer,
 )
-from stingray import Powerspectrum
 
 
 colors = [
@@ -51,15 +50,7 @@ def create_warning_handler():
     return warning_handler
 
 """ Header Section """
-def create_quicklook_powerspectrum_header(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-):
+def create_quicklook_powerspectrum_header(context: AppContext):
     home_heading_input = pn.widgets.TextInput(
         name="Heading", value="QuickLook Power Spectrum"
     )
@@ -76,16 +67,12 @@ def create_loadingdata_warning_box(content):
 
 """ Main Area Section """
 def create_powerspectrum_tab(
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
-    plots_container,
-    header_container,
-    float_panel_container,
 ):
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
 
     dt_input = pn.widgets.FloatInput(
@@ -104,7 +91,7 @@ def create_powerspectrum_tab(
 
     multi_event_select = pn.widgets.MultiSelect(
         name="Or Select Event List(s) to Combine",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
         size=8,
     )
 
@@ -140,8 +127,8 @@ def create_powerspectrum_tab(
     def update_time_info(event):
         selected_index = event_list_dropdown.value
         if selected_index is not None:
-            event_list_name = state_manager.get_event_data()[selected_index][0]
-            event_list = state_manager.get_event_data()[selected_index][1]
+            event_list_name = context.state.get_event_data()[selected_index][0]
+            event_list = context.state.get_event_data()[selected_index][1]
             start_time = event_list.time[0]
             end_time = event_list.time[-1]
             time_info_pane.object = (
@@ -298,18 +285,34 @@ def create_powerspectrum_tab(
 
     def create_dataframe(selected_event_list_index, dt, norm):
         if selected_event_list_index is not None:
-            event_list = state_manager.get_event_data()[selected_event_list_index][1]
+            event_list = context.state.get_event_data()[selected_event_list_index][1]
 
-            # Create a PowerSpectrum object using from_events
-            ps = Powerspectrum.from_events(events=event_list, dt=dt, norm=norm)
-
-            df = pd.DataFrame(
-                {
-                    "Frequency": ps.freq,
-                    "Power": ps.power,
-                }
+            # Create a PowerSpectrum object using spectrum service
+            result = context.services.spectrum.create_power_spectrum(
+                event_list=event_list,
+                dt=dt,
+                norm=norm
             )
-            return df, ps
+
+            if not result["success"]:
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {result['message']}")
+                )
+                return None, None
+
+            ps = result["data"]
+
+            # Use export service to convert to DataFrame
+            df_result = context.services.export.to_dataframe_power_spectrum(ps)
+
+            if df_result["success"]:
+                return df_result["data"], ps
+            else:
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {df_result['message']}")
+                )
+                return None, None
+
         return None, None
 
     """ Rebin Functionality """
@@ -334,52 +337,52 @@ def create_powerspectrum_tab(
         return FloatingPlot(content=content, title=title)
 
     def show_dataframe(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index = event_list_dropdown.value
         if selected_event_list_index is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event list selected.")
-            ]
+            )
             return
 
         dt = dt_input.value
         norm = norm_select.value
         df, ps = create_dataframe(selected_event_list_index, dt, norm)
         if df is not None:
-            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
+            event_list_name = context.state.get_event_data()[selected_event_list_index][0]
             dataframe_title = f"{event_list_name} (dt={dt}, norm={norm})"
             dataframe_output = create_dataframe_panes(df, dataframe_title)
             if dataframe_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=dataframe_output,
                         title=f"DataFrame for {dataframe_title}",
                     )
                 )
             else:
-                plots_container.append(dataframe_output)
+                context.append_to_container('plots',dataframe_output)
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create dataframe.")
-            ]
+            )
 
     def generate_powerspectrum(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index = event_list_dropdown.value
         if selected_event_list_index is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event list selected.")
-            ]
+            )
             return
 
         dt = dt_input.value
@@ -387,7 +390,7 @@ def create_powerspectrum_tab(
         df, ps = create_dataframe(selected_event_list_index, dt, norm)
         
         if df is not None:
-            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
+            event_list_name = context.state.get_event_data()[selected_event_list_index][0]
             label = f"{event_list_name} (dt={dt}, norm={norm})"
             
             # Create the original plot
@@ -421,7 +424,7 @@ def create_powerspectrum_tab(
 
             # Append the pane to the appropriate container
             if floatpanel_plots_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=holoviews_output_pane,
                         title=f"Power Spectrum for {event_list_name} (dt={dt}, norm={norm})",
@@ -431,7 +434,7 @@ def create_powerspectrum_tab(
                 markdown_content = (
                     f"## Power Spectrum for {event_list_name} (dt={dt}, norm={norm})"
                 )
-                plots_container.append(
+                context.append_to_container('plots',
                     pn.FlexBox(
                         pn.pane.Markdown(markdown_content),
                         holoviews_output_pane,
@@ -442,17 +445,17 @@ def create_powerspectrum_tab(
                     )
                 )
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create power spectrum.")
-            ]
+            )
 
 
     def combine_selected_plots(event=None):
         selected_event_list_indices = multi_event_select.value
         if not selected_event_list_indices:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event lists selected.")
-            ]
+            )
             return
 
         combined_plots = []
@@ -469,7 +472,7 @@ def create_powerspectrum_tab(
             norm = norm_select.value
             df, ps = create_dataframe(index, dt, norm)
             if df is not None:
-                event_list_name = state_manager.get_event_data()[index][0]
+                event_list_name = context.state.get_event_data()[index][0]
 
                 label = f"{event_list_name} (dt={dt}, norm={norm})"
                 plot_hv = create_holoviews_plots_no_colorbar(
@@ -490,14 +493,14 @@ def create_powerspectrum_tab(
             combined_title_str = " + ".join(combined_title)
             combined_title_str += f" (dt={dt}, norm={norm})"
             if floatpanel_plots_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=combined_pane, title=combined_title_str
                     )
                 )
             else:
                 markdown_content = f"## {combined_title_str}"
-                plots_container.append(
+                context.append_to_container('plots',
                     pn.FlexBox(
                         pn.pane.Markdown(markdown_content),
                         combined_pane,
@@ -543,25 +546,12 @@ def create_powerspectrum_tab(
     )
     return tab_content
 
-def create_quicklook_powerspectrum_main_area(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_quicklook_powerspectrum_main_area(context: AppContext):
     warning_handler = create_warning_handler()
     tabs_content = {
         "Power Spectrum": create_powerspectrum_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
-            plots_container=plots_container,
-            header_container=header_container,
-            float_panel_container=float_panel_container,
         ),
     }
 

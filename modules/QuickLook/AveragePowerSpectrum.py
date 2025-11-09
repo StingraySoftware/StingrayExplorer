@@ -1,6 +1,6 @@
 import panel as pn
 import holoviews as hv
-from utils.state_manager import state_manager
+from utils.app_context import AppContext
 import pandas as pd
 import warnings
 import hvplot.pandas
@@ -52,15 +52,7 @@ def create_warning_handler():
 """ Header Section """
 
 
-def create_quicklook_avg_powerspectrum_header(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-):
+def create_quicklook_avg_powerspectrum_header(context: AppContext):
     home_heading_input = pn.widgets.TextInput(
         name="Heading", value="QuickLook Averaged Power Spectrum"
     )
@@ -94,17 +86,13 @@ def create_floatpanel_area(content, title):
 
 
 def create_avg_powerspectrum_tab(
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
-    plots_container,
-    header_container,
-    float_panel_container,
 ):
     # Define Widgets
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
 
     dt_input = pn.widgets.FloatInput(
@@ -125,7 +113,7 @@ def create_avg_powerspectrum_tab(
 
     multi_event_select = pn.widgets.MultiSelect(
         name="Or Select Event List(s) to Combine",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
         size=8,
     )
 
@@ -171,9 +159,9 @@ def create_avg_powerspectrum_tab(
 
         if selected_index is not None:
 
-            event_list_name = state_manager.get_event_data()[selected_index][0]
+            event_list_name = context.state.get_event_data()[selected_index][0]
 
-            event_list = state_manager.get_event_data()[selected_index][1]
+            event_list = context.state.get_event_data()[selected_index][1]
 
             start_time = event_list.time[0]
 
@@ -192,51 +180,33 @@ def create_avg_powerspectrum_tab(
     # Internal functions to encapsulate functionality
     def create_dataframe(selected_event_list_index, dt, norm, segment_size):
         if selected_event_list_index is not None:
-            event_list = state_manager.get_event_data()[selected_event_list_index][1]
+            event_list = context.state.get_event_data()[selected_event_list_index][1]
 
-            # Create an AveragedPowerspectrum object using from_lightcurve
-            try:
-                lc = event_list.to_lc(dt=dt)
-                ps = AveragedPowerspectrum.from_lightcurve(lc, segment_size, norm=norm)
+            # Use spectrum service to create averaged power spectrum
+            result = context.services.spectrum.create_averaged_power_spectrum(
+                event_list=event_list,
+                dt=dt,
+                segment_size=segment_size,
+                norm=norm
+            )
 
-                df = pd.DataFrame(
-                    {
-                        "Frequency": ps.freq,
-                        "Power": ps.power,
-                    }
-                )
-                return df, ps
-
-            except AssertionError as ae:
-                if "No GTIs are equal to or longer than segment_size" in str(ae):
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            f"Error: No GTIs are long enough to accommodate the segment size {segment_size}s. "
-                            "Please reduce the segment size or check your GTIs."
-                        )
-                    ]
-                else:
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            f"Error generating Averaged Power Spectrum: {ae}. "
-                        )
-                    ]
+            if not result["success"]:
+                output_box_container[:] = [
+                    create_loadingdata_output_box(f"Error: {result['message']}")
+                ]
                 return None, None
 
-            except Exception as e:
-                if "requested segment size" in str(e):
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            f"Failed to create power spectrum: dt is too large or the segment size is too small."
-                        )
-                    ]
-                else:
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            f"Error generating Averaged Power Spectrum: {e}. "
-                            "Try using a different segment size."
-                        )
-                    ]
+            ps = result["data"]
+
+            # Use export service to convert to DataFrame
+            df_result = context.services.export.to_dataframe_power_spectrum(ps)
+
+            if df_result["success"]:
+                return df_result["data"], ps
+            else:
+                output_box_container[:] = [
+                    create_loadingdata_output_box(f"Error: {df_result['message']}")
+                ]
                 return None, None
         return None, None
 
@@ -338,17 +308,17 @@ def create_avg_powerspectrum_tab(
         )
 
     def generate_avg_powerspectrum(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index = event_list_dropdown.value
         if selected_event_list_index is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event list selected.")
-            ]
+            )
             return
 
         dt = dt_input.value
@@ -356,19 +326,19 @@ def create_avg_powerspectrum_tab(
         segment_size = segment_size_input.value
         df, ps = create_dataframe(selected_event_list_index, dt, norm, segment_size)
         if df is not None:
-            plot_title = f"Averaged Power Spectrum for {state_manager.get_event_data()[selected_event_list_index][0]}"
+            plot_title = f"Averaged Power Spectrum for {context.state.get_event_data()[selected_event_list_index][0]}"
             plot_hv = create_holoviews_plots(
                 ps, title=plot_title, dt=dt, norm=norm, segment_size=segment_size
             )
             holoviews_output = create_holoviews_panes(plot_hv)
 
             if floatpanel_plots_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(content=holoviews_output, title=plot_title)
                 )
             else:
                 markdown_content = f"## {plot_title}"
-                plots_container.append(
+                context.append_to_container('plots',
                     pn.FlexBox(
                         pn.pane.Markdown(markdown_content),
                         holoviews_output,
@@ -378,30 +348,30 @@ def create_avg_powerspectrum_tab(
                         flex_direction="column",
                     )
                 )
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box(
                     "Averaged Power Spectrum generated successfully."
                 )
-            ]
+            )
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box(
                     "Failed to create averaged power spectrum."
                 )
-            ]
+            )
 
     def show_dataframe(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index = event_list_dropdown.value
         if selected_event_list_index is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event list selected.")
-            ]
+            )
             return
 
         dt = dt_input.value
@@ -411,34 +381,34 @@ def create_avg_powerspectrum_tab(
         if df is not None:
             dataframe_output = create_dataframe_panes(
                 df,
-                f"{state_manager.get_event_data()[selected_event_list_index][0]}",
+                f"{context.state.get_event_data()[selected_event_list_index][0]}",
                 dt,
                 norm,
                 segment_size,
             )
             if dataframe_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=dataframe_output,
-                        title=f"DataFrame for {state_manager.get_event_data()[selected_event_list_index][0]}",
+                        title=f"DataFrame for {context.state.get_event_data()[selected_event_list_index][0]}",
                     )
                 )
             else:
-                plots_container.append(dataframe_output)
-            output_box_container[:] = [
+                context.append_to_container('plots',dataframe_output)
+            context.update_container('output_box',
                 create_loadingdata_output_box("DataFrame generated successfully.")
-            ]
+            )
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create dataframe.")
-            ]
+            )
 
     def combine_selected_plots(event=None):
         selected_event_list_indices = multi_event_select.value
         if not selected_event_list_indices:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event lists selected.")
-            ]
+            )
             return
 
         combined_plots = []
@@ -450,7 +420,7 @@ def create_avg_powerspectrum_tab(
             segment_size = segment_size_input.value
             df, ps = create_dataframe(index, dt, norm, segment_size)
             if df is not None:
-                event_list_name = state_manager.get_event_data()[index][0]
+                event_list_name = context.state.get_event_data()[index][0]
                 plot_hv = create_holoviews_plots_no_colorbar(
                     ps,
                     title=event_list_name,
@@ -467,14 +437,14 @@ def create_avg_powerspectrum_tab(
 
             combined_title_str = " + ".join(combined_title)
             if floatpanel_plots_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=combined_pane, title=combined_title_str
                     )
                 )
             else:
                 markdown_content = f"## {combined_title_str}"
-                plots_container.append(
+                context.append_to_container('plots',
                     pn.FlexBox(
                         pn.pane.Markdown(markdown_content),
                         combined_pane,
@@ -484,13 +454,13 @@ def create_avg_powerspectrum_tab(
                         flex_direction="column",
                     )
                 )
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Combined plots generated successfully.")
-            ]
+            )
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to combine plots.")
-            ]
+            )
 
     generate_powerspectrum_button = pn.widgets.Button(
         name="Generate Averaged Power Spectrum", button_type="primary"
@@ -523,25 +493,12 @@ def create_avg_powerspectrum_tab(
     return tab_content
 
 
-def create_quicklook_avg_powerspectrum_main_area(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_quicklook_avg_powerspectrum_main_area(context: AppContext):
     warning_handler = create_warning_handler()
     tabs_content = {
         "Averaged Power Spectrum": create_avg_powerspectrum_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
-            plots_container=plots_container,
-            header_container=header_container,
-            float_panel_container=float_panel_container,
         ),
     }
 

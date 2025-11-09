@@ -1,8 +1,10 @@
 import panel as pn
 import holoviews as hv
-from utils.state_manager import state_manager
+from utils.app_context import AppContext
+from utils.error_handler import ErrorHandler
 import pandas as pd
 import numpy as np
+import logging
 import warnings
 import hvplot.pandas
 from stingray.bispectrum import Bispectrum
@@ -59,15 +61,7 @@ def create_warning_handler():
 """ Header Section """
 
 
-def create_quicklook_bispectrum_header(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-):
+def create_quicklook_bispectrum_header(context: AppContext):
     home_heading_input = pn.widgets.TextInput(
         name="Heading", value="Bispectrum"
     )
@@ -94,17 +88,13 @@ def create_loadingdata_warning_box(content):
 
 
 def create_bispectrum_tab(
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
-    plots_container,
-    header_container,
-    float_panel_container,
 ):
-    
+
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
     dt_input = pn.widgets.FloatInput(name="Select dt", value=1.0, step=0.0001, start=0.0001, end=1000.0)
     maxlag_input = pn.widgets.IntInput(name="Max Lag", value=25, step=1, start=1, end=100)
@@ -119,16 +109,21 @@ def create_bispectrum_tab(
     )
     
     def create_bispectrum(selected_event_index, dt, maxlag, scale, window):
-        try:
-            event_list = state_manager.get_event_data()[selected_event_index][1]
-            # Use `to_lc` for efficient light curve creation
-            lc = event_list.to_lc(dt=dt)
+        event_list = context.state.get_event_data()[selected_event_index][1]
 
-            # Create Bispectrum
-            bs = Bispectrum(lc, maxlag=maxlag, scale=scale, window=window)
-            return bs
-        except Exception as e:
-            output_box_container[:] = [pn.pane.Markdown(f"Error: {str(e)}")]
+        # Use timing service to create bispectrum
+        result = context.services.timing.create_bispectrum(
+            event_list=event_list,
+            dt=dt,
+            maxlag=maxlag,
+            scale=scale,
+            window=window
+        )
+
+        if result["success"]:
+            return result["data"]
+        else:
+            context.update_container('output_box', pn.pane.Markdown(f"Error: {result['message']}"))
             return None
 
 
@@ -153,7 +148,12 @@ def create_bispectrum_tab(
             return pn.pane.Matplotlib(fig, width=600, height=600)
 
         except Exception as e:
-            output_box_container[:] = [pn.pane.Markdown(f"Visualization Error: {str(e)}")]
+            user_msg, tech_msg = ErrorHandler.handle_error(
+                e,
+                context="Visualizing bispectrum",
+                visualization_type=vis_type
+            )
+            context.update_container('output_box', pn.pane.Markdown(f"Visualization Error: {user_msg}"))
             return None
 
 
@@ -182,45 +182,47 @@ def create_bispectrum_tab(
         if selected_event_list_index is not None:
             try:
                 # Fetch the selected EventList
-                event_list = state_manager.get_event_data()[selected_event_list_index][1]
+                event_list = context.state.get_event_data()[selected_event_list_index][1]
 
-                # Convert EventList to Lightcurve
-                lc = event_list.to_lc(dt=dt)
-
-                # Generate the Bispectrum
-                bs = Bispectrum(lc, maxlag=maxlag, window=window, scale=scale)
-
-                # Create 2D grids for Frequency and Lags
-                freq_grid, lags_grid = np.meshgrid(bs.freq, bs.lags)
-
-                # Flatten grids and corresponding Bispectrum data
-                freq_flat = freq_grid.flatten()
-                lags_flat = lags_grid.flatten()
-                mag_flat = bs.bispec_mag.flatten()
-                phase_flat = bs.bispec_phase.flatten()
-                cum3_flat = bs.cum3.flatten()
-
-                # Ensure all arrays are of the same length
-                if not (
-                    len(freq_flat) == len(lags_flat) == len(mag_flat) == len(phase_flat) == len(cum3_flat)
-                ):
-                    raise ValueError("Inconsistent lengths of Bispectrum data.")
-
-                # Create DataFrame
-                df = pd.DataFrame(
-                    {
-                        "Frequency": freq_flat,
-                        "Lags": lags_flat,
-                        "Cumulant (Cum3)": cum3_flat,
-                        "Magnitude": mag_flat,
-                        "Phase": phase_flat,
-                    }
+                # Use timing service to create bispectrum
+                result = context.services.timing.create_bispectrum(
+                    event_list=event_list,
+                    dt=dt,
+                    maxlag=maxlag,
+                    scale=scale,
+                    window=window
                 )
-                return df, bs
+
+                if not result["success"]:
+                    context.update_container('output_box',
+                        create_loadingdata_output_box(f"Error: {result['message']}")
+                    )
+                    return None, None
+
+                bs = result["data"]
+
+                # Use export service to convert to DataFrame
+                df_result = context.services.export.to_dataframe_bispectrum(bs)
+
+                if df_result["success"]:
+                    return df_result["data"], bs
+                else:
+                    context.update_container('output_box',
+                        create_loadingdata_output_box(f"Error: {df_result['message']}")
+                    )
+                    return None, None
             except Exception as e:
-                output_box_container[:] = [
-                    create_loadingdata_output_box(f"Error creating dataframe: {e}")
-                ]
+                user_msg, tech_msg = ErrorHandler.handle_error(
+                    e,
+                    context="Creating bispectrum dataframe",
+                    dt=dt,
+                    maxlag=maxlag,
+                    scale=scale,
+                    window=window
+                )
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {user_msg}")
+                )
                 return None, None
         return None, None
 
@@ -233,17 +235,17 @@ def create_bispectrum_tab(
         return FloatingPlot(content=content, title=title)
 
     def show_dataframe(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index = event_list_dropdown.value
         if selected_event_list_index is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event list selected.")
-            ]
+            )
             return
 
         dt = dt_input.value
@@ -252,32 +254,32 @@ def create_bispectrum_tab(
         window = window_select.value
         df, bs = create_dataframe(selected_event_list_index, dt, maxlag, scale, window)
         if df is not None:
-            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
+            event_list_name = context.state.get_event_data()[selected_event_list_index][0]
             dataframe_title = f"{event_list_name} (dt={dt}, maxlag={maxlag}, scale={scale}, window={window})"
             dataframe_output = create_dataframe_panes(df, dataframe_title)
             if dataframe_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=dataframe_output,
                         title=f"DataFrame for {dataframe_title}",
                     )
                 )
             else:
-                plots_container.append(dataframe_output)
+                context.append_to_container('plots', dataframe_output)
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create dataframe.")
-            ]
+            )
 
 
     def generate_bispectrum(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [pn.pane.Markdown("No event data available.")]
+        if not context.state.get_event_data():
+            context.update_container('output_box', pn.pane.Markdown("No event data available."))
             return
 
         selected_index = event_list_dropdown.value
         if selected_index is None:
-            output_box_container[:] = [pn.pane.Markdown("Select an event list.")]
+            context.update_container('output_box', pn.pane.Markdown("Select an event list."))
             return
 
         dt = dt_input.value
@@ -290,11 +292,11 @@ def create_bispectrum_tab(
         if bs:
             pane = visualize_bispectrum(bs, vis_type)
             if pane:
-                title = f"Bispectrum ({vis_type}) for Event {state_manager.get_event_data()[selected_index][0]}"
+                title = f"Bispectrum ({vis_type}) for Event {context.state.get_event_data()[selected_index][0]}"
                 if floatpanel_checkbox.value:
-                    float_panel_container.append(FloatingPlot(title=title, content=pane))
+                    context.append_to_container('float_panel', FloatingPlot(title=title, content=pane))
                 else:
-                    plots_container.append(pn.Row(pn.pane.Markdown(f"## {title}"), pane))
+                    context.append_to_container('plots', pn.Row(pn.pane.Markdown(f"## {title}"), pane))
 
 
     generate_bispectrum_button = pn.widgets.Button(
@@ -321,25 +323,12 @@ def create_bispectrum_tab(
     return tab1_content
 
 
-def create_quicklook_bispectrum_main_area(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_quicklook_bispectrum_main_area(context: AppContext):
     warning_handler = create_warning_handler()
     tabs_content = {
         "Bispectrum": create_bispectrum_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
-            plots_container=plots_container,
-            header_container=header_container,
-            float_panel_container=float_panel_container,
         ),
     }
 

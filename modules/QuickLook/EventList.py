@@ -2,6 +2,7 @@
 import os
 import stat
 import copy
+import logging
 import numpy as np
 import warnings
 import tempfile
@@ -15,10 +16,10 @@ import panel as pn
 
 # Stingray Imports
 from stingray.events import EventList
-from stingray import Lightcurve
 
 # Dashboard Classes and State Management Imports
-from utils.state_manager import state_manager
+from utils.app_context import AppContext
+from utils.error_handler import ErrorHandler
 from utils.DashboardClasses import (
     MainHeader,
     MainArea,
@@ -52,35 +53,20 @@ def create_warning_handler():
 """ Header Section """
 
 
-def create_eventlist_header(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_eventlist_header(context: AppContext):
     """
-        Create the header for the data loading section.
+    Create the header for the EventList section.
 
-        Args:
-            header_container: The container for the header.
-            main_area_container: The container for the main content area.
-            output_box_container: The container for the output messages.
-            warning_box_container: The container for warning messages.
-            plots_container: The container for plots.
-            help_box_container: The container for the help section.
-            footer_container: The container for the footer.
+    Args:
+        context (AppContext): The application context containing containers and state.
 
-        Returns:
-            MainHeader: An instance of MainHeader with the specified heading.
-    # TODO: Add better example for create_loading_header()
-        Example:
-            >>> header = create_loadingdata_header(header_container, main_area_container, ...)
-            >>> header.heading.value
-            'Data Ingestion and creation'
+    Returns:
+        MainHeader: An instance of MainHeader with the specified heading.
+
+    Example:
+        >>> header = create_eventlist_header(context)
+        >>> header.heading.value
+        'QuickLook EventList'
     """
     home_heading_input = pn.widgets.TextInput(
         name="Heading", value="QuickLook EventList"
@@ -148,8 +134,7 @@ def create_event_list(
     skip_checks_checkbox,
     notes_input,
     name_input,
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
 ):
     """
@@ -169,16 +154,16 @@ def create_event_list(
 
         # Mandatory input validation
         if not times_input.value:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_eventlist_output_box(
                     "Error: Photon Arrival Times is a mandatory field."
                 )
-            ]
-            warning_box_container[:] = [
+            )
+            context.update_container('warning_box',
                 create_eventlist_warning_box(
                     "Warning: Mandatory fields are missing. Please provide required inputs."
                 )
-            ]
+            )
             return
 
         # Clean and parse inputs, ignoring empty values
@@ -221,15 +206,15 @@ def create_event_list(
         rmf_file = rmf_file_input.value.strip() or None
         skip_checks = skip_checks_checkbox.value
         notes = notes_input.value.strip() or None
-        name = name_input.value.strip() or f"event_list_{len(state_manager.get_event_data())}"
+        name = name_input.value.strip() or f"event_list_{len(context.state.get_event_data())}"
 
         # Check for duplicates
-        if state_manager.has_event_data(name):
-            output_box_container[:] = [
+        if context.state.has_event_data(name):
+            context.update_container('output_box',
                 create_eventlist_output_box(
                     f"A file with the name '{name}' already exists in memory. Please provide a different name."
                 )
-            ]
+            )
             return
 
         # Create EventList
@@ -254,33 +239,42 @@ def create_event_list(
         )
 
         # Store the EventList
-        state_manager.add_event_data(name, event_list)
+        context.state.add_event_data(name, event_list)
 
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_eventlist_output_box(
                 f"Event List created successfully!\nSaved as: {name}\nDetails:\n"
                 f"Times: {event_list.time}\nMJDREF: {event_list.mjdref}\nGTI: {event_list.gti}\n"
                 f"Energy: {event_list.energy if energy else 'Not provided'}\nPI: {event_list.pi if pi else 'Not provided'}\n"
                 f"Mission: {event_list.mission if mission else 'Not provided'}\nInstrument: {event_list.instr if instr else 'Not provided'}"
             )
-        ]
+        )
     except ValueError as ve:
-        warning_handler.warn(str(ve), category=ValueError)
-        output_box_container[:] = [
-            create_eventlist_output_box("An error occurred: Please check your inputs.")
-        ]
+        user_msg, tech_msg = ErrorHandler.handle_error(
+            ve,
+            context="Creating custom event list",
+            log_level=logging.WARNING
+        )
+        warning_handler.warn(tech_msg, category=ValueError)
+        context.update_container('output_box',
+            create_eventlist_output_box(f"Error: {user_msg}")
+        )
     except Exception as e:
-        warning_handler.warn(str(e), category=RuntimeError)
-        output_box_container[:] = [
-            create_eventlist_output_box(f"An unexpected error occurred: {e}")
-        ]
+        user_msg, tech_msg = ErrorHandler.handle_error(
+            e,
+            context="Creating custom event list"
+        )
+        warning_handler.warn(tech_msg, category=RuntimeError)
+        context.update_container('output_box',
+            create_eventlist_output_box(f"Error: {user_msg}")
+        )
 
     if warning_handler.warnings:
-        warning_box_container[:] = [
+        context.update_container('warning_box',
             create_eventlist_warning_box("\n".join(warning_handler.warnings))
-        ]
+        )
     else:
-        warning_box_container[:] = [create_eventlist_warning_box("No warnings.")]
+        context.update_container('warning_box', create_eventlist_warning_box("No warnings."))
 
     warning_handler.warnings.clear()
 
@@ -292,8 +286,7 @@ def simulate_event_list(
     max_counts_input,
     dt_input,
     name_input,
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
 ):
     """
@@ -330,19 +323,19 @@ def simulate_event_list(
 
     try:
         if not name_input.value:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_eventlist_output_box(
                     "Please provide a name for the simulated event list."
                 )
-            ]
+            )
             return
 
-        if state_manager.has_event_data(name_input.value):
-            output_box_container[:] = [
+        if context.state.has_event_data(name_input.value):
+            context.update_container('output_box',
                 create_eventlist_output_box(
                     f"A file with the name '{name_input.value}' already exists in memory. Please provide a different name."
                 )
-            ]
+            )
             return
 
         # Parse inputs from IntInput and FloatInput widgets
@@ -350,43 +343,73 @@ def simulate_event_list(
         max_counts = max_counts_input.value
         dt = dt_input.value
 
-        # Simulate the light curve
+        # Simulate the light curve using lightcurve service
         times = np.arange(time_bins)
         counts = np.random.randint(0, max_counts, size=time_bins)
-        lc = Lightcurve(times, counts, dt=dt, skip_checks=True)
 
-        event_list = EventList.from_lc(lc)
+        lc_result = context.services.lightcurve.create_lightcurve_from_arrays(
+            times=times,
+            counts=counts,
+            dt=dt
+        )
 
+        if not lc_result["success"]:
+            context.update_container('output_box',
+                create_eventlist_output_box(f"Error: {lc_result['message']}")
+            )
+            return
+
+        lc = lc_result["data"]
+
+        # Create EventList from lightcurve using service
+        event_list_result = context.services.lightcurve.create_event_list_from_lightcurve(lc)
+
+        if not event_list_result["success"]:
+            context.update_container('output_box',
+                create_eventlist_output_box(f"Error: {event_list_result['message']}")
+            )
+            return
+
+        event_list = event_list_result["data"]
         name = name_input.value
-        state_manager.add_event_data(name, event_list)
+        context.state.add_event_data(name, event_list)
 
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_eventlist_output_box(
                 f"Event List simulated successfully!\nSaved as: {name}\nTimes: {event_list.time}\nCounts: {counts}"
             )
-        ]
+        )
 
     except Exception as e:
-        warning_handler.warn(str(e), category=RuntimeError)
+        user_msg, tech_msg = ErrorHandler.handle_error(
+            e,
+            context="Simulating event list from lightcurve",
+            time_bins=time_bins,
+            max_counts=max_counts,
+            dt=dt
+        )
+        warning_handler.warn(tech_msg, category=RuntimeError)
+        context.update_container('output_box',
+            create_eventlist_output_box(f"Error: {user_msg}")
+        )
 
     if warning_handler.warnings:
-        warning_box_container[:] = [
+        context.update_container('warning_box',
             create_eventlist_warning_box("\n".join(warning_handler.warnings))
-        ]
+        )
     else:
-        warning_box_container[:] = [create_eventlist_warning_box("No warnings.")]
+        context.update_container('warning_box', create_eventlist_warning_box("No warnings."))
 
     warning_handler.warnings.clear()
 
 
 # TODO: ADD better comments, error handlling and docstrings
-def create_event_list_tab(output_box_container, warning_box_container, warning_handler):
+def create_event_list_tab(context: AppContext, warning_handler):
     """
     Create the tab for creating an event list with all parameters of the EventList class.
 
     Args:
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
+        context (AppContext): The application context containing all containers and state.
         warning_handler (WarningHandler): The handler for warnings.
 
     Returns:
@@ -453,8 +476,8 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
 
     def on_create_button_click(event):
         # Clear previous output and warnings
-        output_box_container.clear()
-        warning_box_container.clear()
+        context.clear_container('output_box')
+        context.clear_container('warning_box')
         warning_handler.warnings.clear()
         warnings.resetwarnings()
 
@@ -478,8 +501,7 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
             skip_checks_checkbox,
             notes_input,
             name_input,
-            output_box_container,
-            warning_box_container,
+            context,
             warning_handler,
         )
 
@@ -517,22 +539,19 @@ def create_event_list_tab(output_box_container, warning_box_container, warning_h
 
 
 # TODO: ADD better comments, error handlling and docstrings
-def create_simulate_event_list_tab(
-    output_box_container, warning_box_container, warning_handler
-):
+def create_simulate_event_list_tab(context: AppContext, warning_handler):
     """
     Create the tab for simulating event lists.
 
     Args:
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
+        context (AppContext): The application context containing all containers and state.
         warning_handler (WarningHandler): The handler for warnings.
 
     Returns:
         Column: A Panel Column containing the widgets and layout for the event list simulation tab.
 
     Example:
-        >>> tab = create_simulate_event_list_tab(output_box_container, warning_box_container, warning_handler)
+        >>> tab = create_simulate_event_list_tab(context, warning_handler)
         >>> isinstance(tab, pn.Column)
         True
     """
@@ -561,8 +580,8 @@ def create_simulate_event_list_tab(
 
     def on_simulate_button_click(event):
         # Clear previous output and warnings
-        output_box_container[:] = [create_eventlist_output_box("N.A.")]
-        warning_box_container[:] = [create_eventlist_warning_box("N.A.")]
+        context.update_container('output_box', create_eventlist_output_box("N.A."))
+        context.update_container('warning_box', create_eventlist_warning_box("N.A."))
         warning_handler.warnings.clear()
         warnings.resetwarnings()
 
@@ -573,8 +592,7 @@ def create_simulate_event_list_tab(
             max_counts_input,
             dt_input,
             sim_name_input,
-            output_box_container,
-            warning_box_container,
+            context,
             warning_handler,
         )
 
@@ -592,18 +610,13 @@ def create_simulate_event_list_tab(
 
 
 # TODO: ADD better comments, error handlling and docstrings
-def create_eventlist_operations_tab(
-    output_box_container,
-    warning_box_container,
-    warning_handler,
-):
+def create_eventlist_operations_tab(context: AppContext, warning_handler):
     """
     Create the EventList Operations tab with buttons for operations like applying deadtime,
     filtering energy ranges, and converting PI to energy.
 
     Args:
-        output_box_container: Container for output messages.
-        warning_box_container: Container for warnings.
+        context (AppContext): The application context containing all containers and state.
         warning_handler: The custom warning handler.
 
     Returns:
@@ -612,7 +625,7 @@ def create_eventlist_operations_tab(
     # Define widgets for input
     multi_event_list_select = pn.widgets.MultiSelect(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
         size=8,
     )
     event_list_properties_box = pn.pane.Markdown(
@@ -621,7 +634,7 @@ def create_eventlist_operations_tab(
 
     multi_light_curve_select = pn.widgets.MultiSelect(
         name="Select Light Curve(s)",
-        options={name: i for i, (name, lc) in enumerate(state_manager.get_light_curve())},
+        options={name: i for i, (name, lc) in enumerate(context.state.get_light_curve())},
         size=8,
     )
 
@@ -732,7 +745,7 @@ def create_eventlist_operations_tab(
 
         properties = []
         for selected_index in selected_indices:
-            event_list_name, event_list = state_manager.get_event_data()[selected_index]
+            event_list_name, event_list = context.state.get_event_data()[selected_index]
             gti_count = len(event_list.gti) if hasattr(event_list, "gti") else "N/A"
             time_span = (
                 f"{event_list.time[0]:.2f} - {event_list.time[-1]:.2f}"
@@ -769,7 +782,7 @@ def create_eventlist_operations_tab(
 
         properties = []
         for selected_index in selected_indices:
-            light_curve_name, light_curve = state_manager.get_light_curve()[selected_index]
+            light_curve_name, light_curve = context.state.get_light_curve()[selected_index]
             properties.append(
                 f"### LightCurve: {light_curve_name}\n"
                 f"- **Counts**: {light_curve.counts}\n"
@@ -803,7 +816,7 @@ def create_eventlist_operations_tab(
                 else:
                     new_event_list = event_list.apply_deadtime(deadtime, inplace=False)
                     new_name = f"{event_list_name}_{deadtime}"
-                    state_manager.add_event_data(new_name, new_event_list)
+                    context.state.add_event_data(new_name, new_event_list)
                     results.append(
                         f"Created new EventList '{new_name}' with deadtime={deadtime}s."
                     )
@@ -855,7 +868,7 @@ def create_eventlist_operations_tab(
 
             # Perform PI to Energy conversion
             selected_index = selected_indices[0]
-            event_list_name, event_list = state_manager.get_event_data()[selected_index]
+            event_list_name, event_list = context.state.get_event_data()[selected_index]
 
             # Check if PI data is available
             if not hasattr(event_list, "pi") or event_list.pi is None:
@@ -872,7 +885,7 @@ def create_eventlist_operations_tab(
                 )  # Deepcopy to ensure independence
                 new_event_list.convert_pi_to_energy(rmf_file)
                 new_event_list_name = f"{event_list_name}_converted_energy"
-                state_manager.add_event_data(
+                context.state.add_event_data(
                     (new_event_list_name, new_event_list)
                 )  # Add new event list
                 output_box_container[:] = [
@@ -931,7 +944,7 @@ def create_eventlist_operations_tab(
             results = []
 
             for selected_index in selected_indices:
-                event_list_name, event_list = state_manager.get_event_data()[selected_index]
+                event_list_name, event_list = context.state.get_event_data()[selected_index]
 
                 # Validate energy or PI data
                 if use_pi:
@@ -971,7 +984,7 @@ def create_eventlist_operations_tab(
                         new_event_list_name = f"{event_list_name}_filtered_pi_{energy_range[0]}_{energy_range[1]}"
                     else:
                         new_event_list_name = f"{event_list_name}_filtered_energy_{energy_range[0]}_{energy_range[1]}"
-                    state_manager.add_event_data((new_event_list_name, filtered_event_list))
+                    context.state.add_event_data((new_event_list_name, filtered_event_list))
 
                     results.append(
                         f"Created new EventList '{new_event_list_name}' filtered using energy range {energy_range} (use_pi={use_pi})."
@@ -1034,7 +1047,7 @@ def create_eventlist_operations_tab(
 
             results = []
             for selected_index in selected_indices:
-                event_list_name, event_list = state_manager.get_event_data()[selected_index]
+                event_list_name, event_list = context.state.get_event_data()[selected_index]
 
                 # Validate energy or PI data
                 if use_pi:
@@ -1120,7 +1133,7 @@ def create_eventlist_operations_tab(
 
             results = []
             for selected_index in selected_indices:
-                event_list_name, event_list = state_manager.get_event_data()[selected_index]
+                event_list_name, event_list = context.state.get_event_data()[selected_index]
 
                 # Validate energy or PI data
                 if use_pi:
@@ -1205,7 +1218,7 @@ def create_eventlist_operations_tab(
 
             results = []
             for selected_index in selected_indices:
-                event_list_name, event_list = state_manager.get_event_data()[selected_index]
+                event_list_name, event_list = context.state.get_event_data()[selected_index]
 
                 # Validate energy or PI data
                 if use_pi:
@@ -1266,7 +1279,7 @@ def create_eventlist_operations_tab(
         try:
             strategy = join_strategy_select.value
             # Retrieve the selected event lists
-            all_event_data = state_manager.get_event_data()
+            all_event_data = context.state.get_event_data()
             selected_event_lists = [all_event_data[i][1] for i in selected_indices]
             selected_names = [all_event_data[i][0] for i in selected_indices]
 
@@ -1279,7 +1292,7 @@ def create_eventlist_operations_tab(
 
             # Generate a new name for the joined EventList
             new_event_list_name = f"joined_{'_'.join(selected_names)}_{strategy}"
-            state_manager.add_event_data(new_event_list_name, result_event_list)
+            context.state.add_event_data(new_event_list_name, result_event_list)
 
             # Update the output container with success message
             output_box_container[:] = [
@@ -1312,7 +1325,7 @@ def create_eventlist_operations_tab(
 
         try:
             for selected_index in selected_indices:
-                event_list_name, event_list = state_manager.get_event_data()[selected_index]
+                event_list_name, event_list = context.state.get_event_data()[selected_index]
 
                 if inplace:
                     # Sort in place
@@ -1322,7 +1335,7 @@ def create_eventlist_operations_tab(
                     # Sort and create a new EventList
                     sorted_event_list = event_list.sort(inplace=False)
                     new_event_list_name = f"{event_list_name}_sorted"
-                    state_manager.add_event_data((new_event_list_name, sorted_event_list))
+                    context.state.add_event_data((new_event_list_name, sorted_event_list))
                     results.append(
                         f"Created a new sorted EventList '{new_event_list_name}' from '{event_list_name}'."
                     )
@@ -1440,51 +1453,33 @@ def create_eventlist_operations_tab(
     return tab_content
 
 
-def create_eventlist_main_area(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_eventlist_main_area(context: AppContext):
     """
-    Create the main area for the data loading tab, including all sub-tabs.
+    Create the main area for the EventList tab, including all sub-tabs.
 
     Args:
-        header_container: The container for the header.
-        main_area_container: The container for the main content area.
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
-        plots_container: The container for plots.
-        help_box_container: The container for the help section.
-        footer_container: The container for the footer.
+        context (AppContext): The application context containing containers and state.
 
     Returns:
-        MainArea: An instance of MainArea with all the necessary tabs for data loading.
+        MainArea: An instance of MainArea with all the necessary tabs.
 
     Example:
-        >>> main_area = create_loadingdata_main_area(header_container, main_area_container, ...)
+        >>> main_area = create_eventlist_main_area(context)
         >>> isinstance(main_area, MainArea)
         True
     """
     warning_handler = create_warning_handler()
     tabs_content = {
         "Create Event List": create_event_list_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
         ),
         "Simulate Event List": create_simulate_event_list_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
         ),
         "EventList Operations": create_eventlist_operations_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
         ),
     }

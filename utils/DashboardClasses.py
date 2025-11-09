@@ -31,11 +31,13 @@ class MainHeader(pn.viewable.Viewer):
         """
         # Create HTML panes for heading and subheading
         heading_pane = pn.pane.HTML(
-            pn.bind(lambda heading: f"<h1>{heading}</h1>", self.param.heading)
+            pn.bind(lambda heading: f"<h1>{heading}</h1>", self.param.heading),
+            sizing_mode='stretch_width'
         )
 
         subheading_pane = pn.pane.HTML(
-            pn.bind(lambda subheading: f"<h4>{subheading}</h4>", self.param.subheading)
+            pn.bind(lambda subheading: f"<h4>{subheading}</h4>", self.param.subheading),
+            sizing_mode='stretch_width'
         )
 
         # Create the layout for the header
@@ -247,7 +249,8 @@ class Footer(pn.viewable.Viewer):
         # Convert Markdown links to HTML with target="_blank"
         html_links = [
             pn.pane.HTML(
-                f'<a href="{link.split("(")[1][:-1]}" target="_blank">{link.split("[")[1].split("]")[0]}</a>'
+                f'<a href="{link.split("(")[1][:-1]}" target="_blank">{link.split("[")[1].split("]")[0]}</a>',
+                sizing_mode='stretch_width'
             )
             for link in self.additional_links
         ]

@@ -1,6 +1,6 @@
 import panel as pn
 import holoviews as hv
-from utils.state_manager import state_manager
+from utils.app_context import AppContext
 import pandas as pd
 import warnings
 import hvplot.pandas
@@ -25,15 +25,7 @@ def create_warning_handler():
     return warning_handler
 
 """ Header Section """
-def create_quicklook_cross_spectrum_header(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-):
+def create_quicklook_cross_spectrum_header(context: AppContext):
     home_heading_input = pn.widgets.TextInput(
         name="Heading", value="QuickLook Cross Spectrum"
     )
@@ -55,21 +47,17 @@ def create_floatpanel_area(content, title):
 
 """ Main Area Section """
 def create_cross_spectrum_tab(
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
-    plots_container,
-    header_container,
-    float_panel_container,
 ):
     event_list_dropdown_1 = pn.widgets.Select(
         name="Select Event List 1",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
 
     event_list_dropdown_2 = pn.widgets.Select(
         name="Select Event List 2",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
 
     dt_slider = pn.widgets.FloatSlider(
@@ -120,120 +108,108 @@ def create_cross_spectrum_tab(
 
     def create_dataframe(selected_event_list_index_1, selected_event_list_index_2, dt, norm):
         if selected_event_list_index_1 is not None and selected_event_list_index_2 is not None:
-            event_list_1 = state_manager.get_event_data()[selected_event_list_index_1][1]
-            event_list_2 = state_manager.get_event_data()[selected_event_list_index_2][1]
+            event_list_1 = context.state.get_event_data()[selected_event_list_index_1][1]
+            event_list_2 = context.state.get_event_data()[selected_event_list_index_2][1]
 
-            try:
-                # Ensure GTIs are not empty before proceeding
-                if event_list_1.gti.shape[0] == 0 or event_list_2.gti.shape[0] == 0:
-                    raise ValueError("GTIs are empty for one or both event lists.")
+            # Use spectrum service to create cross spectrum
+            result = context.services.spectrum.create_cross_spectrum(
+                event_list_1=event_list_1,
+                event_list_2=event_list_2,
+                dt=dt,
+                norm=norm
+            )
 
-                # Create a CrossSpectrum object using from_events
-                cs = Crossspectrum.from_events(events1=event_list_1, events2=event_list_2, dt=dt, norm=norm)
-
-                df = pd.DataFrame(
-                    {
-                        "Frequency": cs.freq,
-                        "Power": cs.power,
-                    }
+            if not result["success"]:
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {result['message']}")
                 )
-                return df, cs
-
-            except ValueError as e:
-                if "zero-size array" in str(e):
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            "Error: GTIs are empty or invalid, leading to zero-size array operations. Please check your event lists."
-                        )
-                    ]
-                else:
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            f"Error generating Cross Spectrum: {e}. Please check your inputs."
-                        )
-                    ]
                 return None, None
 
-            except Exception as e:
-                output_box_container[:] = [
-                    create_loadingdata_output_box(
-                        f"Unexpected error generating Cross Spectrum: {e}. Please try again."
-                    )
-                ]
+            cs = result["data"]
+
+            # Use export service to convert to DataFrame
+            df_result = context.services.export.to_dataframe_cross_spectrum(cs)
+
+            if df_result["success"]:
+                return df_result["data"], cs
+            else:
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {df_result['message']}")
+                )
                 return None, None
 
         return None, None
 
     def show_dataframe(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index_1 = event_list_dropdown_1.value
         selected_event_list_index_2 = event_list_dropdown_2.value
         if selected_event_list_index_1 is None or selected_event_list_index_2 is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Both event lists must be selected.")
-            ]
+            )
             return
 
         dt = dt_slider.value
         norm = norm_select.value
         df, cs = create_dataframe(selected_event_list_index_1, selected_event_list_index_2, dt, norm)
         if df is not None:
-            event_list_name_1 = state_manager.get_event_data()[selected_event_list_index_1][0]
-            event_list_name_2 = state_manager.get_event_data()[selected_event_list_index_2][0]
+            event_list_name_1 = context.state.get_event_data()[selected_event_list_index_1][0]
+            event_list_name_2 = context.state.get_event_data()[selected_event_list_index_2][0]
             dataframe_title = f"{event_list_name_1} vs {event_list_name_2} (dt={dt}, norm={norm})"
             dataframe_output = create_dataframe_panes(df, dataframe_title)
             if dataframe_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=dataframe_output,
                         title=f"DataFrame for {dataframe_title}",
                     )
                 )
             else:
-                plots_container.append(dataframe_output)
+                context.append_to_container('plots', dataframe_output)
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create dataframe.")
-            ]
+            )
 
     def generate_cross_spectrum(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index_1 = event_list_dropdown_1.value
         selected_event_list_index_2 = event_list_dropdown_2.value
         if selected_event_list_index_1 is None or selected_event_list_index_2 is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Both event lists must be selected.")
-            ]
+            )
             return
 
         dt = dt_slider.value
         norm = norm_select.value
         df, cs = create_dataframe(selected_event_list_index_1, selected_event_list_index_2, dt, norm)
         if df is not None:
-            event_list_name_1 = state_manager.get_event_data()[selected_event_list_index_1][0]
-            event_list_name_2 = state_manager.get_event_data()[selected_event_list_index_2][0]
+            event_list_name_1 = context.state.get_event_data()[selected_event_list_index_1][0]
+            event_list_name_2 = context.state.get_event_data()[selected_event_list_index_2][0]
             plot_hv = create_holoviews_plots(cs, event_list_name_1, event_list_name_2, dt, norm)
             holoviews_output = create_holoviews_panes(plot_hv)
 
             if floatpanel_plots_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=holoviews_output, title=f"Cross Spectrum for {event_list_name_1} vs {event_list_name_2} (dt={dt}, norm={norm})"
                     )
                 )
             else:
                 markdown_content = f"## Cross Spectrum for {event_list_name_1} vs {event_list_name_2} (dt={dt}, norm={norm})"
-                plots_container.append(
+                context.append_to_container('plots',
                     pn.FlexBox(
                         pn.pane.Markdown(markdown_content),
                         holoviews_output,
@@ -244,9 +220,9 @@ def create_cross_spectrum_tab(
                     )
                 )
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create cross spectrum.")
-            ]
+            )
 
     generate_cross_spectrum_button = pn.widgets.Button(
         name="Generate Cross Spectrum", button_type="primary"
@@ -269,25 +245,12 @@ def create_cross_spectrum_tab(
     )
     return tab_content
 
-def create_quicklook_cross_spectrum_main_area(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_quicklook_cross_spectrum_main_area(context: AppContext):
     warning_handler = create_warning_handler()
     tabs_content = {
         "Cross Spectrum": create_cross_spectrum_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
-            plots_container=plots_container,
-            header_container=header_container,
-            float_panel_container=float_panel_container,
         ),
     }
 

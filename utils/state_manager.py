@@ -22,6 +22,7 @@ Example:
 import sys
 import logging
 import psutil
+import param
 from typing import List, Tuple, Optional, Callable, Any, Dict
 from collections import OrderedDict
 
@@ -30,7 +31,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class StateManager:
+class StateManager(param.Parameterized):
     """
     Centralized state management for the StingrayExplorer dashboard.
 
@@ -39,12 +40,23 @@ class StateManager:
 
     The memory limit is dynamically calculated as 80% of available system RAM.
 
+    Now inherits from param.Parameterized to enable reactive UI updates.
+    When state changes (e.g., adding/removing event data), the UI can
+    automatically respond using @param.depends decorators.
+
     Attributes:
         MAX_EVENT_LISTS (int): Maximum number of event lists to store
         MAX_LIGHT_CURVES (int): Maximum number of light curves to store
         MAX_TIMESERIES (int): Maximum number of time series to store
         MAX_MEMORY_MB (float): Maximum memory usage in megabytes (80% of system RAM)
         MEMORY_USAGE_PERCENT (float): Percentage of system RAM allowed (default: 80%)
+
+    Reactive Parameters:
+        event_data_count (int): Number of event lists (triggers UI updates)
+        light_curve_count (int): Number of light curves (triggers UI updates)
+        timeseries_count (int): Number of timeseries (triggers UI updates)
+        memory_usage_mb (float): Current memory usage in MB (triggers UI updates)
+        last_operation (str): Description of last state change (triggers UI updates)
     """
 
     # Configuration limits
@@ -53,8 +65,23 @@ class StateManager:
     MAX_TIMESERIES = 50
     MEMORY_USAGE_PERCENT = 0.80  # Use up to 80% of system RAM
 
-    def __init__(self):
+    # Reactive parameters that trigger UI updates when changed
+    event_data_count = param.Integer(default=0, bounds=(0, None),
+                                      doc="Number of event lists currently stored")
+    light_curve_count = param.Integer(default=0, bounds=(0, None),
+                                       doc="Number of light curves currently stored")
+    timeseries_count = param.Integer(default=0, bounds=(0, None),
+                                      doc="Number of timeseries currently stored")
+    memory_usage_mb = param.Number(default=0.0, bounds=(0, None),
+                                    doc="Current memory usage in MB")
+    last_operation = param.String(default="",
+                                   doc="Description of last state change")
+
+    def __init__(self, **params):
         """Initialize the StateManager with empty state collections."""
+        # Initialize param.Parameterized
+        super().__init__(**params)
+
         # Use OrderedDict to maintain insertion order for LRU eviction
         self._event_data: OrderedDict[str, Any] = OrderedDict()
         self._light_curves: OrderedDict[str, Any] = OrderedDict()
@@ -77,6 +104,36 @@ class StateManager:
             f"StateManager initialized with dynamic memory limit: "
             f"{self.MAX_MEMORY_MB:.2f} MB ({self.MEMORY_USAGE_PERCENT*100:.0f}% of system RAM)"
         )
+
+    def _update_reactive_parameters(self, operation: str = "") -> None:
+        """
+        Update reactive parameters to trigger UI updates.
+
+        This method updates the param properties that Panel's @param.depends
+        decorators can watch, automatically updating the UI when state changes.
+
+        Args:
+            operation (str): Description of the operation that triggered the update
+
+        Example:
+            >>> self._update_reactive_parameters("Added event list 'obs1'")
+        """
+        # Update counts - these trigger UI components watching these parameters
+        self.event_data_count = len(self._event_data)
+        self.light_curve_count = len(self._light_curves)
+        self.timeseries_count = len(self._timeseries_data)
+
+        # Update memory usage
+        try:
+            self.memory_usage_mb = self._calculate_memory_usage()
+        except Exception as e:
+            logger.warning(f"Could not calculate memory usage: {e}")
+            self.memory_usage_mb = 0.0
+
+        # Update last operation
+        if operation:
+            self.last_operation = operation
+            logger.debug(f"State updated: {operation}")
 
     def _calculate_max_memory_limit(self) -> float:
         """
@@ -193,6 +250,9 @@ class StateManager:
         logger.info(f"Added event data: '{name}' (total: {len(self._event_data)})")
         self._notify_observers('event_data_added', {'name': name, 'data': event_list})
 
+        # Update reactive parameters to trigger UI updates
+        self._update_reactive_parameters(f"Added event data '{name}'")
+
     def get_event_data(self, name: Optional[str] = None) -> Any:
         """
         Get event data by name or all event data.
@@ -247,6 +307,7 @@ class StateManager:
             self._stats['total_removals'] += 1
             logger.info(f"Removed event data: '{name}' (remaining: {len(self._event_data)})")
             self._notify_observers('event_data_removed', {'name': name})
+            self._update_reactive_parameters(f"Removed event data '{name}'")
             return True
         return False
 
@@ -275,8 +336,10 @@ class StateManager:
         """
         count = len(self._event_data)
         self._event_data.clear()
+        self._stats['total_removals'] += count
         logger.info(f"Cleared all event data ({count} items)")
         self._notify_observers('event_data_cleared', {'count': count})
+        self._update_reactive_parameters(f"Cleared all event data ({count} items)")
 
     def update_event_data(self, name: str, event_list: Any) -> bool:
         """
@@ -340,6 +403,7 @@ class StateManager:
 
         logger.info(f"Added light curve: '{name}' (total: {len(self._light_curves)})")
         self._notify_observers('light_curve_added', {'name': name, 'data': light_curve})
+        self._update_reactive_parameters(f"Added light curve '{name}'")
 
     def get_light_curve(self, name: Optional[str] = None) -> Any:
         """
@@ -367,6 +431,7 @@ class StateManager:
             self._stats['total_removals'] += 1
             logger.info(f"Removed light curve: '{name}' (remaining: {len(self._light_curves)})")
             self._notify_observers('light_curve_removed', {'name': name})
+            self._update_reactive_parameters(f"Removed light curve '{name}'")
             return True
         return False
 
@@ -378,8 +443,10 @@ class StateManager:
         """Clear all light curves."""
         count = len(self._light_curves)
         self._light_curves.clear()
+        self._stats['total_removals'] += count
         logger.info(f"Cleared all light curves ({count} items)")
         self._notify_observers('light_curves_cleared', {'count': count})
+        self._update_reactive_parameters(f"Cleared all light curves ({count} items)")
 
     def update_light_curve(self, name: str, light_curve: Any) -> bool:
         """Update existing light curve."""
@@ -421,6 +488,7 @@ class StateManager:
 
         logger.info(f"Added timeseries: '{name}' (total: {len(self._timeseries_data)})")
         self._notify_observers('timeseries_added', {'name': name, 'data': timeseries})
+        self._update_reactive_parameters(f"Added timeseries '{name}'")
 
     def get_timeseries_data(self, name: Optional[str] = None) -> Any:
         """Get time series data by name or all time series."""
@@ -439,6 +507,7 @@ class StateManager:
             self._stats['total_removals'] += 1
             logger.info(f"Removed timeseries: '{name}' (remaining: {len(self._timeseries_data)})")
             self._notify_observers('timeseries_removed', {'name': name})
+            self._update_reactive_parameters(f"Removed timeseries '{name}'")
             return True
         return False
 
@@ -450,8 +519,10 @@ class StateManager:
         """Clear all time series data."""
         count = len(self._timeseries_data)
         self._timeseries_data.clear()
+        self._stats['total_removals'] += count
         logger.info(f"Cleared all timeseries ({count} items)")
         self._notify_observers('timeseries_cleared', {'count': count})
+        self._update_reactive_parameters(f"Cleared all timeseries ({count} items)")
 
     def update_timeseries_data(self, name: str, timeseries: Any) -> bool:
         """Update existing time series data."""

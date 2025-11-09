@@ -1,6 +1,6 @@
 import panel as pn
 import holoviews as hv
-from utils.state_manager import state_manager
+from utils.app_context import AppContext
 import pandas as pd
 import numpy as np
 import warnings
@@ -25,15 +25,7 @@ def create_warning_handler():
     return warning_handler
 
 """ Header Section """
-def create_quicklook_avg_cross_spectrum_header(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-):
+def create_quicklook_avg_cross_spectrum_header(context: AppContext):
     home_heading_input = pn.widgets.TextInput(
         name="Heading", value="QuickLook Averaged Cross Spectrum"
     )
@@ -55,22 +47,18 @@ def create_floatpanel_area(content, title):
 
 """ Main Area Section """
 def create_avg_cross_spectrum_tab(
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
-    plots_container,
-    header_container,
-    float_panel_container,
 ):
     # Define Widgets
     event_list_dropdown_1 = pn.widgets.Select(
         name="Select Event List 1",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
 
     event_list_dropdown_2 = pn.widgets.Select(
         name="Select Event List 2",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
 
     dt_slider = pn.widgets.FloatSlider(
@@ -101,53 +89,33 @@ def create_avg_cross_spectrum_tab(
 
     def create_dataframe(selected_event_list_index_1, selected_event_list_index_2, dt, norm, segment_size):
         if selected_event_list_index_1 is not None and selected_event_list_index_2 is not None:
-            event_list_1 = state_manager.get_event_data()[selected_event_list_index_1][1]
-            event_list_2 = state_manager.get_event_data()[selected_event_list_index_2][1]
+            event_list_1 = context.state.get_event_data()[selected_event_list_index_1][1]
+            event_list_2 = context.state.get_event_data()[selected_event_list_index_2][1]
 
-            # Create an AveragedCrossspectrum object using from_lightcurve
-            try:
-                lc1 = event_list_1.to_lc(dt=dt)
-                lc2 = event_list_2.to_lc(dt=dt)
-                cs = AveragedCrossspectrum.from_lightcurve(lc1, lc2, segment_size, norm=norm)
+            # Use spectrum service to create averaged cross spectrum
+            result = context.services.spectrum.create_averaged_cross_spectrum(
+                event_list_1=event_list_1,
+                event_list_2=event_list_2,
+                dt=dt,
+                segment_size=segment_size,
+                norm=norm
+            )
 
-                df = pd.DataFrame(
-                    {
-                        "Frequency": cs.freq,
-                        "Cross Power": np.abs(cs.power),
-                    }
+            if not result["success"]:
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {result['message']}")
                 )
-                return df, cs
-
-            except AssertionError as ae:
-                if "No GTIs are equal to or longer than segment_size" in str(ae):
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            f"Error: No GTIs are long enough to accommodate the segment size {segment_size}s. "
-                            "Please reduce the segment size or check your GTIs."
-                        )
-                    ]
-                else:
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            f"Error generating Averaged Cross Spectrum: {ae}. "
-                        )
-                    ]
                 return None, None
 
-            except Exception as e:
-                if "requested segment size" in str(e):
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            f"Failed to create cross spectrum: dt is too large or the segment size is too small."
-                        )
-                    ]
-                else:
-                    output_box_container[:] = [
-                        create_loadingdata_output_box(
-                            f"Error generating Averaged Cross Spectrum: {e}. "
-                            "Try using a different segment size."
-                        )]
-                return None, None
+            cs = result["data"]
+
+            # Create DataFrame manually (cross spectrum has complex power)
+            df = pd.DataFrame({
+                "Frequency": cs.freq,
+                "Cross Power": np.abs(cs.power),
+            })
+
+            return df, cs
         return None, None
 
     def create_holoviews_panes(plot):
@@ -175,18 +143,18 @@ def create_avg_cross_spectrum_tab(
         )
 
     def generate_avg_cross_spectrum(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index_1 = event_list_dropdown_1.value
         selected_event_list_index_2 = event_list_dropdown_2.value
         if selected_event_list_index_1 is None or selected_event_list_index_2 is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Both event lists must be selected.")
-            ]
+            )
             return
 
         dt = dt_slider.value
@@ -194,19 +162,19 @@ def create_avg_cross_spectrum_tab(
         segment_size = segment_size_input.value
         df, cs = create_dataframe(selected_event_list_index_1, selected_event_list_index_2, dt, norm, segment_size)
         if df is not None:
-            plot_title = f"Averaged Cross Spectrum for {state_manager.get_event_data()[selected_event_list_index_1][0]} vs {state_manager.get_event_data()[selected_event_list_index_2][0]}"
+            plot_title = f"Averaged Cross Spectrum for {context.state.get_event_data()[selected_event_list_index_1][0]} vs {context.state.get_event_data()[selected_event_list_index_2][0]}"
             plot_hv = create_holoviews_plots(cs, title=plot_title, dt=dt, norm=norm, segment_size=segment_size)
             holoviews_output = create_holoviews_panes(plot_hv)
 
             if floatpanel_plots_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=holoviews_output, title=plot_title
                     )
                 )
             else:
                 markdown_content = f"## {plot_title}"
-                plots_container.append(
+                context.append_to_container('plots',
                     pn.FlexBox(
                         pn.pane.Markdown(markdown_content),
                         holoviews_output,
@@ -216,27 +184,27 @@ def create_avg_cross_spectrum_tab(
                         flex_direction="column",
                     )
                 )
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Averaged Cross Spectrum generated successfully.")
-            ]
+            )
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create averaged cross spectrum.")
-            ]
+            )
 
     def show_dataframe(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index_1 = event_list_dropdown_1.value
         selected_event_list_index_2 = event_list_dropdown_2.value
         if selected_event_list_index_1 is None or selected_event_list_index_2 is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Both event lists must be selected.")
-            ]
+            )
             return
 
         dt = dt_slider.value
@@ -244,23 +212,23 @@ def create_avg_cross_spectrum_tab(
         segment_size = segment_size_input.value
         df, cs = create_dataframe(selected_event_list_index_1, selected_event_list_index_2, dt, norm, segment_size)
         if df is not None:
-            dataframe_output = create_dataframe_panes(df, f"{state_manager.get_event_data()[selected_event_list_index_1][0]} vs {state_manager.get_event_data()[selected_event_list_index_2][0]}", dt, norm, segment_size)
+            dataframe_output = create_dataframe_panes(df, f"{context.state.get_event_data()[selected_event_list_index_1][0]} vs {context.state.get_event_data()[selected_event_list_index_2][0]}", dt, norm, segment_size)
             if dataframe_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floatpanel_area(
                         content=dataframe_output,
-                        title=f"DataFrame for {state_manager.get_event_data()[selected_event_list_index_1][0]} vs {state_manager.get_event_data()[selected_event_list_index_2][0]}",
+                        title=f"DataFrame for {context.state.get_event_data()[selected_event_list_index_1][0]} vs {context.state.get_event_data()[selected_event_list_index_2][0]}",
                     )
                 )
             else:
-                plots_container.append(dataframe_output)
-            output_box_container[:] = [
+                context.append_to_container('plots', dataframe_output)
+            context.update_container('output_box',
                 create_loadingdata_output_box("DataFrame generated successfully.")
-            ]
+            )
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create dataframe.")
-            ]
+            )
 
     generate_cross_spectrum_button = pn.widgets.Button(
         name="Generate Averaged Cross Spectrum", button_type="primary"
@@ -284,25 +252,12 @@ def create_avg_cross_spectrum_tab(
     )
     return tab_content
 
-def create_quicklook_avg_cross_spectrum_main_area(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_quicklook_avg_cross_spectrum_main_area(context: AppContext):
     warning_handler = create_warning_handler()
     tabs_content = {
         "Averaged Cross Spectrum": create_avg_cross_spectrum_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
-            plots_container=plots_container,
-            header_container=header_container,
-            float_panel_container=float_panel_container,
         ),
     }
 

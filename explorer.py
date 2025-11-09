@@ -26,11 +26,12 @@ from modules.Home.HomeContent import (
     create_home_warning_box,
     create_home_help_area,
     create_home_footer,
-    create_home_plots_area_initial,
+    create_home_plots_area,
     create_home_resource_monitor,
 )
 
 from utils.sidebar import create_sidebar
+from utils.app_context import AppContext
 
 
 # Initialize Panel and Holoviews extensions with required features
@@ -44,6 +45,13 @@ hv.extension('bokeh')
 # busy_status = pn.indicators.BooleanStatus(
 #     value=True, color="warning", width=30, height=30
 # )
+
+# =============================================================================
+# Create Application Context
+# =============================================================================
+
+# Initialize the application context that will hold all containers and state
+context = AppContext()
 
 # Create the main dashboard header with branding and navigation
 header = create_home_header()
@@ -67,35 +75,26 @@ help_box = create_home_help_area()
 footer = create_home_footer()
 
 # Create the plots area container for visualization outputs
-plots_area = create_home_plots_area_initial()
+plots_area = create_home_plots_area()
 
+# =============================================================================
+# Register All Containers with AppContext
+# =============================================================================
 
-# Create containers for each section to enable dynamic layout management
-header_container = pn.Column(header)
-resource_monitor_container = pn.Column(resource_monitor)
-main_area_container = pn.Column(main_area)
-output_box_container = pn.Column(output_box)
-warning_box_container = pn.Column(warning_box)
-plots_container = pn.FlexBox(plots_area, flex_direction='row', align_content='space-evenly', align_items="center", justify_content="center", flex_wrap="wrap")
-help_box_container = pn.Column(help_box)
-footer_container = pn.Column(footer)
-float_panel_container = pn.Column(pn.pane.Markdown("This is not a bug that this container is scrolling, it's a container to hold Floating Plots. You can ignore it completely."))
-
-# Floating plot container for additional visualization options
-# floating_plot_demo = create_floating_plot_demo(floating_panel_container)
+# Create containers for each section and register them with the context
+context.register_container('header', pn.Column(header), {'purpose': 'Main navigation and branding'})
+context.register_container('resource_monitor', pn.Column(resource_monitor), {'purpose': 'System resource usage display'})
+context.register_container('main_area', pn.Column(main_area), {'purpose': 'Primary workspace for data visualization'})
+context.register_container('output_box', pn.Column(output_box), {'purpose': 'Analysis results and messages'})
+context.register_container('warning_box', pn.Column(warning_box), {'purpose': 'Important alerts and notifications'})
+context.register_container('plots', pn.FlexBox(plots_area, flex_direction='row', align_content='space-evenly', align_items="center", justify_content="center", flex_wrap="wrap"), {'purpose': 'Visualization outputs'})
+context.register_container('help_box', pn.Column(help_box), {'purpose': 'Documentation and support resources'})
+context.register_container('footer', pn.Column(footer), {'purpose': 'Copyright and additional information'})
+context.register_container('float_panel', pn.Column(pn.pane.Markdown("This is not a bug that this container is scrolling, it's a container to hold Floating Plots. You can ignore it completely.")), {'purpose': 'Floating plot container'})
 
 # Create the sidebar with navigation and control elements
-sidebar = create_sidebar(
-    main_area=main_area_container,
-    resource_usage=resource_monitor_container,
-    header=header_container,
-    footer=footer_container,
-    output_box=output_box_container,
-    warning_box=warning_box_container,
-    help_box=help_box_container,
-    plots_container=plots_container,
-    float_panel_container=float_panel_container,
-)
+# Now passing a single AppContext instead of 9 individual parameters!
+sidebar = create_sidebar(context)
 
 
 """
@@ -162,15 +161,15 @@ layout = pn.template.FastGridTemplate(
     base_target="_self",
 )
 
-layout.main[0:10, 0:6] = header_container
-layout.main[0:10, 6:12] = resource_monitor_container
-layout.main[10:55, 0:8] = main_area_container
-layout.main[10:33, 8:12] = output_box_container
-layout.main[33:55, 8:12] = warning_box_container
-layout.main[55:100, 0:12] = plots_container
-layout.main[100:140, 0:12] = help_box_container
-layout.main[140:170, 0:12] = footer_container
-layout.main[170:170, 0:12] = float_panel_container
+layout.main[0:10, 0:6] = context.get_container('header')
+layout.main[0:10, 6:12] = context.get_container('resource_monitor')
+layout.main[10:55, 0:8] = context.get_container('main_area')
+layout.main[10:33, 8:12] = context.get_container('output_box')
+layout.main[33:55, 8:12] = context.get_container('warning_box')
+layout.main[55:100, 0:12] = context.get_container('plots')
+layout.main[100:140, 0:12] = context.get_container('help_box')
+layout.main[140:170, 0:12] = context.get_container('footer')
+layout.main[170:170, 0:12] = context.get_container('float_panel')
 
 
 # Make the layout available for serving

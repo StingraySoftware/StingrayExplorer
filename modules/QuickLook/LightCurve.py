@@ -2,7 +2,7 @@ import panel as pn
 import holoviews as hv
 import holoviews.operation.datashader as hd
 from holoviews.operation.timeseries import rolling, rolling_outlier_std
-from utils.state_manager import state_manager
+from utils.app_context import AppContext
 import pandas as pd
 import warnings
 import hvplot.pandas
@@ -52,16 +52,7 @@ def create_warning_handler():
 """ Header Section """
 
 
-def create_quicklook_lightcurve_header(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_quicklook_lightcurve_header(context: AppContext):
     home_heading_input = pn.widgets.TextInput(
         name="Heading", value="QuickLook Light Curve"
     )
@@ -88,17 +79,13 @@ def create_loadingdata_warning_box(content):
 
 
 def create_lightcurve_tab(
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
-    plots_container,
-    header_container,
-    float_panel_container,
 ):
 
     event_list_dropdown = pn.widgets.Select(
         name="Select Event List(s)",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
     )
 
     dt_input = pn.widgets.FloatInput(
@@ -111,7 +98,7 @@ def create_lightcurve_tab(
 
     multi_event_select = pn.widgets.MultiSelect(
         name="Or Select Event List(s) to Combine",
-        options={name: i for i, (name, event) in enumerate(state_manager.get_event_data())},
+        options={name: i for i, (name, event) in enumerate(context.state.get_event_data())},
         size=8,
     )
 
@@ -141,8 +128,8 @@ def create_lightcurve_tab(
     def update_time_info(event):
         selected_index = event_list_dropdown.value
         if selected_index is not None:
-            event_list_name = state_manager.get_event_data()[selected_index][0]
-            event_list = state_manager.get_event_data()[selected_index][1]
+            event_list_name = context.state.get_event_data()[selected_index][0]
+            event_list = context.state.get_event_data()[selected_index][1]
             start_time = event_list.time[0]
             end_time = event_list.time[-1]
             time_info_pane.object = (
@@ -260,7 +247,7 @@ def create_lightcurve_tab(
 
     def create_dataframe(selected_event_list_index, dt, eventlist_name):
         if selected_event_list_index is not None:
-            event_list = state_manager.get_event_data()[selected_event_list_index][1]
+            event_list = context.state.get_event_data()[selected_event_list_index][1]
 
 
             # Parse GTIs from input if provided
@@ -274,30 +261,41 @@ def create_lightcurve_tab(
                         )
                     ]
                 except ValueError:
-                    output_box_container[:] = [
+                    context.update_container('output_box',
                         create_loadingdata_output_box("Invalid GTI format. Use 'start end; start end'.")
-                    ]
+                    )
                     return None
                 
-            if gti_input.value:
-                lc_new = event_list.to_lc(dt=dt).apply_gtis(gti)
-            else:
-                lc_new = event_list.to_lc(dt=dt)
-            
+            # Use lightcurve service to create lightcurve
+            result = context.services.lightcurve.create_lightcurve_from_event_list(
+                event_list=event_list,
+                dt=dt,
+                gti=gti if gti_input.value else None
+            )
 
+            if not result["success"]:
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {result['message']}")
+                )
+                return None
+
+            lc_new = result["data"]
             lightcurve_name = f"{eventlist_name}_lightcurve"
 
             # Add the generated light curve to state manager if the checkbox is checked
             if save_lightcurve_checkbox.value:
-                state_manager.add_light_curve(lightcurve_name, lc_new)
+                context.state.add_light_curve(lightcurve_name, lc_new)
 
-            df = pd.DataFrame(
-                {
-                    "Time": lc_new.time,
-                    "Counts": lc_new.counts,
-                }
-            )
-            return df
+            # Use export service to convert to DataFrame
+            df_result = context.services.export.to_dataframe_lightcurve(lc_new)
+
+            if df_result["success"]:
+                return df_result["data"]
+            else:
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {df_result['message']}")
+                )
+                return None
         return None
 
     """ Floating Plots """
@@ -306,60 +304,60 @@ def create_lightcurve_tab(
         return FloatingPlot(title, content)
 
     def show_dataframe(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index = event_list_dropdown.value
         if selected_event_list_index is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event list selected.")
-            ]
+            )
             return
 
         dt = dt_input.value
         df = create_dataframe(selected_event_list_index, dt)
         if df is not None:
-            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
+            event_list_name = context.state.get_event_data()[selected_event_list_index][0]
             dataframe_output = create_dataframe_panes(df, f"{event_list_name}", dt)
             if dataframe_checkbox.value:
-                float_panel_container.append(
+                context.append_to_container('float_panel',
                     create_floating_plot_container(
                         content=dataframe_output,
                         title=f"DataFrame for {event_list_name}",
                     )
                 )
             else:
-                plots_container.append(dataframe_output)
+                context.append_to_container('plots', dataframe_output)
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create dataframe.")
-            ]
+            )
 
     def generate_lightcurve(event=None):
-        if not state_manager.get_event_data():
-            output_box_container[:] = [
+        if not context.state.get_event_data():
+            context.update_container('output_box',
                 create_loadingdata_output_box("No loaded event data available.")
-            ]
+            )
             return
 
         selected_event_list_index = event_list_dropdown.value
         if selected_event_list_index is None:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event list selected.")
-            ]
+            )
             return
 
         dt = dt_input.value
         df = create_dataframe(
             selected_event_list_index,
             dt,
-            state_manager.get_event_data()[selected_event_list_index][0],
+            context.state.get_event_data()[selected_event_list_index][0],
         )
         if df is not None:
-            event_list_name = state_manager.get_event_data()[selected_event_list_index][0]
+            event_list_name = context.state.get_event_data()[selected_event_list_index][0]
             plot_hv = create_holoviews_plots(df, label=event_list_name, dt=dt)
             holoviews_output = create_holoviews_panes(plot=plot_hv)
 
@@ -367,10 +365,10 @@ def create_lightcurve_tab(
                 new_floatpanel = create_floating_plot_container(
                     content=holoviews_output, title=event_list_name
                 )
-                float_panel_container.append(new_floatpanel)
+                context.append_to_container('float_panel', new_floatpanel)
             else:
                 markdown_content = f"## {event_list_name}"
-                plots_container.append(
+                context.append_to_container('plots',
                     pn.FlexBox(
                         pn.pane.Markdown(markdown_content),
                         holoviews_output,
@@ -381,16 +379,16 @@ def create_lightcurve_tab(
                     )
                 )
         else:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("Failed to create dataframe.")
-            ]
+            )
 
     def combine_selected_plots(event=None):
         selected_event_list_indices = multi_event_select.value
         if not selected_event_list_indices:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box("No event lists selected.")
-            ]
+            )
             return
 
         combined_plots = []
@@ -406,7 +404,7 @@ def create_lightcurve_tab(
             dt = dt_input.value
             df = create_dataframe(index, dt)
             if df is not None:
-                event_list_name = state_manager.get_event_data()[index][0]
+                event_list_name = context.state.get_event_data()[index][0]
                 plot_hv = create_holoviews_plots_no_colorbar(
                     df, label=event_list_name, dt=dt, color_key=color_key[index]
                 )
@@ -475,25 +473,12 @@ def create_lightcurve_tab(
     return tab1_content
 
 
-def create_quicklook_lightcurve_main_area(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-    float_panel_container,
-):
+def create_quicklook_lightcurve_main_area(context: AppContext):
     warning_handler = create_warning_handler()
     tabs_content = {
         "Light Curve": create_lightcurve_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
-            plots_container=plots_container,
-            header_container=header_container,
-            float_panel_container=float_panel_container,
         ),
     }
 

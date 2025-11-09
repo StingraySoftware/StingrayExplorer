@@ -2,6 +2,7 @@
 import os
 import stat
 import copy
+import logging
 import numpy as np
 import warnings
 import tempfile
@@ -19,6 +20,9 @@ from stingray import Lightcurve
 
 # Dashboard Classes and State Management Imports
 from utils.state_manager import state_manager
+from utils.app_context import AppContext
+from utils.error_handler import ErrorHandler
+from utils.error_recovery import ErrorRecoveryPanel, show_file_error, show_validation_error, show_success
 from utils.DashboardClasses import (
     MainHeader,
     MainArea,
@@ -61,34 +65,20 @@ def create_warning_handler():
 """ Header Section """
 
 
-def create_loadingdata_header(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-):
+def create_loadingdata_header(context: AppContext):
     """
-        Create the header for the data loading section.
+    Create the header for the data loading section.
 
-        Args:
-            header_container: The container for the header.
-            main_area_container: The container for the main content area.
-            output_box_container: The container for the output messages.
-            warning_box_container: The container for warning messages.
-            plots_container: The container for plots.
-            help_box_container: The container for the help section.
-            footer_container: The container for the footer.
+    Args:
+        context (AppContext): The application context containing containers and state.
 
-        Returns:
-            MainHeader: An instance of MainHeader with the specified heading.
-    # TODO: Add better example for create_loading_header()
-        Example:
-            >>> header = create_loadingdata_header(header_container, main_area_container, ...)
-            >>> header.heading.value
-            'Data Ingestion and creation'
+    Returns:
+        MainHeader: An instance of MainHeader with the specified heading.
+
+    Example:
+        >>> header = create_loadingdata_header(context)
+        >>> header.heading.value
+        'Data Ingestion'
     """
     home_heading_input = pn.widgets.TextInput(name="Heading", value="Data Ingestion")
     return MainHeader(heading=home_heading_input)
@@ -144,97 +134,228 @@ def read_event_data(
     format_checkbox,
     rmf_file_dropper,
     additional_columns_input,
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
 ):
     """
-    # TODO: Add better docstring for read_event_data
     Load event data from selected files with extended EventList.read functionality,
     supporting FileDropper for RMF files and additional columns.
+
+    Args:
+        event: The event object triggering the function.
+        file_selector: The file selector widget.
+        filename_input: Text input for filenames.
+        format_input: Text input for file formats.
+        format_checkbox: Checkbox for default format.
+        rmf_file_dropper: File dropper for RMF files.
+        additional_columns_input: Text input for additional columns.
+        context (AppContext): The application context containing containers and state.
+        warning_handler: The handler for warnings.
     """
     # Validation for required inputs
     if not file_selector.value:
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_loadingdata_output_box(
                 "No file selected. Please select a file to upload."
             )
-        ]
+        )
         return
 
-    # TODO: Add try and except block for error handling during selection of file path and display in warning box
-    file_paths = file_selector.value
-    filenames = (
-        [name.strip() for name in filename_input.value.split(",")]
-        if filename_input.value
-        else []
-    )
+    try:
+        # Parse file paths
+        file_paths = file_selector.value
+        filenames = (
+            [name.strip() for name in filename_input.value.split(",")]
+            if filename_input.value
+            else []
+        )
+    except Exception as e:
+        user_msg, tech_msg = ErrorHandler.handle_error(
+            e,
+            context="Parsing file paths and names",
+            file_count=len(file_selector.value) if file_selector.value else 0
+        )
 
-    # TODO: Add try and except block for error handling during selection of file format and display in warning box
-    formats = (
-        [fmt.strip() for fmt in format_input.value.split(",")]
-        if format_input.value
-        else []
-    )
+        # Create retry callback
+        def retry_load():
+            load_event_lists_from_file(
+                event, file_selector, filename_input, format_input,
+                format_checkbox, rmf_file_dropper, additional_columns_input,
+                context, warning_handler
+            )
 
-    # Use default format if checkbox is checked
-    if format_checkbox.value:
-        formats = ["ogip" for _ in range(len(file_paths))]
-
-    # TODO: Add try and except block for error handling during selection of RMF file and display in warning box
-    # Retrieve the RMF file from FileDropper (if any)
-    if rmf_file_dropper.value:
-        rmf_file = list(rmf_file_dropper.value.values())[0]
-
-        # Save the file data to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".rmf") as tmp_file:
-            tmp_file.write(rmf_file)
-            tmp_file_path = tmp_file.name
-
-    # TODO: Add try and except block for error handling during selection of additional columns and display in warning box
-    # Parse additional columns
-    additional_columns = (
-        [col.strip() for col in additional_columns_input.value.split(",")]
-        if additional_columns_input.value
-        else None
-    )
+        # Show error panel with retry option
+        error_panel = ErrorRecoveryPanel.create_error_panel(
+            error_message=user_msg,
+            error_type="error",
+            retry_callback=retry_load,
+            help_text="Check that file paths and filenames are correctly formatted (comma-separated if multiple)",
+            technical_details=tech_msg
+        )
+        context.update_container('warning_box', error_panel)
+        return
 
     try:
-        loaded_files = []
-        for file_path, file_name, file_format in zip(file_paths, filenames, formats):
-            # Check if event data with this name already exists
-            if state_manager.has_event_data(file_name):
-                output_box_container[:] = [
-                    create_loadingdata_output_box(
-                        f"A file with the name '{file_name}' already exists in memory. Please provide a different name."
-                    )
-                ]
-                return
-            # EventList read method used from stingray.EventList
-            event_list = EventList.read(
-                file_path,
-                fmt=file_format,
-                rmf_file=tmp_file_path if rmf_file_dropper.value else None,
-                additional_columns=additional_columns,
-            )
-            # Add to state manager instead of global list
-            state_manager.add_event_data(file_name, event_list)
-            loaded_files.append(
-                f"File '{file_path}' loaded successfully as '{file_name}' with format '{file_format}'."
-            )
-        output_box_container[:] = [
-            create_loadingdata_output_box("\n".join(loaded_files))
-        ]
-        if warning_handler.warnings:
-            warning_box_container[:] = [
-                create_loadingdata_warning_box("\n".join(warning_handler.warnings))
-            ]
-        else:
-            warning_box_container[:] = [create_loadingdata_warning_box("No warnings.")]
+        # Parse file formats
+        formats = (
+            [fmt.strip() for fmt in format_input.value.split(",")]
+            if format_input.value
+            else []
+        )
+
+        # Use default format if checkbox is checked
+        if format_checkbox.value:
+            formats = ["ogip" for _ in range(len(file_paths))]
     except Exception as e:
-        output_box_container[:] = [
-            create_loadingdata_output_box(f"An error occurred: {e}")
-        ]
+        user_msg, tech_msg = ErrorHandler.handle_error(
+            e,
+            context="Parsing file formats",
+            format_input=format_input.value if format_input.value else "None"
+        )
+
+        # Create retry callback
+        def retry_load():
+            load_event_lists_from_file(
+                event, file_selector, filename_input, format_input,
+                format_checkbox, rmf_file_dropper, additional_columns_input,
+                context, warning_handler
+            )
+
+        # Show error panel with retry option
+        error_panel = ErrorRecoveryPanel.create_error_panel(
+            error_message=user_msg,
+            error_type="error",
+            retry_callback=retry_load,
+            help_text="Supported formats: ogip, hea, fits (comma-separated if multiple files)",
+            technical_details=tech_msg
+        )
+        context.update_container('warning_box', error_panel)
+        return
+
+    try:
+        # Retrieve the RMF file from FileDropper (if any)
+        if rmf_file_dropper.value:
+            rmf_file = list(rmf_file_dropper.value.values())[0]
+
+            # Save the file data to a temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".rmf") as tmp_file:
+                tmp_file.write(rmf_file)
+                tmp_file_path = tmp_file.name
+    except Exception as e:
+        user_msg, tech_msg = ErrorHandler.handle_error(
+            e,
+            context="Processing RMF file",
+            has_rmf=bool(rmf_file_dropper.value)
+        )
+
+        # Create clear callback to reset RMF file
+        def clear_rmf():
+            rmf_file_dropper.value = None
+            context.update_container('warning_box',
+                pn.pane.Markdown("*RMF file cleared. Ready to try again.*")
+            )
+
+        # Show error panel with clear option
+        error_panel = ErrorRecoveryPanel.create_error_panel(
+            error_message=user_msg,
+            error_type="error",
+            clear_callback=clear_rmf,
+            help_text="Make sure the RMF file is valid and in the correct format (.rmf extension)",
+            technical_details=tech_msg
+        )
+        context.update_container('warning_box', error_panel)
+        return
+
+    try:
+        # Parse additional columns
+        additional_columns = (
+            [col.strip() for col in additional_columns_input.value.split(",")]
+            if additional_columns_input.value
+            else None
+        )
+    except Exception as e:
+        user_msg, tech_msg = ErrorHandler.handle_error(
+            e,
+            context="Parsing additional columns",
+            columns_input=additional_columns_input.value if additional_columns_input.value else "None"
+        )
+
+        # Create retry callback
+        def retry_load():
+            load_event_lists_from_file(
+                event, file_selector, filename_input, format_input,
+                format_checkbox, rmf_file_dropper, additional_columns_input,
+                context, warning_handler
+            )
+
+        # Create clear callback
+        def clear_columns():
+            additional_columns_input.value = ""
+            context.update_container('warning_box',
+                pn.pane.Markdown("*Additional columns cleared. Ready to try again.*")
+            )
+
+        # Show error panel with retry and clear options
+        error_panel = ErrorRecoveryPanel.create_error_panel(
+            error_message=user_msg,
+            error_type="error",
+            retry_callback=retry_load,
+            clear_callback=clear_columns,
+            help_text="Provide column names as comma-separated values (e.g., 'PI, ENERGY')",
+            technical_details=tech_msg
+        )
+        context.update_container('warning_box', error_panel)
+        return
+
+    # Use data service to load files
+    loaded_files = []
+    for file_path, file_name, file_format in zip(file_paths, filenames, formats):
+        # Use data service for loading
+        result = context.services.data.load_event_list(
+            file_path=file_path,
+            name=file_name,
+            fmt=file_format,
+            rmf_file=tmp_file_path if rmf_file_dropper.value else None,
+            additional_columns=additional_columns
+        )
+
+        if result["success"]:
+            loaded_files.append(result["message"])
+        else:
+            # If loading failed, show error panel with retry
+            def retry_load():
+                load_event_lists_from_file(
+                    event, file_selector, filename_input, format_input,
+                    format_checkbox, rmf_file_dropper, additional_columns_input,
+                    context, warning_handler
+                )
+
+            error_panel = ErrorRecoveryPanel.create_error_panel(
+                error_message=result['message'],
+                error_type="error",
+                retry_callback=retry_load,
+                help_text="Check the file format and try again, or select different files",
+                technical_details=result.get('error', 'No technical details available')
+            )
+            context.update_container('output_box', error_panel)
+            return
+
+    # Show success panel
+    success_message = f"Successfully loaded {len(loaded_files)} file(s)"
+    details = "<br>".join([f"• {msg}" for msg in loaded_files])
+    success_panel = ErrorRecoveryPanel.create_success_panel(
+        success_message=success_message,
+        details=details
+    )
+    context.update_container('output_box', success_panel)
+
+    # Show warnings if any
+    if warning_handler.warnings:
+        context.update_container('warning_box',
+            create_loadingdata_warning_box("\n".join(warning_handler.warnings))
+        )
+    else:
+        context.update_container('warning_box', create_loadingdata_warning_box("No warnings."))
 
     # Clear the warnings after displaying them
     warning_handler.warnings.clear()
@@ -245,44 +366,39 @@ def save_loaded_files(
     filename_input,
     format_input,
     format_checkbox,
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
 ):
     """
-        Save loaded event data to specified file formats.
+    Save loaded event data to specified file formats.
 
-        Args:
-            event: The event object triggering the function.
-            filename_input (TextInput): The input widget for filenames.
-            format_input (TextInput): The input widget for formats.
-            format_checkbox (Checkbox): The checkbox for default format.
-            output_box_container (OutputBox): The container for output messages.
-            warning_box_container (WarningBox): The container for warning messages.
-            warning_handler (WarningHandler): The handler for warnings.
+    Args:
+        event: The event object triggering the function.
+        filename_input (TextInput): The input widget for filenames.
+        format_input (TextInput): The input widget for formats.
+        format_checkbox (Checkbox): The checkbox for default format.
+        context (AppContext): The application context containing containers and state.
+        warning_handler (WarningHandler): The handler for warnings.
 
-        Side effects:
-            - Saves files to disk in the specified formats.
-            - Updates the output and warning containers with messages.
+    Side effects:
+        - Saves files to disk in the specified formats.
+        - Updates the output and warning containers with messages.
 
-        Exceptions:
-            - Displays exceptions in the warning box if file saving fails.
+    Restrictions:
+        - Requires that the number of filenames and formats matches the number of loaded files unless default format is used.
 
-        Restrictions:
-            - Requires that the number of filenames and formats matches the number of loaded files unless default format is used.
-    # TODO: Add better example
-        Example:
-            >>> save_loaded_files(event, filename_input, format_input, format_checkbox, ...)
-            >>> os.path.exists('/path/to/saved/file.hdf5')
-            True  # Assuming the file was saved successfully
+    Example:
+        >>> save_loaded_files(event, filename_input, format_input, format_checkbox, context, warning_handler)
+        >>> os.path.exists('/path/to/saved/file.hdf5')
+        True  # Assuming the file was saved successfully
     """
     # Get all event data from state manager
-    all_event_data = state_manager.get_event_data()
+    all_event_data = context.state.get_event_data()
 
     if not all_event_data:
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_loadingdata_output_box("No files loaded to save.")
-        ]
+        )
         return
 
     filenames = (
@@ -302,23 +418,23 @@ def save_loaded_files(
         formats = ["hdf5" for _ in range(len(all_event_data))]
 
     if len(filenames) < len(all_event_data):
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_loadingdata_output_box("Please specify names for all loaded files.")
-        ]
+        )
         return
     if len(filenames) != len(all_event_data):
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_loadingdata_output_box(
                 "Please ensure that the number of names matches the number of loaded files."
             )
-        ]
+        )
         return
     if len(formats) < len(all_event_data):
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_loadingdata_output_box(
                 "Please specify formats for all loaded files or check the default format option."
             )
-        ]
+        )
         return
 
     saved_files = []
@@ -329,38 +445,45 @@ def save_loaded_files(
             if os.path.exists(
                 os.path.join(loaded_data_path, f"{file_name}.{file_format}")
             ):
-                output_box_container[:] = [
+                context.update_container('output_box',
                     create_loadingdata_output_box(
                         f"A file with the name '{file_name}' already exists. Please provide a different name."
                     )
-                ]
+                )
                 return
 
             save_path = os.path.join(loaded_data_path, f"{file_name}.{file_format}")
-            if file_format == "hdf5":
-                event_list.to_astropy_table().write(
-                    save_path, format=file_format, path="data"
-                )
-            else:
-                event_list.write(save_path, file_format)
 
-            saved_files.append(
-                f"File '{file_name}' saved successfully to '{save_path}'."
+            # Use export service to save the event list
+            result = context.services.export.export_event_list(
+                name=file_name,
+                file_path=save_path,
+                fmt=file_format
             )
 
-        output_box_container[:] = [
+            if result["success"]:
+                saved_files.append(result["message"])
+            else:
+                saved_files.append(f"Error saving '{file_name}': {result['message']}")
+
+        context.update_container('output_box',
             create_loadingdata_output_box("\n".join(saved_files))
-        ]
+        )
         if warning_handler.warnings:
-            warning_box_container[:] = [
+            context.update_container('warning_box',
                 create_loadingdata_warning_box("\n".join(warning_handler.warnings))
-            ]
+            )
         else:
-            warning_box_container[:] = [create_loadingdata_warning_box("No warnings.")]
+            context.update_container('warning_box', create_loadingdata_warning_box("No warnings."))
     except Exception as e:
-        warning_box_container[:] = [
-            create_loadingdata_warning_box(f"An error occurred while saving files: {e}")
-        ]
+        user_msg, tech_msg = ErrorHandler.handle_error(
+            e,
+            context="Saving loaded files",
+            save_directory=loaded_data_path
+        )
+        context.update_container('warning_box',
+            create_loadingdata_warning_box(f"Error: {user_msg}")
+        )
 
     # Clear the warnings after displaying them
     warning_handler.warnings.clear()
@@ -370,8 +493,7 @@ def save_loaded_files(
 def delete_selected_files(
     event,
     file_selector,
-    warning_box_container,
-    output_box_container,
+    context: AppContext,
     warning_handler,
 ):
     """
@@ -380,22 +502,18 @@ def delete_selected_files(
     Args:
         event: The event object triggering the function.
         file_selector (FileSelector): The file selector widget.
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
+        context (AppContext): The application context containing containers and state.
         warning_handler (WarningHandler): The handler for warnings.
 
     Side effects:
         - Deletes files from the file system.
         - Updates the output and warning containers with messages.
 
-    Exceptions:
-        - Displays exceptions in the warning box if file deletion fails.
-
     Restrictions:
         - Cannot delete `.py` files for safety reasons.
 
     Example:
-        >>> delete_selected_files(event, file_selector, warning_box_container, output_box_container, warning_handler)
+        >>> delete_selected_files(event, file_selector, context, warning_handler)
         >>> os.path.exists('/path/to/deleted/file')
         False  # Assuming the file was deleted successfully
     """
@@ -418,11 +536,11 @@ def delete_selected_files(
         ".gz",
     }
     if not file_selector.value:
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_loadingdata_output_box(
                 "No file selected. Please select a file to delete."
             )
-        ]
+        )
         return
 
     file_paths = file_selector.value
@@ -440,14 +558,20 @@ def delete_selected_files(
             os.remove(file_path)
             deleted_files.append(f"File '{file_path}' deleted successfully.")
         except Exception as e:
-            deleted_files.append(f"An error occurred while deleting '{file_path}': {e}")
-    output_box_container[:] = [create_loadingdata_output_box("\n".join(deleted_files))]
+            user_msg, tech_msg = ErrorHandler.handle_error(
+                e,
+                context="Deleting file",
+                file_path=file_path,
+                log_level=logging.WARNING
+            )
+            deleted_files.append(f"Error deleting '{file_path}': {user_msg}")
+    context.update_container('output_box', create_loadingdata_output_box("\n".join(deleted_files)))
     if warning_handler.warnings:
-        warning_box_container[:] = [
+        context.update_container('warning_box',
             create_loadingdata_warning_box("\n".join(warning_handler.warnings))
-        ]
+        )
     else:
-        warning_box_container[:] = [create_loadingdata_warning_box("No warnings.")]
+        context.update_container('warning_box', create_loadingdata_warning_box("No warnings."))
 
     warning_handler.warnings.clear()
 
@@ -455,8 +579,7 @@ def delete_selected_files(
 # TODO: ADD better comments, error handlling and docstrings
 def preview_loaded_files(
     event,
-    output_box_container,
-    warning_box_container,
+    context: AppContext,
     warning_handler,
     time_limit=10,
 ):
@@ -465,29 +588,22 @@ def preview_loaded_files(
 
     Args:
         event: The event object triggering the function.
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
+        context (AppContext): The application context containing containers and state.
         warning_handler (WarningHandler): The handler for warnings.
         time_limit (int): The number of time entries to preview.
 
     Side Effects:
         Updates the output and warning containers with preview information.
 
-    Exceptions:
-        Captures exceptions and displays them in the warning box.
-
-    Restrictions:
-        None.
-
     Example:
-        >>> preview_loaded_files(event, output_box_container, warning_box_container, warning_handler)
+        >>> preview_loaded_files(event, context, warning_handler)
         "Event List - my_event_list:\nTimes (first 10): [0.1, 0.2, ...]\nMJDREF: 58000"
     """
     preview_data = []
 
     # Get all data from state manager
-    all_event_data = state_manager.get_event_data()
-    all_light_curves = state_manager.get_light_curve()
+    all_event_data = context.state.get_event_data()
+    all_light_curves = context.state.get_light_curve()
 
     # Add a summary of loaded files and their names
     if all_event_data:
@@ -543,7 +659,12 @@ def preview_loaded_files(
                 preview_data.append(event_preview)
 
             except Exception as e:
-                warning_handler.warn(str(e), category=RuntimeWarning)
+                user_msg = ErrorHandler.handle_warning(
+                    str(e),
+                    context="Generating event list preview",
+                    file_name=file_name
+                )
+                warning_handler.warn(user_msg, category=RuntimeWarning)
 
     # Preview Lightcurve data
     if all_light_curves:
@@ -596,68 +717,66 @@ def preview_loaded_files(
                 lightcurve_preview += "----------------------\n\n"
                 preview_data.append(lightcurve_preview)
             except Exception as e:
-                warning_handler.warn(str(e), category=RuntimeWarning)
+                user_msg = ErrorHandler.handle_warning(
+                    str(e),
+                    context="Generating lightcurve preview",
+                    lc_name=lc_name
+                )
+                warning_handler.warn(user_msg, category=RuntimeWarning)
 
     # Display preview data or message if no data available
     if preview_data:
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_loadingdata_output_box("\n\n".join(preview_data))
-        ]
+        )
     else:
-        output_box_container[:] = [
+        context.update_container('output_box',
             create_loadingdata_output_box(
                 "No valid files or light curves loaded for preview."
             )
-        ]
+        )
 
     if warning_handler.warnings:
-        warning_box_container[:] = [
+        context.update_container('warning_box',
             create_loadingdata_warning_box("\n".join(warning_handler.warnings))
-        ]
+        )
     else:
-        warning_box_container[:] = [create_loadingdata_warning_box("No warnings.")]
+        context.update_container('warning_box', create_loadingdata_warning_box("No warnings."))
 
     warning_handler.warnings.clear()
 
 
 # TODO: ADD better comments, error handlling and docstrings
-def clear_loaded_files(event, output_box_container, warning_box_container):
+def clear_loaded_files(event, context: AppContext):
     """
     Clear all loaded event data files and light curves from memory.
 
     Args:
         event: The event object triggering the function.
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
+        context (AppContext): The application context containing containers and state.
 
     Side effects:
-        - Clears the global `loaded_event_data` and `loaded_light_curve` lists.
-        - Updates the output and warning containers with messages.
-
-    Exceptions:
-        - None.
-
-    Restrictions:
-        - None.
+        - Clears event data and light curves from state manager.
+        - Updates the output container with messages.
 
     Example:
-        >>> clear_loaded_files(event, output_box_container, warning_box_container)
+        >>> clear_loaded_files(event, context)
         "Loaded event files have been cleared."
     """
-    event_data_count = len(state_manager.get_event_data())
-    light_curve_count = len(state_manager.get_light_curve())
+    event_data_count = len(context.state.get_event_data())
+    light_curve_count = len(context.state.get_light_curve())
 
     event_data_cleared = False
     light_curve_data_cleared = False
 
     # Clear EventList data
     if event_data_count > 0:
-        state_manager.clear_event_data()
+        context.state.clear_event_data()
         event_data_cleared = True
 
     # Clear Lightcurve data
     if light_curve_count > 0:
-        state_manager.clear_light_curves()
+        context.state.clear_light_curves()
         light_curve_data_cleared = True
 
     # Create appropriate messages based on what was cleared
@@ -669,28 +788,27 @@ def clear_loaded_files(event, output_box_container, warning_box_container):
     if not messages:
         messages.append("No files or light curves loaded to clear.")
 
-    # Update the output and warning containers
-    output_box_container[:] = [create_loadingdata_output_box("\n".join(messages))]
-    warning_box_container[:] = [create_loadingdata_warning_box("No warnings.")]
+    # Update the output container
+    context.update_container('output_box', create_loadingdata_output_box("\n".join(messages)))
+    context.update_container('warning_box', create_loadingdata_warning_box("No warnings."))
 
 
 
 
 # TODO: ADD better comments, error handlling and docstrings
-def create_loading_tab(output_box_container, warning_box_container, warning_handler):
+def create_loading_tab(context: AppContext, warning_handler):
     """
     Create the tab for loading event data files.
 
     Args:
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
+        context (AppContext): The application context containing containers and state.
         warning_handler (WarningHandler): The handler for warnings.
 
     Returns:
         Column: A Panel Column containing the widgets and layout for the loading tab.
 
     Example:
-        >>> tab = create_loading_tab(output_box_container, warning_box_container, warning_handler)
+        >>> tab = create_loading_tab(context, warning_handler)
         >>> isinstance(tab, pn.Column)
         True
     """
@@ -772,8 +890,8 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
 
     def on_load_click(event):
         # Clear previous outputs and warnings
-        output_box_container[:] = [create_loadingdata_output_box("N.A.")]
-        warning_box_container[:] = [create_loadingdata_warning_box("N.A.")]
+        context.update_container('output_box', create_loadingdata_output_box("N.A."))
+        context.update_container('warning_box', create_loadingdata_warning_box("N.A."))
         warning_handler.warnings.clear()
         warnings.resetwarnings()
 
@@ -785,15 +903,14 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
             format_checkbox,
             rmf_file_dropper,
             additional_columns_input,
-            output_box_container,
-            warning_box_container,
+            context,
             warning_handler,
         )
 
     def on_save_click(event):
         # Clear previous outputs and warnings
-        output_box_container[:] = [create_loadingdata_output_box("N.A.")]
-        warning_box_container[:] = [create_loadingdata_warning_box("N.A.")]
+        context.update_container('output_box', create_loadingdata_output_box("N.A."))
+        context.update_container('warning_box', create_loadingdata_warning_box("N.A."))
         warning_handler.warnings.clear()
         warnings.resetwarnings()
 
@@ -802,44 +919,42 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
             filename_input,
             format_input,
             format_checkbox,
-            output_box_container,
-            warning_box_container,
+            context,
             warning_handler,
         )
 
     def on_delete_click(event):
         # Clear previous outputs and warnings
-        warning_box_container[:] = [create_loadingdata_warning_box("N.A.")]
-        output_box_container[:] = [create_loadingdata_output_box("N.A.")]
+        context.update_container('warning_box', create_loadingdata_warning_box("N.A."))
+        context.update_container('output_box', create_loadingdata_output_box("N.A."))
         warning_handler.warnings.clear()
         warnings.resetwarnings()
 
         delete_selected_files(
             event,
             file_selector,
-            warning_box_container,
-            output_box_container,
+            context,
             warning_handler,
         )
 
     def on_preview_click(event):
         # Clear previous outputs and warnings
-        output_box_container[:] = [create_loadingdata_output_box("N.A.")]
-        warning_box_container[:] = [create_loadingdata_warning_box("N.A.")]
+        context.update_container('output_box', create_loadingdata_output_box("N.A."))
+        context.update_container('warning_box', create_loadingdata_warning_box("N.A."))
         warning_handler.warnings.clear()
         warnings.resetwarnings()
 
         preview_loaded_files(
-            event, output_box_container, warning_box_container, warning_handler
+            event, context, warning_handler
         )
 
     def on_clear_click(event):
         # Clear the loaded files list
-        output_box_container[:] = [create_loadingdata_output_box("N.A.")]
-        warning_box_container[:] = [create_loadingdata_warning_box("N.A.")]
+        context.update_container('output_box', create_loadingdata_output_box("N.A."))
+        context.update_container('warning_box', create_loadingdata_warning_box("N.A."))
         warning_handler.warnings.clear()
         warnings.resetwarnings()
-        clear_loaded_files(event, output_box_container, warning_box_container)
+        clear_loaded_files(event, context)
 
     load_button.on_click(on_load_click)
     save_button.on_click(on_save_click)
@@ -878,15 +993,12 @@ def create_loading_tab(output_box_container, warning_box_container, warning_hand
 
 
 # TODO: Add better comments, error handlling and docstrings and increase the functionality
-def create_fetch_eventlist_tab(
-    output_box_container, warning_box_container, warning_handler
-):
+def create_fetch_eventlist_tab(context: AppContext, warning_handler):
     """
     Create the tab for fetching EventList data from a link.
 
     Args:
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
+        context (AppContext): The application context containing containers and state.
         warning_handler (WarningHandler): The handler for warnings.
 
     Returns:
@@ -921,11 +1033,11 @@ def create_fetch_eventlist_tab(
 
     def fetch_eventlist(event):
         if not link_input.value or not filename_input.value:
-            output_box_container[:] = [
+            context.update_container('output_box',
                 create_loadingdata_output_box(
                     "Error: Please provide both the link and file name."
                 )
-            ]
+            )
             return
 
         try:
@@ -945,22 +1057,33 @@ def create_fetch_eventlist_tab(
                     if chunk:
                         f.write(chunk)
 
-            # Read the EventList
-            event_list = EventList.read(temp_filename, format_select.value)
+            # Use data service to load from URL
+            result = context.services.data.load_event_list_from_url(
+                url=link_input.value,
+                name=filename_input.value.strip(),
+                fmt=format_select.value
+            )
 
-            # Add to state manager
-            state_manager.add_event_data(filename_input.value.strip(), event_list)
-
-            output_box_container[:] = [
-                create_loadingdata_output_box(
-                    f"EventList '{filename_input.value}' loaded successfully from link."
+            if result["success"]:
+                context.update_container('output_box',
+                    create_loadingdata_output_box(result["message"])
                 )
-            ]
+            else:
+                warning_handler.warn(result["error"], category=RuntimeWarning)
+                context.update_container('output_box',
+                    create_loadingdata_output_box(f"Error: {result['message']}")
+                )
         except Exception as e:
-            warning_handler.warn(str(e), category=RuntimeWarning)
-            output_box_container[:] = [
-                create_loadingdata_output_box(f"Error occurred: {e}")
-            ]
+            user_msg, tech_msg = ErrorHandler.handle_error(
+                e,
+                context="Loading event list from URL",
+                url=link_input.value,
+                filename=filename_input.value
+            )
+            warning_handler.warn(tech_msg, category=RuntimeWarning)
+            context.update_container('output_box',
+                create_loadingdata_output_box(f"Error: {user_msg}")
+            )
         finally:
             # Ensure the temporary file is deleted after processing
             if os.path.exists(temp_filename):
@@ -979,45 +1102,29 @@ def create_fetch_eventlist_tab(
 
 
 
-def create_loadingdata_main_area(
-    header_container,
-    main_area_container,
-    output_box_container,
-    warning_box_container,
-    plots_container,
-    help_box_container,
-    footer_container,
-):
+def create_loadingdata_main_area(context: AppContext):
     """
     Create the main area for the data loading tab, including all sub-tabs.
 
     Args:
-        header_container: The container for the header.
-        main_area_container: The container for the main content area.
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
-        plots_container: The container for plots.
-        help_box_container: The container for the help section.
-        footer_container: The container for the footer.
+        context (AppContext): The application context containing containers and state.
 
     Returns:
         MainArea: An instance of MainArea with all the necessary tabs for data loading.
 
     Example:
-        >>> main_area = create_loadingdata_main_area(header_container, main_area_container, ...)
+        >>> main_area = create_loadingdata_main_area(context)
         >>> isinstance(main_area, MainArea)
         True
     """
     warning_handler = create_warning_handler()
     tabs_content = {
         "Read Event List from File": create_loading_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
         ),
         "Fetch EventList from Link": create_fetch_eventlist_tab(
-            output_box_container=output_box_container,
-            warning_box_container=warning_box_container,
+            context=context,
             warning_handler=warning_handler,
         ),
     }
