@@ -134,6 +134,9 @@ def read_event_data(
     format_checkbox,
     rmf_file_dropper,
     additional_columns_input,
+    use_lazy_loading,
+    use_preview_mode,
+    preview_duration_input,
     context: AppContext,
     warning_handler,
 ):
@@ -310,24 +313,49 @@ def read_event_data(
     # Use data service to load files
     loaded_files = []
     for file_path, file_name, file_format in zip(file_paths, filenames, formats):
-        # Use data service for loading
-        result = context.services.data.load_event_list(
-            file_path=file_path,
-            name=file_name,
-            fmt=file_format,
-            rmf_file=tmp_file_path if rmf_file_dropper.value else None,
-            additional_columns=additional_columns
-        )
+        # Choose loading method based on mode selection
+        if use_preview_mode.value:
+            # Use preview mode for extremely large files
+            result = context.services.data.load_event_list_preview(
+                file_path=file_path,
+                name=file_name,
+                preview_duration=preview_duration_input.value,
+                rmf_file=tmp_file_path if rmf_file_dropper.value else None,
+                additional_columns=additional_columns
+            )
+        elif use_lazy_loading.value:
+            # Use lazy loading method (now supports RMF and additional columns!)
+            result = context.services.data.load_event_list_lazy(
+                file_path=file_path,
+                name=file_name,
+                safety_margin=0.5,
+                rmf_file=tmp_file_path if rmf_file_dropper.value else None,
+                additional_columns=additional_columns
+            )
+        else:
+            # Use standard loading method
+            result = context.services.data.load_event_list(
+                file_path=file_path,
+                name=file_name,
+                fmt=file_format,
+                rmf_file=tmp_file_path if rmf_file_dropper.value else None,
+                additional_columns=additional_columns
+            )
 
         if result["success"]:
-            loaded_files.append(result["message"])
+            # Add loading method info to message
+            method_info = result.get("metadata", {}).get("method", "standard")
+            message = result["message"]
+            if method_info == "standard_risky":
+                message += " ⚠️ (Loaded despite memory risk)"
+            loaded_files.append(message)
         else:
             # If loading failed, show error panel with retry
             def retry_load():
-                load_event_lists_from_file(
+                read_event_data(
                     event, file_selector, filename_input, format_input,
                     format_checkbox, rmf_file_dropper, additional_columns_input,
-                    context, warning_handler
+                    use_lazy_loading, context, warning_handler
                 )
 
             error_panel = ErrorRecoveryPanel.create_error_panel(
@@ -888,6 +916,108 @@ def create_loading_tab(context: AppContext, warning_handler):
         name="Additional Columns (optional)", placeholder="Comma-separated column names"
     )
 
+    # Lazy loading controls
+    use_lazy_loading = pn.widgets.Checkbox(
+        name="Use lazy loading (recommended for files >1GB)",
+        value=False,
+    )
+
+    tooltip_lazy = pn.widgets.TooltipIcon(
+        value=Tooltip(
+            content="""Lazy loading reads large files in chunks without loading everything into memory.
+Recommended for files >1GB. Prevents memory crashes but some operations may be slower.""",
+            position="bottom",
+        )
+    )
+
+    # Preview mode controls (for extremely large files)
+    use_preview_mode = pn.widgets.Checkbox(
+        name="Preview mode (load only first segment)",
+        value=False,
+    )
+
+    preview_duration_input = pn.widgets.FloatInput(
+        name="Preview duration (seconds)",
+        value=100.0,
+        start=10.0,
+        end=1000.0,
+        step=10.0,
+    )
+
+    tooltip_preview = pn.widgets.TooltipIcon(
+        value=Tooltip(
+            content="""Preview mode loads only the first segment of data for extremely large files.
+Useful when file is too large to fit in memory even with lazy loading.
+You can analyze the preview and decide on next steps.""",
+            position="bottom",
+        ),
+    )
+
+    # File size info pane (updated dynamically)
+    file_size_info = pn.pane.Markdown("", sizing_mode="stretch_width")
+
+    def update_file_size_info(event=None):
+        """Update file size info when file selection changes."""
+        if not file_selector.value:
+            file_size_info.object = ""
+            use_lazy_loading.value = False
+            return
+
+        try:
+            file_path = file_selector.value[0] if isinstance(file_selector.value, list) else file_selector.value
+
+            # Check file size using data service
+            result = context.services.data.check_file_size(file_path)
+
+            if result["success"]:
+                data = result["data"]
+                risk_level = data["risk_level"]
+                file_size_mb = data["file_size_mb"]
+                file_size_gb = data["file_size_gb"]
+                estimated_mem_mb = data["estimated_memory_mb"]
+                memory_info = data["memory_info"]
+                recommend_lazy = data["recommend_lazy"]
+
+                # Color code based on risk
+                color_map = {
+                    'safe': 'green',
+                    'caution': 'orange',
+                    'risky': 'darkorange',
+                    'critical': 'red'
+                }
+                color = color_map.get(risk_level, 'black')
+
+                # Auto-enable lazy loading for large/risky files
+                if recommend_lazy and not use_lazy_loading.value:
+                    use_lazy_loading.value = True
+
+                # Create info message
+                recommendation_text = "Use lazy loading" if recommend_lazy else "Standard loading OK"
+
+                # Add preview mode suggestion for critical/extremely large files
+                show_preview_warning = (risk_level == 'critical') or (file_size_gb > 5.0)
+
+                info_md = f"""
+**File Size Info:**
+- **File Size**: {file_size_gb:.2f} GB ({file_size_mb:.1f} MB)
+- **Estimated Memory**: ~{estimated_mem_mb:.1f} MB
+- **Risk Level**: <span style="color:{color}; font-weight:bold">{risk_level.upper()}</span>
+- **Available RAM**: {memory_info['available_mb']:.0f} MB ({100-memory_info['percent']:.1f}% free)
+- **Recommendation**: {recommendation_text}
+"""
+                if show_preview_warning:
+                    info_md += "\n- **CRITICAL**: File may be too large for full load. Consider using Preview Mode!"
+
+                file_size_info.object = info_md
+            else:
+                file_size_info.object = f"**Error checking file size:** {result['message']}"
+
+        except Exception as e:
+            file_size_info.object = f"**Error:** {str(e)}"
+
+    # Update file size info when file selection changes
+    file_selector.param.watch(update_file_size_info, 'value')
+
     def on_load_click(event):
         # Clear previous outputs and warnings
         context.update_container('output_box', create_loadingdata_output_box("N.A."))
@@ -903,6 +1033,9 @@ def create_loading_tab(context: AppContext, warning_handler):
             format_checkbox,
             rmf_file_dropper,
             additional_columns_input,
+            use_lazy_loading,
+            use_preview_mode,
+            preview_duration_input,
             context,
             warning_handler,
         )
@@ -962,7 +1095,8 @@ def create_loading_tab(context: AppContext, warning_handler):
     preview_button.on_click(on_preview_click)
     clear_button.on_click(on_clear_click)
 
-    first_column = pn.Column(
+    # Left column: Basic file selection and configuration
+    left_column = pn.Column(
         pn.Row(
             pn.pane.Markdown("<h2> Read an EventList object from File</h2>"),
             pn.widgets.TooltipIcon(
@@ -973,20 +1107,36 @@ def create_loading_tab(context: AppContext, warning_handler):
             ),
         ),
         file_selector,
+        file_size_info,  # Show file size and memory info
+        pn.pane.Markdown("---"),  # Separator
         pn.Row(filename_input, tooltip_file),
         pn.Row(format_input, tooltip_format),
         format_checkbox,
-        pn.Row(rmf_file_dropper, tooltip_rmf),
-        pn.Row(additional_columns_input, tooltip_additional_columns),
-        pn.Row(load_button, save_button, delete_button),
-        pn.Row(preview_button, clear_button),
-        pn.pane.Markdown("<br/>"),
         width_policy="min",
     )
 
-    tab_content = pn.Column(
-        first_column,
+    # Right column: Advanced options and actions
+    right_column = pn.Column(
+        pn.pane.Markdown("<h3>Advanced Options</h3>"),
+        pn.Row(rmf_file_dropper, tooltip_rmf),
+        pn.Row(additional_columns_input, tooltip_additional_columns),
+        pn.pane.Markdown("---"),  # Separator
+        pn.pane.Markdown("<h3>Loading Options</h3>"),
+        pn.Row(use_lazy_loading, tooltip_lazy),
+        pn.Row(use_preview_mode, tooltip_preview),
+        preview_duration_input,
+        pn.pane.Markdown("---"),  # Separator
+        pn.pane.Markdown("<h3>Actions</h3>"),
+        pn.Row(load_button, save_button, delete_button),
+        pn.Row(preview_button, clear_button),
         width_policy="min",
+    )
+
+    # Two-column layout
+    tab_content = pn.Row(
+        left_column,
+        right_column,
+        width_policy="max",
     )
 
     return tab_content

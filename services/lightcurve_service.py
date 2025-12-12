@@ -302,3 +302,180 @@ class LightcurveService(BaseService):
                 "Creating EventList from lightcurve",
                 lightcurve_dt=lightcurve.dt if hasattr(lightcurve, 'dt') else None
             )
+
+    def simulate_event_list_from_lightcurve(
+        self,
+        lightcurve: Lightcurve,
+        method: str = 'probabilistic',
+        seed: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        Simulate EventList from Lightcurve using specified method.
+
+        This method provides two approaches:
+        1. Probabilistic (recommended): Uses inverse CDF sampling for
+           statistically realistic event generation
+        2. Deterministic (legacy): Uses from_lc() for exact count matching
+
+        Args:
+            lightcurve: Lightcurve object to simulate events from
+            method: Simulation method - 'probabilistic' (recommended) or 'deterministic'
+            seed: Random seed for reproducible probabilistic simulations
+
+        Returns:
+            Result dictionary with EventList and simulation metadata
+
+        Example:
+            >>> result = lightcurve_service.simulate_event_list_from_lightcurve(
+            ...     lightcurve=lc,
+            ...     method='probabilistic',
+            ...     seed=42
+            ... )
+            >>> if result["success"]:
+            ...     event_list = result["data"]
+        """
+        try:
+            if method not in ['probabilistic', 'deterministic']:
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message=f"Invalid method: {method}. Use 'probabilistic' or 'deterministic'.",
+                    error=f"Method must be 'probabilistic' or 'deterministic', got '{method}'"
+                )
+
+            if method == 'probabilistic':
+                # Recommended method using inverse CDF sampling
+                if seed is not None:
+                    np.random.seed(seed)
+
+                event_list = EventList()
+                event_list.simulate_times(lightcurve)
+
+                return self.create_result(
+                    success=True,
+                    data=event_list,
+                    message=f"EventList simulated successfully using probabilistic method (seed={seed if seed is not None else 'random'})",
+                    metadata={
+                        'method': 'probabilistic',
+                        'seed': seed,
+                        'n_events': len(event_list.time),
+                        'time_range': (float(event_list.time[0]), float(event_list.time[-1]))
+                    }
+                )
+
+            else:  # deterministic
+                # Legacy method for backwards compatibility
+                event_list = EventList.from_lc(lightcurve)
+
+                return self.create_result(
+                    success=True,
+                    data=event_list,
+                    message="EventList created using deterministic method (from_lc)",
+                    metadata={
+                        'method': 'deterministic',
+                        'n_events': len(event_list.time)
+                    }
+                )
+
+        except Exception as e:
+            return self.handle_error(
+                e,
+                "Simulating EventList from lightcurve",
+                method=method,
+                seed=seed,
+                lightcurve_dt=lightcurve.dt if hasattr(lightcurve, 'dt') else None
+            )
+
+    def simulate_energies_for_event_list(
+        self,
+        event_list: EventList,
+        spectrum: List[List[float]]
+    ) -> Dict[str, Any]:
+        """
+        Simulate photon energies for an EventList based on a spectral distribution.
+
+        Uses inverse CDF method to assign realistic energy values to events
+        based on the provided spectrum. The spectrum is a two-dimensional array
+        where the first dimension is energy bins (keV) and the second is counts
+        in each bin (normalized before simulation).
+
+        Args:
+            event_list: EventList object to add energies to
+            spectrum: 2D list [[energies], [counts]]
+                     Example: [[1, 2, 3, 4, 5, 6], [1000, 2040, 1000, 3000, 4020, 2070]]
+
+        Returns:
+            Result dictionary with updated EventList and simulation metadata
+
+        Example:
+            >>> spectrum = [[1, 2, 3, 4, 5, 6], [1000, 2040, 1000, 3000, 4020, 2070]]
+            >>> result = lightcurve_service.simulate_energies_for_event_list(
+            ...     event_list=ev,
+            ...     spectrum=spectrum
+            ... )
+            >>> if result["success"]:
+            ...     ev_with_energies = result["data"]
+        """
+        try:
+            # Validate spectrum format
+            if not isinstance(spectrum, list) or len(spectrum) != 2:
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message="Spectrum must be a 2D list with [energies, counts]",
+                    error=f"Invalid spectrum format: expected [[energies], [counts]], got {type(spectrum)}"
+                )
+
+            energies, counts = spectrum[0], spectrum[1]
+
+            if len(energies) != len(counts):
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message=f"Energy bins ({len(energies)}) and counts ({len(counts)}) must have same length",
+                    error=f"Mismatch: {len(energies)} energies vs {len(counts)} counts"
+                )
+
+            if len(energies) < 2:
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message="Spectrum must have at least 2 energy bins",
+                    error=f"Only {len(energies)} energy bins provided"
+                )
+
+            # Convert to numpy arrays
+            energy_array = np.array(energies, dtype=float)
+            count_array = np.array(counts, dtype=float)
+
+            # Validate energy bins are sorted
+            if not np.all(energy_array[:-1] <= energy_array[1:]):
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message="Energy bins must be in ascending order",
+                    error=f"Energy bins not sorted: {energies}"
+                )
+
+            # Simulate energies using Stingray's method
+            event_list.simulate_energies([energy_array.tolist(), count_array.tolist()])
+
+            return self.create_result(
+                success=True,
+                data=event_list,
+                message=f"Energies simulated successfully for {len(event_list.time)} events",
+                metadata={
+                    'n_energy_bins': len(energies),
+                    'energy_range': (float(energies[0]), float(energies[-1])),
+                    'mean_energy': float(np.mean(event_list.energy)) if hasattr(event_list, 'energy') and event_list.energy is not None else None,
+                    'n_events': len(event_list.time)
+                }
+            )
+
+        except Exception as e:
+            return self.handle_error(
+                e,
+                "Simulating energies for EventList",
+                n_energy_bins=len(spectrum[0]) if spectrum and len(spectrum) > 0 else 0,
+                n_events=len(event_list.time) if hasattr(event_list, 'time') else 0
+            )

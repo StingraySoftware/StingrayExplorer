@@ -286,6 +286,11 @@ def simulate_event_list(
     max_counts_input,
     dt_input,
     name_input,
+    method_selector,
+    seed_input,
+    simulate_energies_checkbox,
+    energy_bins_input,
+    energy_counts_input,
     context: AppContext,
     warning_handler,
 ):
@@ -294,14 +299,17 @@ def simulate_event_list(
 
     Args:
         event: The event object triggering the function.
-        time_slider (IntSlider): The slider for the number of time bins.
-        count_slider (IntSlider): The slider for the maximum counts per bin.
-        dt_input (FloatSlider): The slider for delta time (dt).
-        name_input (TextInput): The input widget for the simulated event list name.
-        method_selector (Select): The selector for the simulation method.
-        output_box_container (OutputBox): The container for output messages.
-        warning_box_container (WarningBox): The container for warning messages.
-        warning_handler (WarningHandler): The handler for warnings.
+        time_bins_input: The input for the number of time bins.
+        max_counts_input: The input for the maximum counts per bin.
+        dt_input: The input for delta time (dt).
+        name_input: The input widget for the simulated event list name.
+        method_selector: Radio button group for simulation method selection.
+        seed_input: Input for random seed (optional).
+        simulate_energies_checkbox: Checkbox to enable energy simulation.
+        energy_bins_input: Energy bins input (comma-separated keV values).
+        energy_counts_input: Counts per bin input (comma-separated values).
+        context: Application context.
+        warning_handler: The handler for warnings.
 
     Side effects:
         - Creates a simulated EventList object and adds it to `loaded_event_data`.
@@ -314,7 +322,7 @@ def simulate_event_list(
         - Requires a unique name for the simulated event list.
 
     Example:
-        >>> simulate_event_list(event, time_slider, count_slider, dt_input, name_input, method_selector, ...)
+        >>> simulate_event_list(event, time_bins_input, max_counts_input, dt_input, name_input, method_selector, seed_input, ...)
         "Event List simulated successfully!"
     """
     # Clear previous warnings
@@ -361,8 +369,22 @@ def simulate_event_list(
 
         lc = lc_result["data"]
 
-        # Create EventList from lightcurve using service
-        event_list_result = context.services.lightcurve.create_event_list_from_lightcurve(lc)
+        # Map radio button value to method string
+        method_map = {
+            'Probabilistic (Recommended)': 'probabilistic',
+            'Deterministic (Legacy)': 'deterministic'
+        }
+        method = method_map.get(method_selector.value, 'probabilistic')
+
+        # Get seed value (None if empty)
+        seed = seed_input.value if seed_input.value is not None else None
+
+        # Simulate EventList from lightcurve using new method
+        event_list_result = context.services.lightcurve.simulate_event_list_from_lightcurve(
+            lightcurve=lc,
+            method=method,
+            seed=seed
+        )
 
         if not event_list_result["success"]:
             context.update_container('output_box',
@@ -371,13 +393,80 @@ def simulate_event_list(
             return
 
         event_list = event_list_result["data"]
+        metadata = event_list_result.get("metadata", {})
         name = name_input.value
+
+        # Simulate energies if requested
+        energy_metadata = {}
+        if simulate_energies_checkbox.value:
+            # Parse energy spectrum inputs
+            energy_bins_str = energy_bins_input.value.strip()
+            energy_counts_str = energy_counts_input.value.strip()
+
+            if not energy_bins_str or not energy_counts_str:
+                context.update_container('output_box',
+                    create_eventlist_output_box(
+                        "Error: Energy simulation enabled but spectrum not provided.\n"
+                        "Please provide both energy bins and counts."
+                    )
+                )
+                return
+
+            try:
+                # Parse comma-separated values
+                energy_bins = [float(e.strip()) for e in energy_bins_str.split(',')]
+                energy_counts = [float(c.strip()) for c in energy_counts_str.split(',')]
+
+                # Create spectrum
+                spectrum = [energy_bins, energy_counts]
+
+                # Simulate energies
+                energy_result = context.services.lightcurve.simulate_energies_for_event_list(
+                    event_list=event_list,
+                    spectrum=spectrum
+                )
+
+                if not energy_result["success"]:
+                    context.update_container('output_box',
+                        create_eventlist_output_box(f"Error simulating energies: {energy_result['message']}")
+                    )
+                    return
+
+                event_list = energy_result["data"]
+                energy_metadata = energy_result.get("metadata", {})
+
+            except ValueError as ve:
+                context.update_container('output_box',
+                    create_eventlist_output_box(
+                        f"Error parsing energy spectrum: {str(ve)}\n"
+                        "Make sure to use comma-separated numbers."
+                    )
+                )
+                return
+
         context.state.add_event_data(name, event_list)
 
-        context.update_container('output_box',
-            create_eventlist_output_box(
-                f"Event List simulated successfully!\nSaved as: {name}\nTimes: {event_list.time}\nCounts: {counts}"
+        # Build output message with method, seed, and energy info
+        output_message = (
+            f"Event List simulated successfully!\n"
+            f"Saved as: {name}\n"
+            f"Method: {metadata.get('method', 'unknown').capitalize()}\n"
+            f"Seed: {metadata.get('seed', 'random')}\n"
+            f"Number of events: {metadata.get('n_events', len(event_list.time))}\n"
+            f"Time range: {metadata.get('time_range', (event_list.time[0], event_list.time[-1]))}\n"
+            f"Original lightcurve counts: {counts}"
+        )
+
+        if energy_metadata:
+            output_message += (
+                f"\n\nEnergy simulation:\n"
+                f"Energy range: {energy_metadata.get('energy_range', 'N/A')} keV\n"
+                f"Mean energy: {energy_metadata.get('mean_energy', 'N/A'):.2f} keV\n"
+                f"Number of energy bins: {energy_metadata.get('n_energy_bins', 'N/A')}"
             )
+
+        context.update_container('output_box',
+            create_eventlist_output_box(output_message)
         )
 
     except Exception as e:
@@ -568,6 +657,69 @@ def create_simulate_event_list_tab(context: AppContext, warning_handler):
     sim_name_input = pn.widgets.TextInput(
         name="Simulated Event List Name", placeholder="e.g., my_sim_event_list"
     )
+
+    method_selector = pn.widgets.RadioButtonGroup(
+        name="Simulation Method",
+        options=['Probabilistic (Recommended)', 'Deterministic (Legacy)'],
+        value='Probabilistic (Recommended)',
+        button_type='default'
+    )
+
+    method_tooltip = pn.widgets.TooltipIcon(
+        value=Tooltip(
+            content="""Probabilistic (Recommended): Uses inverse CDF sampling for statistically realistic events. Each run produces different results (use seed for reproducibility).
+
+Deterministic (Legacy): Creates exact count matching. Same results every time. Not suitable for scientific simulations.""",
+            position="bottom",
+        )
+    )
+
+    seed_input = pn.widgets.IntInput(
+        name="Random Seed (optional, for reproducibility)",
+        value=None,
+        start=0,
+        end=2147483647,
+        placeholder="Leave empty for random"
+    )
+
+    seed_tooltip = pn.widgets.TooltipIcon(
+        value=Tooltip(
+            content="""Set a random seed to make probabilistic simulations reproducible. Same seed = same result. Leave empty for truly random simulation.""",
+            position="bottom",
+        )
+    )
+
+    simulate_energies_checkbox = pn.widgets.Checkbox(
+        name="Simulate photon energies (optional)",
+        value=False
+    )
+
+    simulate_energies_tooltip = pn.widgets.TooltipIcon(
+        value=Tooltip(
+            content="""Simulate realistic photon energies based on a spectral distribution. The spectrum defines energy bins (keV) and counts in each bin. Uses inverse CDF sampling.""",
+            position="bottom",
+        )
+    )
+
+    energy_bins_input = pn.widgets.TextInput(
+        name="Energy bins (keV, comma-separated)",
+        placeholder="e.g., 1, 2, 3, 4, 5, 6",
+        visible=False
+    )
+
+    energy_counts_input = pn.widgets.TextInput(
+        name="Counts per bin (comma-separated)",
+        placeholder="e.g., 1000, 2040, 1000, 3000, 4020, 2070",
+        visible=False
+    )
+
+    def toggle_energy_inputs(event):
+        """Show/hide energy input fields based on checkbox."""
+        energy_bins_input.visible = simulate_energies_checkbox.value
+        energy_counts_input.visible = simulate_energies_checkbox.value
+
+    simulate_energies_checkbox.param.watch(toggle_energy_inputs, 'value')
+
     simulate_button = pn.widgets.Button(
         name="Simulate Event List", button_type="primary"
     )
@@ -592,6 +744,11 @@ def create_simulate_event_list_tab(context: AppContext, warning_handler):
             max_counts_input,
             dt_input,
             sim_name_input,
+            method_selector,
+            seed_input,
+            simulate_energies_checkbox,
+            energy_bins_input,
+            energy_counts_input,
             context,
             warning_handler,
         )
@@ -604,6 +761,14 @@ def create_simulate_event_list_tab(context: AppContext, warning_handler):
         max_counts_input,
         dt_input,
         sim_name_input,
+        pn.pane.Markdown("---"),
+        pn.Row(method_selector, method_tooltip),
+        pn.Row(seed_input, seed_tooltip),
+        pn.pane.Markdown("---"),
+        pn.Row(simulate_energies_checkbox, simulate_energies_tooltip),
+        energy_bins_input,
+        energy_counts_input,
+        pn.pane.Markdown("---"),
         simulate_button,
     )
     return tab_content
@@ -735,6 +900,40 @@ def create_eventlist_operations_tab(context: AppContext, warning_handler):
     # Widgets for Sorting EventLists
     sort_inplace_checkbox = pn.widgets.Checkbox(name="Sort in place", value=False)
     sort_button = pn.widgets.Button(name="Sort EventLists", button_type="primary")
+
+    # Widgets for Astropy Export
+    astropy_export_path_input = pn.widgets.TextInput(
+        name="Output file path",
+        placeholder="/path/to/output.ecsv"
+    )
+    astropy_export_format_select = pn.widgets.Select(
+        name="Export format",
+        options=["ascii.ecsv", "fits", "votable", "hdf5"],
+        value="ascii.ecsv"
+    )
+    export_astropy_button = pn.widgets.Button(
+        name="Export to Astropy Table",
+        button_type="primary"
+    )
+
+    # Widgets for Astropy Import
+    astropy_import_path_input = pn.widgets.TextInput(
+        name="Input file path",
+        placeholder="/path/to/input.ecsv"
+    )
+    astropy_import_format_select = pn.widgets.Select(
+        name="Import format",
+        options=["ascii.ecsv", "fits", "votable", "hdf5"],
+        value="ascii.ecsv"
+    )
+    astropy_import_name_input = pn.widgets.TextInput(
+        name="EventList name",
+        placeholder="imported_eventlist"
+    )
+    import_astropy_button = pn.widgets.Button(
+        name="Import from Astropy Table",
+        button_type="primary"
+    )
 
     # Callback to update the properties box
     def update_event_list_properties(event):
@@ -1350,6 +1549,130 @@ def create_eventlist_operations_tab(context: AppContext, warning_handler):
             print(error_message)
             warning_handler.warn(error_message, category=RuntimeWarning)
 
+    # Callback for Exporting to Astropy Table
+    def export_astropy_callback(event):
+        selected_indices = multi_event_list_select.value
+        if not selected_indices:
+            warning_box_container[:] = [
+                create_eventlist_warning_box(
+                    "Please select at least one EventList to export."
+                )
+            ]
+            return
+
+        if len(selected_indices) > 1:
+            warning_box_container[:] = [
+                create_eventlist_warning_box(
+                    "Please select only one EventList for export."
+                )
+            ]
+            return
+
+        output_path = astropy_export_path_input.value.strip()
+        if not output_path:
+            warning_box_container[:] = [
+                create_eventlist_warning_box(
+                    "Please provide an output file path."
+                )
+            ]
+            return
+
+        try:
+            selected_index = selected_indices[0]
+            event_list_name, event_list = context.state.get_event_data()[selected_index]
+            export_format = astropy_export_format_select.value
+
+            # Call the service method
+            result = context.services.data.export_event_list_to_astropy_table(
+                event_list_name=event_list_name,
+                output_path=output_path,
+                fmt=export_format
+            )
+
+            if result["success"]:
+                output_box_container[:] = [
+                    create_eventlist_output_box(
+                        f"Successfully exported EventList '{event_list_name}' to:\n"
+                        f"{output_path}\n"
+                        f"Format: {export_format}\n"
+                        f"Rows: {result['metadata']['n_rows']}"
+                    )
+                ]
+            else:
+                warning_box_container[:] = [
+                    create_eventlist_warning_box(
+                        f"Export failed: {result['message']}"
+                    )
+                ]
+
+        except Exception as e:
+            error_message = (
+                f"An error occurred during export:\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            )
+            print(error_message)
+            warning_handler.warn(error_message, category=RuntimeWarning)
+
+    # Callback for Importing from Astropy Table
+    def import_astropy_callback(event):
+        input_path = astropy_import_path_input.value.strip()
+        if not input_path:
+            warning_box_container[:] = [
+                create_eventlist_warning_box(
+                    "Please provide an input file path."
+                )
+            ]
+            return
+
+        import_name = astropy_import_name_input.value.strip()
+        if not import_name:
+            warning_box_container[:] = [
+                create_eventlist_warning_box(
+                    "Please provide a name for the imported EventList."
+                )
+            ]
+            return
+
+        if not os.path.isfile(input_path):
+            warning_box_container[:] = [
+                create_eventlist_warning_box(
+                    f"File not found: {input_path}"
+                )
+            ]
+            return
+
+        try:
+            import_format = astropy_import_format_select.value
+
+            # Call the service method
+            result = context.services.data.import_event_list_from_astropy_table(
+                file_path=input_path,
+                name=import_name,
+                fmt=import_format
+            )
+
+            if result["success"]:
+                output_box_container[:] = [
+                    create_eventlist_output_box(
+                        f"Successfully imported EventList '{import_name}' from:\n"
+                        f"{input_path}\n"
+                        f"Format: {import_format}\n"
+                        f"Events: {result['metadata']['n_events']}"
+                    )
+                ]
+            else:
+                warning_box_container[:] = [
+                    create_eventlist_warning_box(
+                        f"Import failed: {result['message']}"
+                    )
+                ]
+
+        except Exception as e:
+            error_message = (
+                f"An error occurred during import:\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            )
+            print(error_message)
+            warning_handler.warn(error_message, category=RuntimeWarning)
+
     # Assign callbacks to buttons
     multi_event_list_select.param.watch(update_event_list_properties, "value")
     multi_light_curve_select.param.watch(update_light_curve_properties, "value")
@@ -1361,6 +1684,8 @@ def create_eventlist_operations_tab(context: AppContext, warning_handler):
     compute_intensity_button.on_click(compute_intensity_callback)
     join_button.on_click(join_eventlists_callback)
     sort_button.on_click(sort_eventlists_callback)
+    export_astropy_button.on_click(export_astropy_callback)
+    import_astropy_button.on_click(import_astropy_callback)
 
     # Layout for the tab
     tab_content = pn.Column(
@@ -1439,6 +1764,23 @@ def create_eventlist_operations_tab(context: AppContext, warning_handler):
                     pn.pane.Markdown("## Sort EventLists"),
                     sort_inplace_checkbox,
                     sort_button,
+                    width=400,
+                    height=300,
+                ),
+                pn.Column(
+                    pn.pane.Markdown("## Export to Astropy Table"),
+                    astropy_export_path_input,
+                    astropy_export_format_select,
+                    export_astropy_button,
+                    width=400,
+                    height=300,
+                ),
+                pn.Column(
+                    pn.pane.Markdown("## Import from Astropy Table"),
+                    astropy_import_path_input,
+                    astropy_import_format_select,
+                    astropy_import_name_input,
+                    import_astropy_button,
                     width=400,
                     height=300,
                 ),

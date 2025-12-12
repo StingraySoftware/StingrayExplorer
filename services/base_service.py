@@ -40,7 +40,8 @@ class BaseService:
         success: bool,
         data: Any = None,
         message: str = "",
-        error: Optional[str] = None
+        error: Optional[str] = None,
+        **kwargs
     ) -> Dict[str, Any]:
         """
         Create a standardized result dictionary.
@@ -52,23 +53,28 @@ class BaseService:
             data: The result data (e.g., EventList, Lightcurve, DataFrame, etc.)
             message: User-friendly message describing the result
             error: Technical error message (if applicable)
+            **kwargs: Additional fields to include in the result (e.g., metadata)
 
         Returns:
-            Dictionary with keys: success, data, message, error
+            Dictionary with keys: success, data, message, error, plus any kwargs
 
         Example:
             >>> return self.create_result(
             ...     success=True,
             ...     data=event_list,
-            ...     message="EventList loaded successfully"
+            ...     message="EventList loaded successfully",
+            ...     metadata={'method': 'lazy'}
             ... )
         """
-        return {
+        result = {
             "success": success,
             "data": data,
             "message": message,
             "error": error
         }
+        # Add any additional fields
+        result.update(kwargs)
+        return result
 
     def handle_error(
         self,
