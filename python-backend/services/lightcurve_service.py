@@ -1,0 +1,269 @@
+"""
+Lightcurve service for lightcurve operations.
+
+Handles creation and manipulation of lightcurves.
+"""
+
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+from stingray import EventList, Lightcurve
+
+from .base_service import BaseService
+
+
+class LightcurveService(BaseService):
+    """
+    Service for Lightcurve operations.
+
+    Handles creation and manipulation of lightcurves without any UI dependencies.
+    """
+
+    def create_lightcurve_from_event_list(
+        self,
+        event_list_name: str,
+        dt: float,
+        output_name: str,
+        gti: Optional[List[List[float]]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a Lightcurve from an EventList.
+
+        Args:
+            event_list_name: Name of the EventList in state
+            dt: Time binning in seconds
+            output_name: Name to save the lightcurve as
+            gti: Optional Good Time Intervals
+
+        Returns:
+            Result dictionary with lightcurve data
+        """
+        try:
+            if not self.state.has_event_data(event_list_name):
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message=f"EventList '{event_list_name}' not found",
+                    error=None,
+                )
+
+            event_list = self.state.get_event_data(event_list_name)
+
+            # Create lightcurve from event list
+            lc = event_list.to_lc(dt=dt)
+
+            # Apply GTIs if provided
+            if gti is not None:
+                gti_array = np.array(gti)
+                lc = lc.apply_gtis(gti_array)
+
+            # Save to state
+            self.state.add_lightcurve_data(output_name, lc)
+
+            # Prepare response data
+            lc_data = {
+                "name": output_name,
+                "time": lc.time.tolist(),
+                "counts": lc.counts.tolist(),
+                "dt": float(lc.dt),
+                "n_bins": len(lc.time),
+                "time_range": [float(lc.time[0]), float(lc.time[-1])],
+                "count_rate_mean": float(np.mean(lc.counts / lc.dt)),
+            }
+
+            return self.create_result(
+                success=True,
+                data=lc_data,
+                message=f"Lightcurve '{output_name}' created (dt={dt}s, {len(lc.time)} bins)",
+            )
+
+        except Exception as e:
+            return self.handle_error(
+                e, "Creating lightcurve", event_list=event_list_name, dt=dt
+            )
+
+    def create_lightcurve_from_arrays(
+        self,
+        times: List[float],
+        counts: List[float],
+        dt: float,
+        output_name: str,
+    ) -> Dict[str, Any]:
+        """
+        Create a Lightcurve from time and count arrays.
+
+        Args:
+            times: Array of time values
+            counts: Array of count values
+            dt: Time binning in seconds
+            output_name: Name to save the lightcurve as
+
+        Returns:
+            Result dictionary with lightcurve data
+        """
+        try:
+            times_arr = np.array(times)
+            counts_arr = np.array(counts)
+
+            lc = Lightcurve(times_arr, counts_arr, dt=dt, skip_checks=True)
+
+            # Save to state
+            self.state.add_lightcurve_data(output_name, lc)
+
+            lc_data = {
+                "name": output_name,
+                "time": lc.time.tolist(),
+                "counts": lc.counts.tolist(),
+                "dt": float(lc.dt),
+                "n_bins": len(lc.time),
+            }
+
+            return self.create_result(
+                success=True,
+                data=lc_data,
+                message=f"Lightcurve '{output_name}' created from arrays",
+            )
+
+        except Exception as e:
+            return self.handle_error(e, "Creating lightcurve from arrays", dt=dt)
+
+    def rebin_lightcurve(
+        self,
+        name: str,
+        rebin_factor: float,
+        output_name: str,
+    ) -> Dict[str, Any]:
+        """
+        Rebin a lightcurve.
+
+        Args:
+            name: Name of the lightcurve to rebin
+            rebin_factor: Rebinning factor
+            output_name: Name for the rebinned lightcurve
+
+        Returns:
+            Result dictionary with rebinned lightcurve data
+        """
+        try:
+            if not self.state.has_lightcurve_data(name):
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message=f"Lightcurve '{name}' not found",
+                    error=None,
+                )
+
+            lightcurve = self.state.get_lightcurve_data(name)
+            rebinned_lc = lightcurve.rebin(rebin_factor)
+
+            # Save to state
+            self.state.add_lightcurve_data(output_name, rebinned_lc)
+
+            lc_data = {
+                "name": output_name,
+                "time": rebinned_lc.time.tolist(),
+                "counts": rebinned_lc.counts.tolist(),
+                "dt": float(rebinned_lc.dt),
+                "n_bins": len(rebinned_lc.time),
+            }
+
+            return self.create_result(
+                success=True,
+                data=lc_data,
+                message=f"Lightcurve rebinned (factor={rebin_factor})",
+            )
+
+        except Exception as e:
+            return self.handle_error(
+                e, "Rebinning lightcurve", name=name, rebin_factor=rebin_factor
+            )
+
+    def get_lightcurve_data(self, name: str) -> Dict[str, Any]:
+        """
+        Get lightcurve data for plotting.
+
+        Args:
+            name: Name of the lightcurve
+
+        Returns:
+            Result dictionary with lightcurve data
+        """
+        try:
+            if not self.state.has_lightcurve_data(name):
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message=f"Lightcurve '{name}' not found",
+                    error=None,
+                )
+
+            lc = self.state.get_lightcurve_data(name)
+
+            lc_data = {
+                "name": name,
+                "time": lc.time.tolist(),
+                "counts": lc.counts.tolist(),
+                "dt": float(lc.dt),
+                "n_bins": len(lc.time),
+                "time_range": [float(lc.time[0]), float(lc.time[-1])],
+                "count_stats": {
+                    "mean": float(np.mean(lc.counts)),
+                    "std": float(np.std(lc.counts)),
+                    "min": float(np.min(lc.counts)),
+                    "max": float(np.max(lc.counts)),
+                },
+            }
+
+            return self.create_result(
+                success=True,
+                data=lc_data,
+                message=f"Lightcurve '{name}' data retrieved",
+            )
+
+        except Exception as e:
+            return self.handle_error(e, "Getting lightcurve data", name=name)
+
+    def list_lightcurves(self) -> Dict[str, Any]:
+        """List all loaded lightcurves."""
+        try:
+            lc_data = self.state.get_lightcurve_data()
+
+            summaries = []
+            for name, lc in lc_data:
+                summaries.append({
+                    "name": name,
+                    "n_bins": len(lc.time),
+                    "dt": float(lc.dt),
+                    "time_range": [float(lc.time[0]), float(lc.time[-1])],
+                })
+
+            return self.create_result(
+                success=True,
+                data=summaries,
+                message=f"Found {len(summaries)} lightcurve(s)",
+            )
+
+        except Exception as e:
+            return self.handle_error(e, "Listing lightcurves")
+
+    def delete_lightcurve(self, name: str) -> Dict[str, Any]:
+        """Delete a lightcurve from state."""
+        try:
+            if not self.state.has_lightcurve_data(name):
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message=f"Lightcurve '{name}' not found",
+                    error=None,
+                )
+
+            self.state.remove_lightcurve_data(name)
+
+            return self.create_result(
+                success=True,
+                data={"name": name},
+                message=f"Lightcurve '{name}' deleted",
+            )
+
+        except Exception as e:
+            return self.handle_error(e, "Deleting lightcurve", name=name)
