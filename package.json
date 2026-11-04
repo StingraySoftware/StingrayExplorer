@@ -179,5 +179,8 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "allowScripts": {
+    "electron@45.2.2": true
   }
 }
