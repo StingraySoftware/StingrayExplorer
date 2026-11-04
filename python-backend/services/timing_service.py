@@ -8,8 +8,24 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 from stingray import Bispectrum, DynamicalPowerspectrum
+from stingray.gti import generate_indices_of_segment_boundaries_unbinned
 
 from .base_service import BaseService
+from .scientific_compatibility import compatible_event_lightcurve
+from .scientific_compatibility import averaged_raw_coherence
+from .analysis_helpers import (
+    analysis_event_copy,
+    collect_warnings,
+    common_gtis,
+    overlap_error as _overlap_error,
+    pair_binning_error,
+    segment_size_error as _segment_size_error,
+)
+from .power_color_helpers import (
+    BAND_ORDER,
+    integrate_power_colors,
+    validate_power_color_inputs,
+)
 from .utility_helpers import operation_provenance
 
 
@@ -19,46 +35,6 @@ def _finite_list(arr) -> list:
     if np.isfinite(values).all():
         return values.tolist()
     return [float(v) if np.isfinite(v) else None for v in values]
-
-
-def _segment_size_error(segment_size: float, dt: float) -> Optional[str]:
-    """Human-readable rejection for segment sizes that stingray fails on cryptically.
-
-    Needs at least 3 time bins per segment to produce a non-empty spectrum.
-    """
-    if segment_size / dt < 3:
-        return (
-            f"segment_size ({segment_size}s) must be at least 3x dt ({dt}s) "
-            "to produce a non-empty spectrum"
-        )
-    return None
-
-
-def _overlap_error(
-    events1, events2, segment_size: Optional[float] = None
-) -> Optional[str]:
-    """Readable rejection when two event lists share no time overlap.
-
-    Optional segment_size check: if provided and the overlap is shorter than
-    one segment, stingray will produce zero segments (cryptic error), so we
-    reject early with a human-readable message.
-    """
-    if len(events1.time) == 0 or len(events2.time) == 0:
-        return "one of the event lists contains no events"
-    start = max(float(events1.time[0]), float(events2.time[0]))
-    stop = min(float(events1.time[-1]), float(events2.time[-1]))
-    if stop <= start:
-        return (
-            "the two event lists have no overlapping time range "
-            f"({events1.time[0]:.1f}-{events1.time[-1]:.1f}s vs "
-            f"{events2.time[0]:.1f}-{events2.time[-1]:.1f}s)"
-        )
-    if segment_size is not None and (stop - start) < segment_size:
-        return (
-            f"the overlapping time range ({stop - start:.1f}s) is shorter than "
-            f"the segment size ({segment_size}s)"
-        )
-    return None
 
 
 class TimingService(BaseService):
@@ -104,7 +80,7 @@ class TimingService(BaseService):
                 )
 
             event_list = self.state.get_event_data(event_list_name)
-            lc = event_list.to_lc(dt=dt)
+            lc = compatible_event_lightcurve(event_list, dt)
             bs = Bispectrum(lc, maxlag=maxlag, scale=scale, window=window)
 
             if output_name:
@@ -146,73 +122,168 @@ class TimingService(BaseService):
         freq_ranges: Dict[str, tuple],
         output_name: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Per-segment, integrated fractional variances and Heil C/A, B/D colours.
+
+        Common-mean normalization requires each segment's Poisson density to be
+        2 * segment_rate / common_mean_rate**2. Instrumental dead time/background
+        are not corrected here. Unlike the paper's averaged
+        observation spectra, these are exploratory per-segment measurements.
         """
-        Calculate power colors from frequency bands.
-
-        Power colors are ratios of band-mean power in different frequency bands,
-        useful for source classification and state analysis.
-
-        Args:
-            event_list_name: Name of the EventList in state
-            dt: Time binning in seconds
-            segment_size: Segment size in seconds
-            freq_ranges: Dictionary of frequency ranges
-            output_name: Optional name to save the result
-
-        Returns:
-            Result dictionary with power colors
-        """
+        scientific_warnings = []
         try:
             if not self.state.has_event_data(event_list_name):
                 return self.create_result(
-                    success=False,
-                    data=None,
-                    message=f"EventList '{event_list_name}' not found",
-                    error=None,
+                    False, message=f"EventList '{event_list_name}' not found"
                 )
-
-            seg_error = _segment_size_error(segment_size, dt)
-            if seg_error:
-                return self.create_result(
-                    success=False, data=None, message=seg_error, error=None
+            bands = validate_power_color_inputs(dt, segment_size, freq_ranges)
+            event_list = analysis_event_copy(self.state.get_event_data(event_list_name))
+            binning_error = pair_binning_error(event_list, event_list, dt)
+            if binning_error:
+                raise ValueError(binning_error)
+            times = np.asarray(event_list.time)
+            if times.ndim != 1 or times.size == 0 or not np.isfinite(times).all():
+                raise ValueError(
+                    "Event times must be a nonempty finite one-dimensional array"
                 )
-
-            event_list = self.state.get_event_data(event_list_name)
-            lc = event_list.to_lc(dt=dt)
-            dps = DynamicalPowerspectrum(lc, segment_size=segment_size, norm="leahy")
-
-            # Mean power in each frequency band per time segment.
-            # dps.dyn_ps has shape (n_freq, n_time); mask along axis 0 (freq).
-            power_colors = {}
-            for band_name, (f_min, f_max) in freq_ranges.items():
-                mask = (dps.freq >= f_min) & (dps.freq < f_max)
-                band_mean_power = dps.dyn_ps[mask, :].mean(axis=0)
-                power_colors[band_name] = _finite_list(band_mean_power)
-
+            segments = list(
+                generate_indices_of_segment_boundaries_unbinned(
+                    times, event_list.gti, segment_size
+                )
+            )
+            segment_counts = np.asarray(
+                [stop_index - start_index for _, _, start_index, stop_index in segments]
+            )
+            retained = segment_counts >= 2
+            if not retained.any():
+                raise ValueError(
+                    "No complete segment contains at least two photons inside the GTIs"
+                )
+            segment_times = np.asarray(
+                [(float(start) + float(stop)) / 2 for start, stop, _, _ in segments]
+            )
+            with collect_warnings(scientific_warnings):
+                dps = DynamicalPowerspectrum(
+                    event_list, segment_size=segment_size, norm="frac", sample_time=dt
+                )
+            actual_segment_size = 1 / float(dps.df)
+            # Validate the actual FFT, including any Stingray rounding, before
+            # integrating: never silently crop a requested frequency range.
+            validate_power_color_inputs(dt, actual_segment_size, bands)
+            if not np.isclose(actual_segment_size, segment_size, rtol=1e-10, atol=0):
+                raise ValueError(
+                    "Stingray changed the requested segment_size; choose an integer number of dt samples"
+                )
+            if not np.isfinite(dps.meanrate) or dps.meanrate <= 0:
+                raise ValueError("A finite positive detected count rate is required")
+            if dps.dyn_ps.shape[1] != int(retained.sum()):
+                raise ValueError(
+                    "Stingray periodogram columns do not match the retained GTI segments"
+                )
+            segment_rates = segment_counts / actual_segment_size
+            if not np.isclose(
+                segment_rates[retained].mean(), dps.meanrate, rtol=1e-10, atol=0
+            ):
+                raise ValueError(
+                    "Stingray's common mean differs from the counted segment rates"
+                )
+            # avg_pds_from_iterable normalizes every sub-periodogram by one
+            # common mean squared. A changing segment rate changes its Poisson
+            # density even though the fractional normalization is fixed.
+            poisson_power = 2 / float(dps.meanrate)
+            segment_noise = 2 * segment_rates / float(dps.meanrate) ** 2
+            powers = dps.dyn_ps
+            if not retained.all():
+                powers = np.full((len(dps.freq), len(segments)), np.nan)
+                powers[:, retained] = dps.dyn_ps
+                scientific_warnings.append(
+                    f"{int((~retained).sum())} segments have fewer than two photons (including segments with no photons); their variances and colours are null at the original time positions."
+                )
+            integrated = integrate_power_colors(
+                dps.freq, powers, float(dps.df), bands, segment_noise
+            )
+            invalid_count = integrated["valid_segments"].count(False)
+            if invalid_count:
+                scientific_warnings.append(
+                    f"{invalid_count} of {len(segment_times)} segments lack a positive >=3 sigma variance detection in all four bands; their power colours are null."
+                )
+            if any(count < 30 for count in integrated["band_bin_counts"].values()):
+                scientific_warnings.append(
+                    "At least one band has fewer than 30 Fourier bins. Propagated Gaussian errors and the 3 sigma detection screen are approximate; use longer segments or averaged spectra for inference."
+                )
+            scientific_warnings.append(
+                "Assumes ideal Poisson counting noise: each segment uses 2 * segment count rate / common mean count rate squared, without background or detector dead-time correction. Per-segment colours are exploratory; the Heil paper averages observation spectra and fits the white-noise level."
+            )
             result_data = {
                 "name": output_name,
-                "power_colors": power_colors,
-                "time": dps.time.astype(float).tolist(),
-                "freq_ranges": freq_ranges,
+                **integrated,
+                "time": segment_times.tolist(),
+                "freq_ranges": bands,
+                "band_order": list(BAND_ORDER),
+                "normalization": "frac",
+                "variance_unit": "fractional rms squared",
+                "poisson_power": poisson_power,
+                "poisson_power_by_segment": segment_noise.tolist(),
+                "segment_count_rates": segment_rates.tolist(),
+                "common_mean_count_rate": float(dps.meanrate),
+                "normalization_reference": "common mean detected count rate across segments with at least two photons",
+                "dt": dt,
+                "segment_size": actual_segment_size,
+                "df": float(dps.df),
+                "detection_sigma": 3,
+                "warnings": scientific_warnings,
+                "metadata": {
+                    "units": {
+                        "time": "s",
+                        "power_colors": "(rms/mean)^2",
+                        "band_variance_errors": "(rms/mean)^2",
+                        "pc1": "1",
+                        "pc1_err": "1",
+                        "pc2": "1",
+                        "pc2_err": "1",
+                    },
+                    "power_color_definition": {"pc1": "C/A", "pc2": "B/D"},
+                    "uncertainty": "observed periodogram P/sqrt(m), m=1; integrated errors and covariance-aware ratio derivatives in quadrature",
+                    "validity_policy": "all four band variances positive and >=3 sigma; null ratios preserve time alignment",
+                    "measurement": "per-segment exploratory",
+                    "poisson_model": "2 * segment_count_rate / common_mean_count_rate**2",
+                    "normalization_reference": "common mean detected count rate across retained segments",
+                },
+                "provenance": operation_provenance(
+                    "timing_power_colors",
+                    input_source={"kind": "event_list", "name": event_list_name},
+                    parameters={
+                        "dt": dt,
+                        "segment_size": actual_segment_size,
+                        "freq_ranges": bands,
+                        "output_name": output_name,
+                    },
+                    method="Fourier-bin overlap integration of common-mean fractional-rms density minus per-segment theoretical Poisson noise",
+                    poisson_model="2 * segment_count_rate / common_mean_count_rate**2",
+                    reference="https://arxiv.org/html/1405.2024v2",
+                ),
             }
-
             if output_name:
                 self.state.add_analysis_result(output_name, result_data)
-
             return self.create_result(
-                success=True,
+                True,
                 data=result_data,
-                message=f"Power colors calculated for {len(freq_ranges)} bands",
+                message=f"Integrated power colours calculated for {len(segment_times)} segments",
+                warnings=scientific_warnings,
             )
-
-        except Exception as e:
-            return self.handle_error(
-                e,
+        except ValueError as error:
+            return self.create_result(
+                False, message=str(error), warnings=scientific_warnings
+            )
+        except Exception as error:
+            result = self.handle_error(
+                error,
                 "Calculating power colors",
                 event_list=event_list_name,
                 dt=dt,
                 segment_size=segment_size,
             )
+            result["warnings"] = scientific_warnings
+            return result
 
     def calculate_time_lags(
         self,
@@ -237,6 +308,7 @@ class TimingService(BaseService):
         Returns:
             Result dictionary with time lags
         """
+        scientific_warnings = []
         try:
             if not self.state.has_event_data(event_list_1_name):
                 return self.create_result(
@@ -273,18 +345,25 @@ class TimingService(BaseService):
                     success=False, data=None, message=overlap_error, error=None
                 )
 
-            lc1 = event_list_1.to_lc(dt=dt)
-            lc2 = event_list_2.to_lc(dt=dt)
-
-            cs = AveragedCrossspectrum.from_lightcurve(
-                lc1=lc1,
-                lc2=lc2,
-                segment_size=segment_size,
-                norm="leahy",
-            )
+            binning_error = pair_binning_error(event_list_1, event_list_2, dt)
+            if binning_error:
+                return self.create_result(False, message=binning_error)
+            event_list_1 = analysis_event_copy(event_list_1)
+            event_list_2 = analysis_event_copy(event_list_2)
+            with collect_warnings(scientific_warnings):
+                cs = AveragedCrossspectrum.from_events(
+                    event_list_1,
+                    event_list_2,
+                    dt=dt,
+                    segment_size=segment_size,
+                    norm="leahy",
+                    silent=True,
+                    gti=common_gtis(event_list_1, event_list_2),
+                )
 
             # Stingray's time_lag() returns (lag, lag_err) for averaged spectra.
-            lag_result = cs.time_lag()
+            with collect_warnings(scientific_warnings):
+                lag_result = cs.time_lag()
             if isinstance(lag_result, tuple):
                 time_lags, time_lags_err = lag_result
             else:
@@ -312,6 +391,10 @@ class TimingService(BaseService):
                 lag_units["time_lags_err"] = "s"
             result_data = {
                 "name": output_name,
+                "dt": float(cs.dt),
+                "segment_size": float(cs.segment_size),
+                "requested_segment_size": segment_size,
+                "warnings": scientific_warnings,
                 "freq": freq.tolist(),
                 "time_lags": _finite_list(time_lags),
                 "time_lags_err": (
@@ -329,8 +412,9 @@ class TimingService(BaseService):
                         "names": [event_list_1_name, event_list_2_name],
                     },
                     parameters={
-                        "dt": dt,
-                        "segment_size": segment_size,
+                        "dt": float(cs.dt),
+                        "segment_size": float(cs.segment_size),
+                        "requested_segment_size": segment_size,
                         "freq_range": freq_range,
                         "output_name": output_name,
                     },
@@ -344,10 +428,11 @@ class TimingService(BaseService):
                 success=True,
                 data=result_data,
                 message="Time lags calculated",
+                warnings=scientific_warnings,
             )
 
         except Exception as e:
-            return self.handle_error(
+            result = self.handle_error(
                 e,
                 "Calculating time lags",
                 event_list_1=event_list_1_name,
@@ -355,6 +440,8 @@ class TimingService(BaseService):
                 dt=dt,
                 segment_size=segment_size,
             )
+            result["warnings"] = scientific_warnings
+            return result
 
     def calculate_coherence(
         self,
@@ -377,6 +464,7 @@ class TimingService(BaseService):
         Returns:
             Result dictionary with coherence data
         """
+        scientific_warnings = []
         try:
             if not self.state.has_event_data(event_list_1_name):
                 return self.create_result(
@@ -413,19 +501,26 @@ class TimingService(BaseService):
                     success=False, data=None, message=overlap_error, error=None
                 )
 
-            lc1 = event_list_1.to_lc(dt=dt)
-            lc2 = event_list_2.to_lc(dt=dt)
-
-            cs = AveragedCrossspectrum.from_lightcurve(
-                lc1=lc1,
-                lc2=lc2,
-                segment_size=segment_size,
-                norm="leahy",
-            )
+            binning_error = pair_binning_error(event_list_1, event_list_2, dt)
+            if binning_error:
+                return self.create_result(False, message=binning_error)
+            event_list_1 = analysis_event_copy(event_list_1)
+            event_list_2 = analysis_event_copy(event_list_2)
+            with collect_warnings(scientific_warnings):
+                cs = AveragedCrossspectrum.from_events(
+                    event_list_1,
+                    event_list_2,
+                    dt=dt,
+                    segment_size=segment_size,
+                    norm="leahy",
+                    silent=True,
+                    gti=common_gtis(event_list_1, event_list_2),
+                )
 
             # Stingray's coherence() returns (coherence, uncertainty) for
             # averaged cross spectra (Vaughan & Nowak 1997).
-            coh_result = cs.coherence()
+            with collect_warnings(scientific_warnings):
+                coh_result = averaged_raw_coherence(cs)
             if isinstance(coh_result, tuple):
                 coherence_vals, coherence_err = coh_result
             else:
@@ -437,20 +532,30 @@ class TimingService(BaseService):
                     f"Unexpected coherence() result shape {coherence_vals.shape}"
                 )
 
-            # Uncertainty formula goes negative where coh > 1; report magnitude as the half-width.
+            # Keep the estimator unclipped, but invalid/negative uncertainty
+            # estimates are not meaningful error-bar magnitudes.
+            if coherence_err is not None:
+                coherence_err = np.asarray(coherence_err, dtype=float)
+                bad_error = ~np.isfinite(coherence_err) | (coherence_err < 0)
+                if bad_error.any():
+                    scientific_warnings.append(
+                        "Some coherence uncertainties are undefined; affected error bars are null. Coherence estimates are not clipped."
+                    )
+                    coherence_err = np.where(bad_error, np.nan, coherence_err)
             coherence_units = {"freq": "Hz", "coherence": "1"}
             if coherence_err is not None:
                 coherence_units["coherence_err"] = "1"
             result_data = {
                 "name": output_name,
+                "dt": float(cs.dt),
+                "segment_size": float(cs.segment_size),
+                "requested_segment_size": segment_size,
+                "warnings": scientific_warnings,
                 "freq": cs.freq.tolist(),
                 "coherence": _finite_list(coherence_vals),
                 "coherence_err": (
-                    _finite_list(np.abs(np.real(np.asarray(coherence_err))))
-                    if coherence_err is not None
-                    else None
+                    _finite_list(coherence_err) if coherence_err is not None else None
                 ),
-                "segment_size": segment_size,
                 "n_segments": int(cs.m) if hasattr(cs, "m") else None,
                 "metadata": {"units": coherence_units},
                 "provenance": operation_provenance(
@@ -460,8 +565,10 @@ class TimingService(BaseService):
                         "names": [event_list_1_name, event_list_2_name],
                     },
                     parameters={
-                        "dt": dt,
-                        "segment_size": segment_size,
+                        "dt": float(cs.dt),
+                        "segment_size": float(cs.segment_size),
+                        "requested_segment_size": segment_size,
+                        "coherence_estimator": "raw_noise_bias_corrected_with_n_averaged",
                         "output_name": output_name,
                     },
                 ),
@@ -474,10 +581,11 @@ class TimingService(BaseService):
                 success=True,
                 data=result_data,
                 message="Coherence calculated",
+                warnings=scientific_warnings,
             )
 
         except Exception as e:
-            return self.handle_error(
+            result = self.handle_error(
                 e,
                 "Calculating coherence",
                 event_list_1=event_list_1_name,
@@ -485,3 +593,5 @@ class TimingService(BaseService):
                 dt=dt,
                 segment_size=segment_size,
             )
+            result["warnings"] = scientific_warnings
+            return result

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computePowerColorRatios } from './powerColors';
+import {
+  CANONICAL_POWER_COLOR_BANDS,
+  computePowerColorRatios,
+  validatePowerColorInputs,
+} from './powerColors';
 
 describe('computePowerColorRatios', () => {
   const powerColors = {
@@ -37,5 +41,17 @@ describe('computePowerColorRatios', () => {
     );
     expect(result?.pc1).toEqual([1]);
     expect(result?.pc2).toEqual([1]);
+  });
+});
+
+
+describe('validatePowerColorInputs', () => {
+  it('accepts resolved canonical bands and exact defaults', () => {
+    expect(validatePowerColorInputs(1 / 64, 512, CANONICAL_POWER_COLOR_BANDS)).toBeNull();
+  });
+  it('rejects unsupported or unresolved bands before submitting', () => {
+    expect(validatePowerColorInputs(1 / 32, 512, CANONICAL_POWER_COLOR_BANDS)).toMatch(/support/);
+    expect(validatePowerColorInputs(1 / 64, 64, CANONICAL_POWER_COLOR_BANDS)).toMatch(/resolution/);
+    expect(validatePowerColorInputs(Number.POSITIVE_INFINITY, 512, CANONICAL_POWER_COLOR_BANDS)).toMatch(/finite/);
   });
 });

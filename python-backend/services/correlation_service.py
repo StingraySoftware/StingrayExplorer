@@ -11,15 +11,21 @@ the UI -- it is easy to get backwards.
 stingray's ``CrossCorrelation`` correlates the two ``counts`` arrays purely by
 position and never looks at ``Lightcurve.time``, so two lists covering different
 absolute time ranges would be silently mis-aligned. This service therefore bins
-both event lists onto ONE shared bin-edge grid spanning their common time range
-before handing them to stingray.
+both event lists onto ONE shared bin-edge grid covering a single continuous
+common good-time interval (GTI) before handing them to stingray. Multiple
+disjoint common GTIs are rejected: this counts-array estimator has no exposure
+weights, so filling gaps with zeros or concatenating intervals would invent
+exposure or false adjacent time samples. Auto-correlation uses the same policy
+for the event list's native GTI. Events outside the selected GTI are excluded,
+and genuinely partial final bins are discarded.
 
 Three properties of that binning are load-bearing and easy to break:
 
-* Bounds come from ``np.min``/``np.max``, never ``time[0]``/``time[-1]``:
-  ``EventList.read`` does not forward ``skip_checks`` in stingray 2.2.10, so an
-  unsorted event file reaches this service with its stored endpoints pointing at
-  arbitrary interior photons. ``np.histogram`` does not need sorted input.
+* Bounds come from validated GTIs, rather than event extrema: unobserved gaps
+  are not zero-count exposure, and unscreened out-of-GTI photons cannot extend
+  the observation. For lists without explicit GTIs the shared validator uses
+  ``np.min``/``np.max``, never stored endpoints. ``np.histogram`` accepts
+  unsorted input.
 * The grid is built in time RELATIVE to the start of the range. ``np.arange``
   over absolute mission times quantises to the local float64 spacing (1.5e-8 s
   at MET 8e7), which makes the real bin width differ from the ``dt`` stamped on
@@ -39,7 +45,13 @@ import numpy as np
 from stingray import Lightcurve
 from stingray.crosscorrelation import AutoCorrelation, CrossCorrelation
 
-from .analysis_helpers import collect_warnings, finite_list, overlap_error
+from .analysis_helpers import (
+    collect_warnings,
+    common_gtis,
+    event_gtis,
+    finite_list,
+    overlap_error,
+)
 from .base_service import BaseService
 
 # 'valid' is deliberately excluded: with equal-length inputs (which the shared
@@ -110,15 +122,39 @@ def _bin_cap_error(span: float, dt: float, what: str) -> Optional[str]:
 
 
 def _time_bounds(event_list) -> Tuple[float, float]:
-    """First and last event time of a list that may not be sorted.
+    """Photon extrema used only to describe cropping, never as GTI bounds.
 
     ``time[0]``/``time[-1]`` are NOT the bounds: stingray only sorts when
     ``skip_checks`` is False, and ``EventList.read`` never forwards it, so an
-    unsorted file yields interior endpoints. Using them shrinks the shared grid
-    to a sliver of the data (or inverts it, faking a no-overlap rejection).
+    unsorted file yields interior endpoints. Advisory ranges must describe all
+    photons even when their stored order does not follow time.
     """
-    times = np.asarray(event_list.time, dtype=float)
-    return float(np.min(times)), float(np.max(times))
+    times = np.asarray(event_list.time, dtype=np.longdouble)
+    return np.min(times), np.max(times)
+
+
+def _continuous_interval(events1, events2=None) -> Tuple[float, float]:
+    """Require one continuous native/common GTI for this unweighted estimator.
+
+    A gapped observation may still participate in cross-correlation when its
+    intersection with the other observation is a single continuous interval.
+    No input events or GTIs are changed to obtain this detached intersection.
+    """
+    gtis = event_gtis(events1) if events2 is None else common_gtis(events1, events2)
+    if len(gtis) == 0:
+        raise ValueError("The event lists have no overlapping good-time interval (GTI)")
+    start, stop = gtis[0]
+    for next_start, next_stop in gtis[1:]:
+        # Separate metadata rows that touch exactly still describe continuous
+        # exposure. Never bridge a positive gap, even one shorter than dt.
+        if next_start != stop:
+            raise ValueError(
+                "Correlation requires one continuous good-time interval (GTI); "
+                "multiple disjoint intervals cannot be correlated without treating "
+                "gaps as exposure. Select one continuous interval with the GTI utility."
+            )
+        stop = next_stop
+    return start, stop
 
 
 def _resolution_warning(event_list, dt: float, label: str) -> Optional[str]:
@@ -204,45 +240,57 @@ def _grid_edges(start: float, stop: float, dt: float) -> np.ndarray:
     on the Lightcurve (from which stingray derives ``time_lags``) and the tail
     of the range is dropped. Starting from 0.0 keeps the step exact.
     """
-    span = stop - start
-    edges = np.arange(0.0, span + dt, dt)
-    # arange's exclusive stop can leave one edge past the range; that final bin
-    # would only be partially covered, so drop it.
-    return edges[edges <= span + 1e-9]
+    span = np.longdouble(stop) - np.longdouble(start)
+    ratio = span / np.longdouble(dt)
+    nearest = np.rint(ratio)
+    # Decimal user inputs such as 64 / 0.05 can fall a few ulps below an integer.
+    # Only correct arithmetic roundoff; a fixed tolerance in seconds could
+    # admit genuinely partial bins when the requested dt is very small.
+    tolerance = 8 * np.finfo(float).eps * max(np.longdouble(1), abs(ratio))
+    n_bins = int(nearest if abs(ratio - nearest) <= tolerance else np.floor(ratio))
+    return np.arange(n_bins + 1, dtype=np.longdouble) * np.longdouble(dt)
 
 
-def _grid_lightcurve(times, start: float, edges: np.ndarray, dt: float) -> Lightcurve:
+def _grid_lightcurve(
+    event_list, start: float, stop: float, edges: np.ndarray, dt: float
+) -> Lightcurve:
     """Histogram one event list onto ``edges`` (relative to ``start``).
 
-    Times are shifted to relative seconds BEFORE histogramming so the binning
-    inherits the exact grid. ``np.histogram`` does not require sorted input, so
-    the raw (possibly unsorted) times are safe to pass straight through.
+    The selected continuous GTI supplies real exposure even in bins with no
+    photons. Times are shifted before reducing precision and are explicitly
+    restricted to half-open full-bin exposure: numpy.histogram would otherwise
+    include a photon at the final bin's right edge. Parent arrays are untouched.
     """
-    relative = np.asarray(times, dtype=float) - start
-    counts, _ = np.histogram(relative, bins=edges)
+    times = np.asarray(event_list.time, dtype=np.longdouble)
+    relative = times - np.longdouble(start)
+    inside = (relative >= 0) & (relative < edges[-1]) & (times < stop)
+    counts, _ = np.histogram(relative[inside], bins=edges)
     centers = start + (edges[:-1] + dt / 2.0)
-    gti = [[start, start + float(edges[-1])]]
-    return Lightcurve(time=centers, counts=counts, dt=dt, gti=gti, skip_checks=True)
+    gti = [[start, min(stop, start + edges[-1])]]
+    return Lightcurve(
+        time=centers,
+        counts=counts,
+        dt=dt,
+        gti=gti,
+        mjdref=getattr(event_list, "mjdref", 0),
+        skip_checks=True,
+    )
 
 
 def _shared_grid_lightcurves(
     events1, events2, dt: float
 ) -> Tuple[Lightcurve, Lightcurve, float, float]:
-    """Bin two event lists onto one identical grid over their common range.
+    """Bin two event lists onto one grid in their continuous common GTI.
 
     stingray performs no time alignment whatsoever, so this is the only thing
     that makes a cross-correlation of two independently-loaded event lists
     physically meaningful.
     """
-    start1, stop1 = _time_bounds(events1)
-    start2, stop2 = _time_bounds(events2)
-    start = max(start1, start2)
-    stop = min(stop1, stop2)
-
+    start, stop = _continuous_interval(events1, events2)
     edges = _grid_edges(start, stop, dt)
-    lc1 = _grid_lightcurve(events1.time, start, edges, dt)
-    lc2 = _grid_lightcurve(events2.time, start, edges, dt)
-    return lc1, lc2, start, start + float(edges[-1])
+    lc1 = _grid_lightcurve(events1, start, stop, edges, dt)
+    lc2 = _grid_lightcurve(events2, start, stop, edges, dt)
+    return lc1, lc2, start, min(stop, start + edges[-1])
 
 
 class CorrelationService(BaseService):
@@ -291,7 +339,12 @@ class CorrelationService(BaseService):
                     success=False, data=None, message=empty, error=None
                 )
 
-            start, stop = _time_bounds(event_list)
+            try:
+                start, stop = _continuous_interval(event_list)
+            except ValueError as error:
+                return self.create_result(
+                    success=False, data=None, message=str(error), error=None
+                )
             span = stop - start
             what = f"the span of '{event_list_name}'"
             for message in (
@@ -310,7 +363,7 @@ class CorrelationService(BaseService):
 
             with collect_warnings(warnings_out):
                 lc = _grid_lightcurve(
-                    event_list.time, start, _grid_edges(start, stop, dt), dt
+                    event_list, start, stop, _grid_edges(start, stop, dt), dt
                 )
                 if norm == "variance":
                     variance_warning = _variance_warning(lc, "The light curve")
@@ -391,8 +444,12 @@ class CorrelationService(BaseService):
 
             start1, stop1 = _time_bounds(events1)
             start2, stop2 = _time_bounds(events2)
-            start = max(start1, start2)
-            stop = min(stop1, stop2)
+            try:
+                start, stop = _continuous_interval(events1, events2)
+            except ValueError as error:
+                return self.create_result(
+                    success=False, data=None, message=str(error), error=None
+                )
             span = stop - start
             what = "the overlapping time range"
             for message in (
