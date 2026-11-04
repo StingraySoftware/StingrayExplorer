@@ -7,10 +7,11 @@ Handles bispectrum, power colors, and other timing analysis.
 from typing import Any, Dict, Optional
 
 import numpy as np
-from stingray import Bispectrum, DynamicalPowerspectrum
+from stingray import DynamicalPowerspectrum
 from stingray.gti import generate_indices_of_segment_boundaries_unbinned
 
 from .base_service import BaseService
+from .scientific_compatibility import compatible_bispectrum
 from .scientific_compatibility import compatible_event_lightcurve
 from .scientific_compatibility import averaged_raw_coherence
 from .analysis_helpers import (
@@ -81,7 +82,7 @@ class TimingService(BaseService):
 
             event_list = self.state.get_event_data(event_list_name)
             lc = compatible_event_lightcurve(event_list, dt)
-            bs = Bispectrum(lc, maxlag=maxlag, scale=scale, window=window)
+            bs = compatible_bispectrum(lc, maxlag=maxlag, scale=scale, window=window)
 
             if output_name:
                 self.state.add_analysis_result(output_name, bs)

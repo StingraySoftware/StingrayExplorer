@@ -112,6 +112,49 @@ def rebin_lightcurve_with_standard_errors(lightcurve, factor):
     return result, LINEAR_REBIN_NEEDS_VARIANCE_INPUT
 
 
+def _flattened_toeplitz(column, row=None):
+    from scipy.linalg import toeplitz
+
+    return toeplitz(np.ravel(column), None if row is None else np.ravel(row))
+
+
+def compatible_bispectrum(lightcurve, **options):
+    """Build an ordinary Bispectrum on releases that pass 2-D Toeplitz inputs.
+
+    Stingray 2.2-2.2.2 hand column vectors to scipy.linalg.toeplitz, which
+    SciPy 1.17+ treats as a batch instead of flattening (fixed upstream in
+    2.2.3). Rebind the unchanged upstream methods to a flattening toeplitz for
+    this one construction. No installed module or class is modified and the
+    result is a plain Bispectrum instance.
+    """
+    import types
+    import stingray
+    from packaging.version import Version
+    from stingray import bispectrum as module
+
+    if Version(stingray.__version__) >= Version("2.2.3"):
+        return module.Bispectrum(lightcurve, **options)
+    namespace = dict(vars(module), toeplitz=_flattened_toeplitz)
+    names = ("_get_window", "_cumulant3", "_normalize_cumulant3")
+    result = module.Bispectrum.__new__(module.Bispectrum)
+    for name in names:
+        function = getattr(module.Bispectrum, name)
+        rebound = types.FunctionType(
+            function.__code__,
+            namespace,
+            function.__name__,
+            function.__defaults__,
+            function.__closure__,
+        )
+        setattr(result, name, types.MethodType(rebound, result))
+    try:
+        result.__init__(lightcurve, **options)
+    finally:
+        for name in names:
+            result.__dict__.pop(name, None)
+    return result
+
+
 @lru_cache(maxsize=1)
 def _zhang_coefficient():
     """Selectively accelerate unchanged upstream kernels when its import broke.

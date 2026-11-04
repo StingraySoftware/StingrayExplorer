@@ -249,7 +249,9 @@ def test_cross_spectrum_export_projection_preserves_true_complex_power(loaded_st
     expected = np.asarray(stored.power)
     assert np.iscomplexobj(expected) and np.any(expected.imag != 0)
     table = spectrum_export_table(stored)
-    np.testing.assert_allclose(table["power_real"] + 1j * table["power_imag"], expected)
+    power_real = np.asarray(table["power_real"])
+    power_imag = np.asarray(table["power_imag"])
+    np.testing.assert_allclose(power_real + 1j * power_imag, expected)
     np.testing.assert_allclose(table["power_magnitude"], np.abs(expected))
     np.testing.assert_allclose(table["power_phase"], np.angle(expected))
     assert str(table["freq"].unit) == "Hz"

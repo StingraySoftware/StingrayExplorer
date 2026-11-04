@@ -8,6 +8,7 @@ from astropy.io import fits
 from stingray import EventList
 from services.scientific_compatibility import (
     averaged_raw_coherence,
+    compatible_bispectrum,
     compatible_event_lightcurve,
     event_read_options,
     mask_legacy_low_count_rms,
@@ -145,3 +146,22 @@ def test_cached_deadtime_series_matches_upstream_without_reducing_model_order(
         )
     actual = cached_zhang_deadtime_model(freqs, 0.0025, 100.0, 0.001, 10, background)
     np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
+
+
+def test_bispectrum_adapter_matches_flattened_upstream_computation(monkeypatch):
+    import stingray
+    from stingray import Lightcurve
+    from stingray.bispectrum import Bispectrum
+
+    rng = np.random.default_rng(7)
+    lightcurve = Lightcurve(np.arange(256) * 0.25, rng.poisson(20, 256), dt=0.25)
+    options = dict(maxlag=10, scale="unbiased", window="hamming")
+    reference = compatible_bispectrum(lightcurve, **options)
+    # Force the legacy rebinding path on whichever release is installed.
+    monkeypatch.setattr(stingray, "__version__", "2.2")
+    legacy = compatible_bispectrum(lightcurve, **options)
+    assert type(legacy) is Bispectrum
+    assert not {"_get_window", "_cumulant3", "_normalize_cumulant3"} & set(vars(legacy))
+    np.testing.assert_allclose(legacy.cum3, reference.cum3)
+    np.testing.assert_allclose(legacy.bispec_mag, reference.bispec_mag)
+    np.testing.assert_allclose(legacy.bispec_phase, reference.bispec_phase)
