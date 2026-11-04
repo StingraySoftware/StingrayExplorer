@@ -28,6 +28,7 @@ import PlotlyChart from '@/components/plots/PlotlyChart';
 import PairedEventInputs from '@/components/analysis/PairedEventInputs';
 import { usePairedSelection } from '@/hooks/usePairedSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
+import { UtilityWarnings } from '@/components/utilities/UtilityResult';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { spectrumApi, PowerSpectrumData } from '@/api/spectrumApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -48,7 +49,7 @@ const CrossSpectrumPage: React.FC = () => {
   const [logRebin, setLogRebin] = useWorkspaceState('QuickLook/CrossSpectrum/index.tsx:logRebin:9', true);
   const [rebinOutputName, setRebinOutputName] = useWorkspaceState('QuickLook/CrossSpectrum/index.tsx:rebinOutputName:10', '');
   const queryClient = useQueryClient();
-  const { result, running, error, run, resultInputs, resultIdentity, resultStatus, resultStale, backendAvailable } = useAnalysisRunner<PowerSpectrumData>('Cross Spectrum');
+  const { result, running, error, warnings, run, resultInputs, resultIdentity, resultStatus, resultStale, backendAvailable } = useAnalysisRunner<PowerSpectrumData>('Cross Spectrum');
 
   const lastStoredName = result?.name ?? null;
   const existingSpectra = useQuery({
@@ -296,6 +297,7 @@ const CrossSpectrumPage: React.FC = () => {
                 currentInputs={currentInputs}
                 result={result}
               />
+              <UtilityWarnings warnings={[...warnings, ...(result?.warnings ?? [])]} />
               {backingResultMissing ? (
                 <Alert severity="warning" sx={{ mb: 1 }}>
                   The stored spectrum was deleted or replaced. This plot is a read-only snapshot.

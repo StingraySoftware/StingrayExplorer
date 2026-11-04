@@ -218,7 +218,6 @@ const EventSelectionField: React.FC<EventSelectionFieldProps> = ({
               value={value.high}
               disabled={disabled}
               onChange={(event) => update({ high: event.target.value })}
-              helperText="Upper bound excluded"
             />
             {value.mode === 'energy' && (
               <Tooltip title="Band presets">
@@ -234,6 +233,11 @@ const EventSelectionField: React.FC<EventSelectionFieldProps> = ({
               </Tooltip>
             )}
           </Stack>
+        )}
+        {spectral && value.mode !== 'none' && (
+          <Typography variant="caption" sx={{ color: 'text.secondary', mt: -0.5 }}>
+            Includes the lower bound and excludes the upper, so adjacent bands never share photons.
+          </Typography>
         )}
         <Menu
           anchorEl={presetAnchor}

@@ -28,6 +28,7 @@ import PlotlyChart from '@/components/plots/PlotlyChart';
 import PairedEventInputs from '@/components/analysis/PairedEventInputs';
 import { usePairedSelection } from '@/hooks/usePairedSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
+import { UtilityWarnings } from '@/components/utilities/UtilityResult';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { spectrumApi, PowerSpectrumData } from '@/api/spectrumApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -49,7 +50,7 @@ const AvgCrossSpectrumPage: React.FC = () => {
   const [logRebin, setLogRebin] = useWorkspaceState('QuickLook/AvgCrossSpectrum/index.tsx:logRebin:10', true);
   const [rebinOutputName, setRebinOutputName] = useWorkspaceState('QuickLook/AvgCrossSpectrum/index.tsx:rebinOutputName:11', '');
   const queryClient = useQueryClient();
-  const { result, running, error, run, resultInputs, resultIdentity, resultStatus, resultStale, backendAvailable } = useAnalysisRunner<PowerSpectrumData>('Averaged Cross Spectrum');
+  const { result, running, error, warnings, run, resultInputs, resultIdentity, resultStatus, resultStale, backendAvailable } = useAnalysisRunner<PowerSpectrumData>('Averaged Cross Spectrum');
 
   const lastStoredName = result?.name ?? null;
   const existingSpectra = useQuery({
@@ -313,6 +314,7 @@ const AvgCrossSpectrumPage: React.FC = () => {
                 currentInputs={currentInputs}
                 result={result}
               />
+              <UtilityWarnings warnings={[...warnings, ...(result?.warnings ?? [])]} />
               {backingResultMissing ? (
                 <Alert severity="warning" sx={{ mb: 1 }}>
                   The stored spectrum was deleted or replaced. This plot is a read-only snapshot.
