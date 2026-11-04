@@ -8,13 +8,8 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  FormControl,
   Grid,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -26,10 +21,9 @@ import { usePairedSelection } from '@/hooks/usePairedSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { correlationApi, CorrelationData } from '@/api/correlationApi';
-import { parsePositiveNumber } from '@/utils/numbers';
+import SchemaForm from '@/components/forms/SchemaForm';
+import { parseSchemaValue, useFormSchema } from '@/components/forms/schemaValues';
 
-const MODE_OPTIONS = ['same', 'full'];
-const NORM_OPTIONS = ['none', 'variance'];
 
 const CrossCorrelationPage: React.FC = () => {
   const [eventList1, setEventList1] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:eventList1:1', '');
@@ -43,7 +37,11 @@ const CrossCorrelationPage: React.FC = () => {
     result, running, error, run, resultInputs, resultIdentity, resultStatus, backendAvailable,
   } = useAnalysisRunner<CorrelationData>('Cross Correlation');
 
-  const dtNum = parsePositiveNumber(dt);
+  const formSchema = useFormSchema('cross_correlation');
+  // Parameter controls and their validation come from the backend schema.
+  const dtNum = formSchema.data
+    ? (parseSchemaValue(formSchema.data.properties.dt, dt).value as number | null)
+    : null;
   const canRun = pair.error === null && eventList1 !== '' && effectiveEventList2 !== '' && dtNum !== null && !running && backendAvailable;
   const requestParams = {
     event_list_1_name: eventList1,
@@ -106,44 +104,20 @@ const CrossCorrelationPage: React.FC = () => {
                   Requires compatible timing references and one continuous common good-time interval.
                   For observations with gaps, use GTI Utilities to select a continuous interval first.
                 </Typography>
-                <TextField
-                  label="Time bin dt (s)"
-                  size="small"
-                  value={dt}
-                  onChange={(e) => setDt(e.target.value)}
-                  error={dt !== '' && dtNum === null}
-                  helperText={dt !== '' && dtNum === null ? 'Must be a positive number' : ' '}
-                />
-                <FormControl size="small">
-                  <InputLabel id="cc-mode-label">Mode</InputLabel>
-                  <Select
-                    labelId="cc-mode-label"
-                    label="Mode"
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value)}
-                  >
-                    {MODE_OPTIONS.map((m) => (
-                      <MenuItem key={m} value={m}>
-                        {m}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl size="small">
-                  <InputLabel id="cc-norm-label">Normalization</InputLabel>
-                  <Select
-                    labelId="cc-norm-label"
-                    label="Normalization"
-                    value={norm}
-                    onChange={(e) => setNorm(e.target.value)}
-                  >
-                    {NORM_OPTIONS.map((n) => (
-                      <MenuItem key={n} value={n}>
-                        {n}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                {formSchema.data ? (
+                  <SchemaForm
+                    schema={formSchema.data}
+                    fields={[
+                      { name: 'dt', value: dt, onChange: (value) => setDt(String(value)) },
+                      { name: 'mode', value: mode, onChange: (value) => setMode(String(value)) },
+                      { name: 'norm', value: norm, onChange: (value) => setNorm(String(value)) },
+                    ]}
+                  />
+                ) : formSchema.isError ? (
+                  <Alert severity="error">{formSchema.error.message}</Alert>
+                ) : (
+                  <CircularProgress size={20} />
+                )}
                 <Button
                   variant="contained"
                   startIcon={running ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}

@@ -32,6 +32,12 @@ export function workspaceSession(): WorkspaceSession {
   const { logPanelOpen, rightToolbarCollapsed } = useUIStore.getState();
   return { version: 1, fields: structuredClone(Object.fromEntries(Object.entries(fields).filter(([key]) => !key.startsWith('ephemeral:')))), preferences: { logPanelOpen, rightToolbarCollapsed }, path };
 }
+/** Prefill other pages' inputs, e.g. before "Send to" navigates to them. */
+export function setWorkspaceFields(values: Record<string, unknown>): void {
+  current();
+  for (const [key, value] of Object.entries(values)) fields[key] = structuredClone(value);
+  notify();
+}
 export function restoreWorkspaceSession(value?: WorkspaceSession): void {
   if (value && (value.version !== 1 || !value.fields || typeof value.fields !== 'object' || Array.isArray(value.fields))) throw new Error('Unsupported workspace session');
   fields = structuredClone(value?.fields ?? {});

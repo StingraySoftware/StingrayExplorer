@@ -17,6 +17,15 @@ vi.mock('@/api/correlationApi', () => ({
   },
 }));
 
+vi.mock('@/api/schemaApi', async () => {
+  const schemas = (await import('@/test/fixtures/form-schemas.json')).default;
+  return {
+    schemaApi: {
+      getFormSchema: async () => ({ success: true, data: schemas.auto_correlation, message: '', error: null }),
+    },
+  };
+});
+
 vi.mock('@/components/plots/PlotlyChart', () => ({
   default: (props: unknown) => {
     chartProps(props);

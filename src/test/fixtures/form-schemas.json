@@ -1,0 +1,376 @@
+{
+  "auto_correlation": {
+    "$defs": {
+      "EventSelection": {
+        "additionalProperties": false,
+        "description": "Photons to keep, applied to a detached copy of the stored EventList.\n\nRanges are half-open, [low, high), matching Stingray's\n``EventList.get_energy_mask``. Adjacent bands therefore never share a\nphoton. ``energy_range`` is in keV and needs a calibrated energy column;\n``pi_range`` selects instrument PI channels instead. Time intervals and the\nextra GTI list are intersected with the EventList's own GTIs.",
+        "properties": {
+          "detector_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detector Ids"
+          },
+          "energy_range": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  {
+                    "minimum": 0,
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Energy Range"
+          },
+          "gti": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "prefixItems": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Gti"
+          },
+          "pi_range": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pi Range"
+          },
+          "time_intervals": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "prefixItems": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Time Intervals"
+          }
+        },
+        "title": "EventSelection",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "dt": {
+        "description": "Light-curve bin width; the lag axis is sampled at this step",
+        "examples": [
+          0.1
+        ],
+        "exclusiveMinimum": 0,
+        "title": "Time bin dt (s)",
+        "type": "number"
+      },
+      "event_list_name": {
+        "title": "Event List Name",
+        "type": "string"
+      },
+      "mode": {
+        "default": "same",
+        "description": "'same' keeps the input length; 'full' keeps every overlap",
+        "enum": [
+          "same",
+          "full"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "norm": {
+        "default": "none",
+        "description": "'variance' divides by the light curves' variances",
+        "enum": [
+          "none",
+          "variance"
+        ],
+        "title": "Normalization",
+        "type": "string"
+      },
+      "selection": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/EventSelection"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      }
+    },
+    "required": [
+      "event_list_name",
+      "dt"
+    ],
+    "title": "AutoCorrelationRequest",
+    "type": "object"
+  },
+  "cross_correlation": {
+    "$defs": {
+      "EventSelection": {
+        "additionalProperties": false,
+        "description": "Photons to keep, applied to a detached copy of the stored EventList.\n\nRanges are half-open, [low, high), matching Stingray's\n``EventList.get_energy_mask``. Adjacent bands therefore never share a\nphoton. ``energy_range`` is in keV and needs a calibrated energy column;\n``pi_range`` selects instrument PI channels instead. Time intervals and the\nextra GTI list are intersected with the EventList's own GTIs.",
+        "properties": {
+          "detector_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detector Ids"
+          },
+          "energy_range": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  {
+                    "minimum": 0,
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Energy Range"
+          },
+          "gti": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "prefixItems": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Gti"
+          },
+          "pi_range": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pi Range"
+          },
+          "time_intervals": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "prefixItems": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Time Intervals"
+          }
+        },
+        "title": "EventSelection",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "dt": {
+        "description": "Light-curve bin width; the lag axis is sampled at this step",
+        "examples": [
+          0.1
+        ],
+        "exclusiveMinimum": 0,
+        "title": "Time bin dt (s)",
+        "type": "number"
+      },
+      "event_list_1_name": {
+        "title": "Event List 1 Name",
+        "type": "string"
+      },
+      "event_list_2_name": {
+        "title": "Event List 2 Name",
+        "type": "string"
+      },
+      "mode": {
+        "default": "same",
+        "description": "'same' keeps the input length; 'full' keeps every overlap",
+        "enum": [
+          "same",
+          "full"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "norm": {
+        "default": "none",
+        "description": "'variance' divides by the light curves' variances",
+        "enum": [
+          "none",
+          "variance"
+        ],
+        "title": "Normalization",
+        "type": "string"
+      },
+      "selection_1": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/EventSelection"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "selection_2": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/EventSelection"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      }
+    },
+    "required": [
+      "event_list_1_name",
+      "event_list_2_name",
+      "dt"
+    ],
+    "title": "CrossCorrelationRequest",
+    "type": "object"
+  }
+}

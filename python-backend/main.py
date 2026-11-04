@@ -28,6 +28,7 @@ from routes import (
     io_utility_routes,
     project_routes,
     result_routes,
+    schema_routes,
     job_routes,
     lightcurve_routes,
     log_routes,
@@ -451,6 +452,7 @@ def create_app(
     app.include_router(internal_grant_routes.router, prefix="/internal")
     app.include_router(data_routes.router, prefix="/api/data", tags=["Data"])
     app.include_router(result_routes.router, prefix="/api/results", tags=["Results"])
+    app.include_router(schema_routes.router, prefix="/api/schemas", tags=["Schemas"])
     app.include_router(
         lightcurve_routes.router, prefix="/api/lightcurve", tags=["Lightcurve"]
     )

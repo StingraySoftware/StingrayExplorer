@@ -8,7 +8,7 @@ import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from models.event_selection import EventSelection
 from services.correlation_service import CorrelationService
 
@@ -23,13 +23,35 @@ def get_correlation_service(request: Request) -> CorrelationService:
     )
 
 
+# Form metadata for generated parameter forms. It is JSON-schema
+# documentation only: the services validate these values themselves, so
+# requests are accepted and rejected exactly as before.
+DT_FIELD = Field(
+    title="Time bin dt (s)",
+    description="Light-curve bin width; the lag axis is sampled at this step",
+    json_schema_extra={"exclusiveMinimum": 0, "examples": [0.1]},
+)
+MODE_FIELD = Field(
+    "same",
+    title="Mode",
+    description="'same' keeps the input length; 'full' keeps every overlap",
+    json_schema_extra={"enum": ["same", "full"]},
+)
+NORM_FIELD = Field(
+    "none",
+    title="Normalization",
+    description="'variance' divides by the light curves' variances",
+    json_schema_extra={"enum": ["none", "variance"]},
+)
+
+
 # Request Models
 class AutoCorrelationRequest(BaseModel):
     event_list_name: str
     selection: Optional[EventSelection] = None
-    dt: float
-    mode: str = "same"
-    norm: str = "none"
+    dt: float = DT_FIELD
+    mode: str = MODE_FIELD
+    norm: str = NORM_FIELD
 
 
 class CrossCorrelationRequest(BaseModel):
@@ -37,9 +59,9 @@ class CrossCorrelationRequest(BaseModel):
     event_list_2_name: str
     selection_1: Optional[EventSelection] = None
     selection_2: Optional[EventSelection] = None
-    dt: float
-    mode: str = "same"
-    norm: str = "none"
+    dt: float = DT_FIELD
+    mode: str = MODE_FIELD
+    norm: str = NORM_FIELD
 
 
 # Routes

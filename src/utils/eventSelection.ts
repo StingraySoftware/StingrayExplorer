@@ -144,3 +144,19 @@ export function describeSelection(selection: EventSelection | null): string {
   if (selection.gti) parts.push(`${selection.gti.length} extra GTI(s)`);
   return parts.join(' · ');
 }
+
+/** The editable form of a request selection, e.g. to prefill another page. */
+export function selectionToDraft(selection: EventSelection | null | undefined): SelectionDraft {
+  if (!selection) return { ...EMPTY_SELECTION_DRAFT };
+  const range = selection.energy_range ?? selection.pi_range;
+  const intervals = (values?: Array<[number, number]>) =>
+    values ? values.map(([start, stop]) => `${start}, ${stop}`).join('; ') : '';
+  return {
+    mode: selection.energy_range ? 'energy' : selection.pi_range ? 'pi' : 'none',
+    low: range ? String(range[0]) : '',
+    high: range ? String(range[1]) : '',
+    detectors: selection.detector_ids ? selection.detector_ids.join(', ') : '',
+    timeIntervals: intervals(selection.time_intervals),
+    gti: intervals(selection.gti),
+  };
+}

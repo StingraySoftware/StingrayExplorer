@@ -21,6 +21,15 @@ vi.mock('@/api/selectionApi', () => ({
   selectionApi: { previewSelection: (...a: unknown[]) => previewSelection(...a) },
 }));
 
+vi.mock('@/api/schemaApi', async () => {
+  const schemas = (await import('@/test/fixtures/form-schemas.json')).default;
+  return {
+    schemaApi: {
+      getFormSchema: async () => ({ success: true, data: schemas.cross_correlation, message: '', error: null }),
+    },
+  };
+});
+
 vi.mock('@/components/plots/PlotlyChart', () => ({
   default: () => <div data-testid="chart" />,
 }));

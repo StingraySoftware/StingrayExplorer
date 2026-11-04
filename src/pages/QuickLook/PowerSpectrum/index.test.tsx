@@ -206,3 +206,13 @@ it('computes from a stored light curve using its own bins', async () => {
     { lightcurve_name: 'nicer lc', norm: 'leahy', output_name: undefined }
   ));
 });
+
+it('opens with a light curve sent from another page', async () => {
+  const { setWorkspaceFields } = await import('@/api/workspaceSession');
+  const { lightcurveToSpectra } = await import('@/utils/sendTo');
+  setWorkspaceFields(lightcurveToSpectra('nicer lc')[0].fields);
+  renderPage();
+  const picker = await screen.findByRole('combobox', { name: 'Light curve' });
+  await waitFor(() => expect(picker).toHaveTextContent(/nicer lc/));
+  expect(screen.queryByLabelText('Time bin dt (s)')).not.toBeInTheDocument();
+});

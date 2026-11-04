@@ -30,6 +30,8 @@ import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
 import LightcurveSelector from '@/components/analysis/LightcurveSelector';
 import EventSelectionField from '@/components/analysis/EventSelectionField';
+import SendToMenu from '@/components/analysis/SendToMenu';
+import { spectrumSendTo } from '@/utils/sendTo';
 import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
@@ -115,6 +117,8 @@ const AvgPowerSpectrumPage: React.FC = () => {
   const currentInputs = resultInputs?.operation === 'rebin_spectrum'
     ? { ...resultInputs, rebin_factor: rebinNum, log: logRebin, creation_inputs: creationInputs }
     : creationInputs;
+
+  const sendTo = result ? spectrumSendTo(resultInputs, 'averaged_power_spectrum', ['dynamical']) : null;
 
   const handleRun = (): void => {
     if (!canRun || !segNum) return;
@@ -325,6 +329,7 @@ const AvgPowerSpectrumPage: React.FC = () => {
                 <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
                   Result
                 </Typography>
+                {sendTo && <SendToMenu actions={sendTo.actions} unavailable={sendTo.unavailable} />}
                 {result?.norm && <Chip size="small" label={`norm: ${result.norm}`} />}
                 {result && <Chip size="small" label={`${result.n_freq.toLocaleString()} freqs`} variant="outlined" />}
                 {typeof result?.n_segments === 'number' && (

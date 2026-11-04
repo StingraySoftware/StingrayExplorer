@@ -29,6 +29,8 @@ import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
 import EventSelectionField from '@/components/analysis/EventSelectionField';
+import SendToMenu from '@/components/analysis/SendToMenu';
+import { lightcurveToSpectra } from '@/utils/sendTo';
 import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
@@ -317,6 +319,9 @@ const LightCurvePage: React.FC = () => {
                     label={`mean ${result.count_rate_mean.toFixed(2)} cts/s`}
                     variant="outlined"
                   />
+                )}
+                {result?.name && storedResultAvailable && (
+                  <SendToMenu actions={lightcurveToSpectra(result.name)} />
                 )}
               </Box>
               {result?.plot_stride !== undefined && result.plot_stride > 1 && (

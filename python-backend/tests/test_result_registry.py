@@ -212,3 +212,14 @@ def test_kinds_route_describes_the_registry():
         == {"key", "label", "store", "export_object_type", "default_plot", "identity"}
         for kind in described
     )
+
+
+def test_every_default_plot_has_a_renderer_component():
+    import re
+
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "src/components/plots/kit/defaultPlots.ts"
+    ).read_text()
+    renderer_ids = set(re.findall(r"^  (\w+): '", source, re.M))
+    assert {kind.default_plot for kind in REGISTRY} <= renderer_ids

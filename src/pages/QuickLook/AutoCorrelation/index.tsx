@@ -8,13 +8,8 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  FormControl,
   Grid,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -27,7 +22,8 @@ import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { correlationApi, CorrelationData } from '@/api/correlationApi';
-import { parsePositiveNumber } from '@/utils/numbers';
+import SchemaForm from '@/components/forms/SchemaForm';
+import { parseSchemaValue, useFormSchema } from '@/components/forms/schemaValues';
 
 const AutoCorrelationPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/AutoCorrelation/index.tsx:eventList:1', '');
@@ -41,7 +37,11 @@ const AutoCorrelationPage: React.FC = () => {
     result, running, error, run, resultInputs, resultIdentity, resultStatus, backendAvailable,
   } = useAnalysisRunner<CorrelationData>('Auto Correlation');
 
-  const dtNum = parsePositiveNumber(dt);
+  const formSchema = useFormSchema('auto_correlation');
+  // Parameter controls and their validation come from the backend schema.
+  const dtNum = formSchema.data
+    ? (parseSchemaValue(formSchema.data.properties.dt, dt).value as number | null)
+    : null;
   const canRun = selectionError === null && eventList !== '' && dtNum !== null && !running && backendAvailable;
   const requestParams = {
     event_list_name: eventList,
@@ -100,38 +100,20 @@ const AutoCorrelationPage: React.FC = () => {
                   Requires one continuous good-time interval. For an observation with gaps, use GTI
                   Utilities to select a continuous interval first.
                 </Typography>
-                <TextField
-                  label="Time bin dt (s)"
-                  size="small"
-                  value={dt}
-                  onChange={(e) => setDt(e.target.value)}
-                  error={dt !== '' && dtNum === null}
-                  helperText={dt !== '' && dtNum === null ? 'Must be a positive number' : ' '}
-                />
-                <FormControl size="small" fullWidth>
-                  <InputLabel id="auto-corr-mode-label">Mode</InputLabel>
-                  <Select
-                    labelId="auto-corr-mode-label"
-                    label="Mode"
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value as 'same' | 'full')}
-                  >
-                    <MenuItem value="same">same</MenuItem>
-                    <MenuItem value="full">full</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl size="small" fullWidth>
-                  <InputLabel id="auto-corr-norm-label">Normalization</InputLabel>
-                  <Select
-                    labelId="auto-corr-norm-label"
-                    label="Normalization"
-                    value={norm}
-                    onChange={(e) => setNorm(e.target.value as 'none' | 'variance')}
-                  >
-                    <MenuItem value="none">none</MenuItem>
-                    <MenuItem value="variance">variance</MenuItem>
-                  </Select>
-                </FormControl>
+                {formSchema.data ? (
+                  <SchemaForm
+                    schema={formSchema.data}
+                    fields={[
+                      { name: 'dt', value: dt, onChange: (value) => setDt(String(value)) },
+                      { name: 'mode', value: mode, onChange: (value) => setMode(value as 'same' | 'full') },
+                      { name: 'norm', value: norm, onChange: (value) => setNorm(value as 'none' | 'variance') },
+                    ]}
+                  />
+                ) : formSchema.isError ? (
+                  <Alert severity="error">{formSchema.error.message}</Alert>
+                ) : (
+                  <CircularProgress size={20} />
+                )}
                 <Typography variant="caption" sx={{
                   color: "text.secondary"
                 }}>
