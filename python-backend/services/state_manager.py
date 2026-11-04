@@ -18,6 +18,8 @@ from astropy import units as u
 from astropy.table import Column
 from astropy.utils.masked import Masked
 
+from .result_registry import kind_of
+
 logger = logging.getLogger(__name__)
 
 
@@ -350,12 +352,14 @@ class StateManager:
             name: Unique name for the event list
             event_list: Stingray EventList object
         """
+        kind_of("event_data", event_list)
         with self._lock:
             self._event_data[name] = event_list
             self._event_identities[name] = str(uuid4())
 
     def add_event_data_if_absent(self, name: str, event_list: Any) -> bool:
         """Atomically add an EventList without replacing an existing name."""
+        kind_of("event_data", event_list)
         with self._lock:
             if name in self._event_data:
                 return False
@@ -546,6 +550,7 @@ class StateManager:
             name: Unique name for the lightcurve
             lightcurve: Stingray Lightcurve object
         """
+        kind_of("lightcurve_data", lightcurve)
         with self._lock:
             self._lightcurve_data[name] = lightcurve
             self._lightcurve_identities[name] = getattr(
@@ -554,6 +559,7 @@ class StateManager:
 
     def add_lightcurve_data_if_absent(self, name: str, lightcurve: Any) -> bool:
         """Atomically add a Lightcurve without replacing an existing name."""
+        kind_of("lightcurve_data", lightcurve)
         with self._lock:
             if name in self._lightcurve_data:
                 return False
@@ -674,11 +680,13 @@ class StateManager:
     # Spectrum data methods
     def add_spectrum_data(self, name: str, spectrum: Any) -> None:
         """Add a spectrum to state."""
+        kind_of("spectrum_data", spectrum)
         with self._lock:
             self._spectrum_data[name] = spectrum
 
     def add_spectrum_data_if_absent(self, name: str, spectrum: Any) -> bool:
         """Atomically add a spectrum without replacing an existing name."""
+        kind_of("spectrum_data", spectrum)
         with self._lock:
             if name in self._spectrum_data:
                 return False
@@ -786,11 +794,13 @@ class StateManager:
     # Analysis results methods
     def add_analysis_result(self, name: str, result: Any) -> None:
         """Add an analysis result to state."""
+        kind_of("analysis_results", result)
         with self._lock:
             self._analysis_results[name] = result
 
     def add_analysis_result_if_absent(self, name: str, result: Any) -> bool:
         """Atomically add an analysis result without replacing a name."""
+        kind_of("analysis_results", result)
         with self._lock:
             if name in self._analysis_results:
                 return False

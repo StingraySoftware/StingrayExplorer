@@ -1,0 +1,27 @@
+{
+  "analysis_results": {
+    "bis": "Bispectrum",
+    "coh": "dict",
+    "lags": "dict",
+    "pc": "dict",
+    "table": "dict"
+  },
+  "event_data": {
+    "a": "EventList",
+    "a mid": "EventList",
+    "b": "EventList"
+  },
+  "lightcurve_data": {
+    "lc a": "Lightcurve",
+    "lc a rebinned": "Lightcurve",
+    "lc file": "Lightcurve"
+  },
+  "spectrum_data": {
+    "acs": "AveragedCrossspectrum",
+    "aps": "AveragedPowerspectrum",
+    "aps log": "AveragedPowerspectrum",
+    "cs": "Crossspectrum",
+    "dps": "DynamicalPowerspectrum",
+    "ps": "Powerspectrum"
+  }
+}

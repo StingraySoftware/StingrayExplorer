@@ -11,30 +11,19 @@ from astropy.io import fits
 from astropy.io.fits.header import _HeaderCommentaryCards
 import numpy as np
 import stingray
-from stingray.bispectrum import Bispectrum
-from stingray import EventList, Lightcurve, Powerspectrum, AveragedPowerspectrum
-from stingray import Crossspectrum, AveragedCrossspectrum, DynamicalPowerspectrum
+from stingray import EventList, Lightcurve, DynamicalPowerspectrum
 
 from .base_service import BaseService
 from .project_compatibility import compatibility, migrate_defaults, checked_version
+from .result_registry import project_classes
 from .secure_publication import open_secure_publication
 from .utility_helpers import open_verified_read_grant
 
 SCHEMA = "stingray-explorer.project.v1"
 MAX_BYTES = 128 * 1024**2
-CLASSES = {
-    cls.__name__: cls
-    for cls in (
-        Bispectrum,
-        EventList,
-        Lightcurve,
-        Powerspectrum,
-        AveragedPowerspectrum,
-        Crossspectrum,
-        AveragedCrossspectrum,
-        DynamicalPowerspectrum,
-    )
-}
+# The registry names every class the codec may rebuild; their saved names
+# (and so the project format) are unchanged by registration.
+CLASSES = project_classes()
 GROUPS = ("event_data", "lightcurve_data", "spectrum_data", "analysis_results")
 
 

@@ -30,6 +30,7 @@ from astropy.utils.data_info import serialize_context_as
 from astropy.utils.masked import Masked
 from stingray.io import high_precision_keyword_read, pi_to_energy, read_rmf
 
+from .result_registry import REGISTRY, kind_of
 from .derived_events import make_lineage, parent_record
 from .analysis_helpers import collect_warnings
 from .base_service import BaseService
@@ -68,7 +69,8 @@ EXPORT_EXTENSIONS = {
     "fits": ".fits",
     "hdf5": ".hdf5",
 }
-EXPORT_OBJECT_TYPES = {"event_list", "lightcurve", "analysis_result", "spectrum"}
+EXPORT_OBJECT_TYPES = {kind.export_object_type for kind in REGISTRY}
+STORE_FOR_OBJECT_TYPE = {kind.export_object_type: kind.store for kind in REGISTRY}
 
 HDF5_SCHEMA = "stingray-explorer.hdf5.v1"
 HDF5_GROUP_PATH = "stingray_explorer"
@@ -3161,8 +3163,11 @@ class IOUtilityService(BaseService):
                             format_reasons["hdf5"] = hdf5_reason
                             if "hdf5" in formats:
                                 formats.remove("hdf5")
+                    kind = kind_of(STORE_FOR_OBJECT_TYPE[object_type], obj)
                     entry = {
                         "object_type": object_type,
+                        "kind": kind.key,
+                        "default_plot": kind.default_plot,
                         "name": name,
                         "row_count": row_count,
                         "exportable": reason is None,
