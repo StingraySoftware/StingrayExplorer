@@ -9,6 +9,9 @@ export interface BackgroundRunHandlers<P> {
   onPartial?: (partial: P) => void;
 }
 
+/** The message of the response a cancelled background analysis resolves with. */
+export const BACKGROUND_CANCELLED_MESSAGE = 'The background analysis was cancelled';
+
 const POLL_MS = 400;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -47,7 +50,7 @@ export async function runBackgroundAnalysis<T, P = unknown>(
       return { success: false, data: null, message, error: message } as ApiResponse<T>;
     }
     if (job.status === 'cancelled') {
-      const message = 'The background analysis was cancelled';
+      const message = BACKGROUND_CANCELLED_MESSAGE;
       return { success: false, data: null, message, error: message } as ApiResponse<T>;
     }
     await sleep(POLL_MS);

@@ -97,4 +97,51 @@ describe('DynamicalPowerSpectrumPage background jobs', () => {
     expect(cancelJob).toHaveBeenCalledWith('job-1');
     expect(await screen.findByText('The background analysis was cancelled', {}, { timeout: 3000 })).toBeInTheDocument();
   });
+
+  async function computeOnceThenRunAgain(secondStatus: 'cancelled' | 'failed') {
+    let run = 0;
+    let cancelled = false;
+    startDynamicalPowerSpectrumJob.mockImplementation(async () => {
+      run += 1;
+      return { success: true, data: { job_id: `job-${run}` }, message: '', error: null };
+    });
+    cancelJob.mockImplementation(async () => {
+      cancelled = true;
+      return { success: true, data: null, message: '', error: null };
+    });
+    getJob.mockImplementation(async (jobId: string) => ({
+      success: true,
+      data: {
+        id: jobId,
+        status: jobId === 'job-1' ? 'completed' : secondStatus === 'failed' ? 'failed' : cancelled ? 'cancelled' : 'running',
+        progress: 0.3,
+        progress_message: 'Computing the dynamical power spectrum',
+        partial_count: 0,
+        error: secondStatus === 'failed' ? 'MemoryError: the segment is too large' : null,
+      },
+    }));
+    getJobResult.mockResolvedValue(final);
+    await prepare();
+    await userEvent.click(screen.getByRole('button', { name: 'Compute' }));
+    expect(await screen.findByTestId('chart', {}, { timeout: 3000 })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Compute' }));
+    if (secondStatus === 'cancelled') {
+      await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    }
+  }
+
+  it('shows only the cancelled state when a later job is cancelled', async () => {
+    await computeOnceThenRunAgain('cancelled');
+    const cancelledAlert = (await screen.findByText('The background analysis was cancelled', {}, { timeout: 3000 })).closest('[role="alert"]');
+    expect(cancelledAlert).toHaveClass('MuiAlert-colorInfo');
+    expect(screen.queryByText(/The latest request failed/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('chart')).toBeInTheDocument();
+  });
+
+  it('still reports a real failure next to the previous result', async () => {
+    await computeOnceThenRunAgain('failed');
+    expect(await screen.findByText('MemoryError: the segment is too large', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText('MemoryError: the segment is too large').closest('[role="alert"]')).toHaveClass('MuiAlert-colorError');
+    expect(screen.getByText(/The latest request failed/)).toBeInTheDocument();
+  });
 });

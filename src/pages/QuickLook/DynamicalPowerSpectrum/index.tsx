@@ -30,7 +30,7 @@ import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { spectrumApi, DynamicalPowerSpectrumData } from '@/api/spectrumApi';
-import { runBackgroundAnalysis } from '@/api/backgroundJobs';
+import { BACKGROUND_CANCELLED_MESSAGE, runBackgroundAnalysis } from '@/api/backgroundJobs';
 import { jobApi } from '@/api/jobApi';
 import type { Job } from '@/types/job';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -241,7 +241,7 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
                 />
               </Box>
               {error && (
-                <Alert severity="error" sx={{ mb: 1 }}>
+                <Alert severity={error === BACKGROUND_CANCELLED_MESSAGE ? 'info' : 'error'} sx={{ mb: 1 }}>
                   {error}
                 </Alert>
               )}
@@ -293,6 +293,7 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
                 status={resultStatus}
                 currentInputs={currentInputs}
                 result={result}
+                latestRequestCancelled={error === BACKGROUND_CANCELLED_MESSAGE}
               />
               {result ? (
                 <PlotlyChart workspaceKey='QuickLook/DynamicalPowerSpectrum/index.tsx:chart:1'                   data={heatmap}

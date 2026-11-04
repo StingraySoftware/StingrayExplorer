@@ -20,6 +20,8 @@ interface AnalysisResultIdentityProps {
   inputs: Readonly<Record<string, unknown>> | null;
   identity?: ResultIdentity | null;
   status: 'empty' | 'current' | 'previous' | 'stale';
+  /** The latest request was cancelled by the user rather than failing. */
+  latestRequestCancelled?: boolean;
   currentInputs?: Readonly<Record<string, unknown>> | null;
   result?: {
     name?: string | null;
@@ -57,6 +59,7 @@ const AnalysisResultIdentity: React.FC<AnalysisResultIdentityProps> = ({
   status,
   currentInputs,
   result,
+  latestRequestCancelled = false,
 }) => {
   if (inputs === null || status === 'empty') return null;
   const inputsChanged = currentInputs !== null && currentInputs !== undefined &&
@@ -76,7 +79,7 @@ const AnalysisResultIdentity: React.FC<AnalysisResultIdentityProps> = ({
           This result belongs to a previous backend session and is read-only. Recompute it before
           using backend objects.
         </Alert>
-      ) : status === 'previous' ? (
+      ) : status === 'previous' && !latestRequestCancelled ? (
         <Alert severity="info">
           The latest request failed. Showing the previous successful result and its original inputs.
         </Alert>

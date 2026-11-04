@@ -46,4 +46,16 @@ describe('AnalysisResultIdentity', () => {
     expect(screen.getByText(/previous backend session and is read-only/)).toBeInTheDocument();
     expect(screen.queryByText(/The latest request failed/)).not.toBeInTheDocument();
   });
+
+  it('does not call a cancelled request a failure', () => {
+    const view = render(
+      <AnalysisResultIdentity inputs={inputs} identity={identity} status="previous" latestRequestCancelled />
+    );
+    expect(screen.queryByText(/The latest request failed/)).not.toBeInTheDocument();
+    expect(screen.getByText('Original calculation inputs')).toBeInTheDocument();
+    view.rerender(
+      <AnalysisResultIdentity inputs={inputs} identity={identity} status="previous" latestRequestCancelled={false} />
+    );
+    expect(screen.getByText(/The latest request failed/)).toBeInTheDocument();
+  });
 });
