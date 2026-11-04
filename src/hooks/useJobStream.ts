@@ -162,7 +162,7 @@ export function useJobStream(): void {
       const message = buildCompletionMessage(job);
       addNotification({
         type: 'success',
-        title: 'Data Loaded',
+        title: job.type === 'analysis' ? 'Analysis Finished' : 'Data Loaded',
         message,
       });
 
@@ -173,7 +173,7 @@ export function useJobStream(): void {
     } else if (event.type === 'job_failed') {
       addNotification({
         type: 'error',
-        title: 'Load Failed',
+        title: job.type === 'analysis' ? 'Analysis Failed' : 'Load Failed',
         message: job.error || `Failed to load: ${job.display_name}`,
       });
     }

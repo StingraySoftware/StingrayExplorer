@@ -10,7 +10,7 @@ export type JobStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancel
 /**
  * Job type enum values.
  */
-export type JobType = 'load_event_list' | 'load_batch' | 'load_from_url';
+export type JobType = 'load_event_list' | 'load_batch' | 'load_from_url' | 'analysis';
 
 export type JobEventInputFormat = 'ogip' | 'fits' | 'hdf5' | 'ascii.ecsv';
 
@@ -25,6 +25,10 @@ export interface PublicBatchJobFailure {
 
 /** Public, redacted scientific/load summary. It intentionally has no paths or request params. */
 export interface PublicJobResult {
+  /** Analysis jobs: the stored result's name, registered kind and identity. */
+  name?: string;
+  kind?: string;
+  result_id?: string;
   event_count?: number;
   time_start?: number;
   time_end?: number;
@@ -66,6 +70,8 @@ export interface Job {
   error: string | null;
   /** Human-readable name for the job (shown in UI) */
   display_name: string;
+  /** Partial (preview) results an analysis job has published so far. */
+  partial_count?: number;
 }
 
 /**
@@ -76,6 +82,7 @@ export type JobEventType =
   | 'job_created'
   | 'job_started'
   | 'job_progress'
+  | 'job_partial'
   | 'job_completed'
   | 'job_failed'
   | 'job_cancelled'

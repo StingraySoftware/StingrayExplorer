@@ -14,13 +14,14 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import ExitStack
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 from models.event_formats import (
     require_batch_input_formats,
     require_input_event_format,
 )
 from models.job import Job, JobStatus, JobType
+from services.process_jobs import run_process_job
 from services.utility_helpers import (
     GrantedReadFile,
     open_verified_read_grant,
@@ -97,6 +98,9 @@ class JobManager:
         self._resources: Dict[str, _JobResources] = {}
         self._created_job_ids: set[str] = set()
         self._capacity_lock = threading.Lock()
+        # Full results and partial previews of analysis jobs, by job id; the
+        # public job record carries only a summary.
+        self._analysis_outputs: Dict[str, Dict[str, Any]] = {}
         self._reserved_jobs = 0
         self._retained_capabilities = 0
 
@@ -232,6 +236,7 @@ class JobManager:
                 del self._jobs[job_id]
                 self._futures.pop(job_id, None)
                 self._created_job_ids.discard(job_id)
+                self._analysis_outputs.pop(job_id, None)
                 resource = self._resources.pop(job_id, None)
                 if resource is not None:
                     resource.close()
@@ -262,6 +267,7 @@ class JobManager:
                 del self._jobs[job_id]
                 self._futures.pop(job_id, None)
                 self._created_job_ids.discard(job_id)
+                self._analysis_outputs.pop(job_id, None)
                 resource = self._resources.pop(job_id, None)
                 if resource is not None:
                     resource.close()
@@ -727,6 +733,87 @@ class JobManager:
     # =========================================================================
     # Job Execution
     # =========================================================================
+
+    def submit_analysis_job(
+        self,
+        *,
+        target: str,
+        payload: Any,
+        display_name: str,
+        publish: Callable[[Any], Tuple[Dict[str, Any], Dict[str, Any]]],
+        memory_cap_bytes: Optional[int] = None,
+    ) -> Job:
+        """Run a long analysis in a worker process.
+
+        ``target`` names a worker function (see services.process_jobs).
+        ``publish`` runs in this process when the worker succeeds: it stores
+        the result in application state and returns (public summary, full
+        response); a ValueError it raises fails the job with that message.
+        """
+        self._reserve_submission(0)
+        job = Job(type=JobType.ANALYSIS, display_name=display_name)
+        resources = _JobResources(
+            ExitStack(),
+            {
+                "target": target,
+                "payload": payload,
+                "publish": publish,
+                "memory_cap_bytes": memory_cap_bytes,
+            },
+            lambda: self._release_submission(0),
+        )
+        with self._lock:
+            self._analysis_outputs[job.id] = {"partials": [], "response": None}
+        return self._schedule(job, resources, self._execute_analysis_job)
+
+    def get_analysis_output(self, job_id: str) -> Optional[Dict[str, Any]]:
+        """The full response and partial previews of an analysis job."""
+        with self._lock:
+            output = self._analysis_outputs.get(job_id)
+            return None if output is None else dict(output, partials=list(output["partials"]))
+
+    def _execute_analysis_job(self, job: Job) -> None:
+        if not self._start_job(job):
+            return
+        private = self._private_resources(job.id)
+        with self._lock:
+            output = self._analysis_outputs.setdefault(
+                job.id, {"partials": [], "response": None}
+            )
+
+        def on_partial(partial: Any) -> None:
+            with self._lock:
+                if job.status != JobStatus.RUNNING:
+                    return
+                output["partials"].append(partial)
+                job.partial_count += 1
+                self._broadcast_update("job_partial", job)
+
+        outcome = run_process_job(
+            private["target"],
+            private["payload"],
+            on_progress=lambda fraction, message: self._update_running_job(
+                job, fraction, message
+            ),
+            on_partial=on_partial,
+            should_cancel=lambda: job.status == JobStatus.CANCELLED,
+            memory_cap_bytes=private["memory_cap_bytes"],
+        )
+        if outcome.status == "cancelled" or job.status == JobStatus.CANCELLED:
+            return
+        if outcome.status != "completed":
+            self._fail_active_job(job, outcome.error or "The analysis failed")
+            return
+        try:
+            with self._lock:
+                if job.status != JobStatus.RUNNING:
+                    return
+                summary, response = private["publish"](outcome.result)
+                output["response"] = response
+        except ValueError as error:
+            self._fail_active_job(job, str(error))
+            return
+        self._complete_running_job(job, summary)
 
     def _execute_load_job(self, job: Job) -> None:
         """Execute a single file job using only private pinned resources."""

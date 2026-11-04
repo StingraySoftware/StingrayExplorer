@@ -167,6 +167,26 @@ export const spectrumApi = {
     });
   },
 
+  /** Start the same calculation as a cancellable background job. */
+  async startDynamicalPowerSpectrumJob(params: {
+    event_list_name: string;
+    selection?: EventSelection | null;
+    dt: number;
+    segment_size: number;
+    norm?: string;
+    output_name?: string;
+  }): Promise<ApiResponse<{ job_id: string }>> {
+    return apiClient.post('/api/spectrum/dynamical-power-spectrum', {
+      event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
+      dt: params.dt,
+      segment_size: params.segment_size,
+      norm: params.norm || 'leahy',
+      output_name: params.output_name,
+      background: true,
+    });
+  },
+
   /**
    * Rebin a spectrum
    */

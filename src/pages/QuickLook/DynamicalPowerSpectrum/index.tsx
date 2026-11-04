@@ -12,6 +12,7 @@ import {
   FormControlLabel,
   Grid,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Select,
   Stack,
@@ -29,9 +30,21 @@ import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { spectrumApi, DynamicalPowerSpectrumData } from '@/api/spectrumApi';
+import { runBackgroundAnalysis } from '@/api/backgroundJobs';
+import { jobApi } from '@/api/jobApi';
+import type { Job } from '@/types/job';
 import { parsePositiveNumber } from '@/utils/numbers';
 
 const NORM_OPTIONS = ['leahy', 'frac', 'abs', 'none'];
+
+/** Early preview a background job publishes: the first segments only. */
+interface DynamicalPreview {
+  preview: true;
+  n_segments: number;
+  freq?: number[];
+  time?: number[];
+  dyn_ps?: Array<Array<number | null>>;
+}
 
 const DynamicalPowerSpectrumPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:eventList:1', '');
@@ -42,6 +55,9 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
   const [norm, setNorm] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:norm:4', 'leahy');
   const [outputName, setOutputName] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:outputName:5', '');
   const [logZ, setLogZ] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:logZ:6', true);
+  const [background, setBackground] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:background', false);
+  const [backgroundJob, setBackgroundJob] = React.useState<Job | null>(null);
+  const [preview, setPreview] = React.useState<DynamicalPreview | null>(null);
   const { result, running, error, run, resultInputs, resultIdentity, resultStatus, backendAvailable } = useAnalysisRunner<DynamicalPowerSpectrumData>(
     'Dynamical Power Spectrum'
   );
@@ -69,10 +85,23 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
       norm,
       output_name: outputName.trim() || undefined,
     };
-    void run(() => spectrumApi.createDynamicalPowerSpectrum(params), {
-      operation: 'dynamical_power_spectrum', ...params,
-    });
+    const inputs = { operation: 'dynamical_power_spectrum', ...params };
+    if (!background) {
+      void run(() => spectrumApi.createDynamicalPowerSpectrum(params), inputs);
+      return;
+    }
+    setBackgroundJob(null);
+    setPreview(null);
+    void run(
+      () =>
+        runBackgroundAnalysis<DynamicalPowerSpectrumData, DynamicalPreview>(
+          () => spectrumApi.startDynamicalPowerSpectrumJob(params),
+          { onJob: setBackgroundJob, onPartial: setPreview }
+        ),
+      inputs
+    );
   };
+  const jobRunning = running && backgroundJob !== null && backgroundJob.status === 'running';
 
   // dyn_ps rows correspond to frequencies (n_freq x n_times) — matches
   // Plotly's convention that z[i] pairs with y[i].
@@ -164,6 +193,16 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
                   value={outputName}
                   onChange={(e) => setOutputName(e.target.value)}
                 />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={background}
+                      onChange={(e) => setBackground(e.target.checked)}
+                      disabled={running}
+                    />
+                  }
+                  label="Run in background (cancellable)"
+                />
                 <Button
                   variant="contained"
                   startIcon={running ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
@@ -205,6 +244,48 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
                 <Alert severity="error" sx={{ mb: 1 }}>
                   {error}
                 </Alert>
+              )}
+              {jobRunning && backgroundJob && (
+                <Box sx={{ mb: 2 }} data-testid="background-job">
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
+                    <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                      {backgroundJob.progress_message}
+                    </Typography>
+                    <Button
+                      size="small"
+                      color="warning"
+                      onClick={() => void jobApi.cancelJob(backgroundJob.id)}
+                    >
+                      Cancel
+                    </Button>
+                  </Stack>
+                  <LinearProgress variant="determinate" value={backgroundJob.progress * 100} />
+                </Box>
+              )}
+              {jobRunning && preview && preview.n_segments > 0 && preview.dyn_ps && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    Preview: first {preview.n_segments} segments. The full result replaces it when
+                    the job finishes.
+                  </Typography>
+                  <PlotlyChart
+                    workspaceKey="QuickLook/DynamicalPowerSpectrum/index.tsx:previewChart"
+                    data={[
+                      {
+                        z: preview.dyn_ps,
+                        x: preview.time,
+                        y: preview.freq,
+                        type: 'heatmap',
+                        colorscale: 'Viridis',
+                      } as Data,
+                    ]}
+                    layout={{
+                      xaxis: { title: { text: 'Time (s)' } },
+                      yaxis: { title: { text: 'Frequency (Hz)' } },
+                    }}
+                    height={260}
+                  />
+                </Box>
               )}
               <AnalysisResultIdentity
                 inputs={resultInputs}

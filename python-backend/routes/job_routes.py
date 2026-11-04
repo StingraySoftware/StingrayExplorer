@@ -528,6 +528,39 @@ async def get_job(request: Request, job_id: JobIdText) -> ApiResponse:
         )
 
 
+@router.get("/{job_id}/result")
+async def get_job_result(job_id: str, request: Request):
+    """The full response of a completed analysis job."""
+    output = get_job_manager(request).get_analysis_output(job_id)
+    if output is None or output["response"] is None:
+        return {
+            "success": False,
+            "data": None,
+            "message": "No completed analysis result for this job",
+            "error": None,
+        }
+    return output["response"]
+
+
+@router.get("/{job_id}/partials")
+async def get_job_partials(job_id: str, request: Request):
+    """Partial (preview) results an analysis job has published so far."""
+    output = get_job_manager(request).get_analysis_output(job_id)
+    if output is None:
+        return {
+            "success": False,
+            "data": None,
+            "message": "Unknown analysis job",
+            "error": None,
+        }
+    return {
+        "success": True,
+        "data": output["partials"],
+        "message": f"{len(output['partials'])} partial result(s)",
+        "error": None,
+    }
+
+
 @router.post("/{job_id}/cancel", response_model=ApiResponse)
 async def cancel_job(request: Request, job_id: JobIdText) -> ApiResponse:
     """

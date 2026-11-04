@@ -119,6 +119,16 @@ export const jobApi = {
    *
    * Only pending jobs can be cancelled. Running jobs cannot be interrupted.
    */
+  /** Full response of a completed analysis job (the same as a direct request). */
+  async getJobResult<T>(jobId: string): Promise<ApiResponse<T>> {
+    return apiClient.get(`/api/jobs/${jobId}/result`);
+  },
+
+  /** Partial (preview) results published by an analysis job so far. */
+  async getJobPartials<T>(jobId: string): Promise<ApiResponse<T[]>> {
+    return apiClient.get(`/api/jobs/${jobId}/partials`);
+  },
+
   async cancelJob(jobId: string): Promise<ApiResponse<void>> {
     return apiClient.post(`/api/jobs/${jobId}/cancel`);
   },

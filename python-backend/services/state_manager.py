@@ -357,6 +357,19 @@ class StateManager:
             self._event_data[name] = event_list
             self._event_identities[name] = str(uuid4())
 
+    def add_event_data_with_identity(
+        self, name: str, event_list: Any, dataset_id: str
+    ) -> None:
+        """Store an EventList under an existing dataset identity.
+
+        Analysis workers rebuild a private copy of the caller's dataset; using
+        the caller's identity keeps their result records identical.
+        """
+        kind_of("event_data", event_list)
+        with self._lock:
+            self._event_data[name] = event_list
+            self._event_identities[name] = dataset_id
+
     def add_event_data_if_absent(self, name: str, event_list: Any) -> bool:
         """Atomically add an EventList without replacing an existing name."""
         kind_of("event_data", event_list)

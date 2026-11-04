@@ -558,6 +558,12 @@ app = create_app()
 
 
 if __name__ == "__main__":
+    # Packaged (frozen) builds must hand spawned analysis workers to
+    # multiprocessing before doing anything else.
+    import multiprocessing
+
+    multiprocessing.freeze_support()
+
     # Suppress /api/status access logs to avoid log flooding during polling
     logging.getLogger("uvicorn.access").addFilter(StatusEndpointFilter())
 

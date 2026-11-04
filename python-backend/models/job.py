@@ -57,6 +57,17 @@ def _public_warnings(result: Dict[str, Any]) -> list[str] | None:
     return warnings or None
 
 
+def _public_analysis_result(result: Any) -> Dict[str, Any] | None:
+    """Name, kind and identity of a stored analysis result."""
+    if not isinstance(result, dict):
+        return None
+    return {
+        key: result[key]
+        for key in ("name", "kind", "result_id")
+        if isinstance(result.get(key), str)
+    }
+
+
 def _public_single_result(result: Any) -> Dict[str, Any] | None:
     """Project an arbitrary internal result onto the public science summary."""
     if not isinstance(result, dict):
@@ -121,6 +132,8 @@ class JobType(str, Enum):
     LOAD_EVENT_LIST = "load_event_list"
     LOAD_BATCH = "load_batch"
     LOAD_FROM_URL = "load_from_url"
+    #: A long scientific computation run in a separate worker process.
+    ANALYSIS = "analysis"
     # Future job types:
     # GENERATE_LIGHTCURVE = "generate_lightcurve"
     # COMPUTE_POWER_SPECTRUM = "compute_power_spectrum"
@@ -166,6 +179,8 @@ class Job:
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     display_name: str = ""
+    #: Number of partial (preview) results published by a running analysis.
+    partial_count: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert job to dictionary for JSON serialization."""
@@ -176,11 +191,14 @@ class Job:
             JobStatus.FAILED: "Failed",
             JobStatus.CANCELLED: "Cancelled",
         }
-        public_result = (
-            _public_batch_result(self.result)
-            if self.type == JobType.LOAD_BATCH
-            else _public_single_result(self.result)
-        )
+        if self.type == JobType.ANALYSIS:
+            # Analysis jobs carry only application-built summaries and
+            # scientific messages, never paths or file details.
+            public_result = _public_analysis_result(self.result)
+        elif self.type == JobType.LOAD_BATCH:
+            public_result = _public_batch_result(self.result)
+        else:
+            public_result = _public_single_result(self.result)
         public_display_name = (
             self.display_name
             if _PUBLIC_DISPLAY.fullmatch(self.display_name)
@@ -191,16 +209,25 @@ class Job:
             "type": self.type.value,
             "status": self.status.value,
             "progress": self.progress,
-            "progress_message": progress_messages[self.status],
+            "progress_message": (
+                self.progress_message
+                if self.type == JobType.ANALYSIS and self.status == JobStatus.RUNNING
+                else progress_messages[self.status]
+            ),
             "total_items": self.total_items,
             "completed_items": self.completed_items,
             "created_at": self.created_at,
             "started_at": self.started_at,
             "completed_at": self.completed_at,
             "result": public_result,
-            "error": "The background job could not be completed"
+            "error": (
+                self.error
+                if self.type == JobType.ANALYSIS
+                else "The background job could not be completed"
+            )
             if self.error
             else None,
+            "partial_count": self.partial_count,
             "display_name": public_display_name,
         }
 

@@ -552,6 +552,86 @@ class SpectrumService(BaseService):
                 norm=norm,
             )
 
+    def submit_dynamical_power_spectrum_job(
+        self,
+        job_manager,
+        event_list_name: str,
+        dt: float,
+        segment_size: float,
+        norm: str = "leahy",
+        output_name: Optional[str] = None,
+        selection: Optional[EventSelection] = None,
+    ) -> Dict[str, Any]:
+        """Run create_dynamical_power_spectrum in a cancellable worker process."""
+        try:
+            if output_name is not None:
+                problem = validate_derived_name(output_name)
+                if problem:
+                    raise ValueError(problem)
+                if self.state.get_spectrum_data(output_name) is not None:
+                    raise ValueError(
+                        f"Spectrum '{output_name}' already exists; choose a new name"
+                    )
+            captured = self.state.copy_event_data_with_identity(event_list_name)
+            if captured is None:
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message=f"EventList '{event_list_name}' not found",
+                    error=None,
+                )
+            events, dataset_id = captured
+            state = self.state
+
+            def publish(worker_result):
+                response = worker_result["response"]
+                if not response.get("success"):
+                    raise ValueError(response.get("message") or "The analysis failed")
+                stored = worker_result["stored"]
+                if stored is not None and not state.add_spectrum_data_if_absent(
+                    output_name, stored
+                ):
+                    raise ValueError(
+                        f"Spectrum '{output_name}' already exists; choose a new name"
+                    )
+                data = response["data"]
+                summary = {
+                    "name": output_name or "",
+                    "kind": "dynamical_power_spectrum",
+                    "result_id": data.get("result_id") or "",
+                }
+                return summary, response
+
+            job = job_manager.submit_analysis_job(
+                target="services.analysis_jobs:dynamical_power_spectrum",
+                payload={
+                    "events": events,
+                    "event_list_name": event_list_name,
+                    "dataset_id": dataset_id,
+                    "session_id": self.state.session_id,
+                    "selection": selection.model_dump(exclude_none=True)
+                    if selection is not None
+                    else None,
+                    "params": {
+                        "dt": dt,
+                        "segment_size": segment_size,
+                        "norm": norm,
+                        "output_name": output_name,
+                    },
+                },
+                display_name="Dynamical power spectrum",
+                publish=publish,
+            )
+            return self.create_result(
+                success=True,
+                data={"job_id": job.id},
+                message="Dynamical power spectrum started as a background job",
+            )
+        except Exception as e:
+            return self.handle_error(
+                e, "Starting a dynamical power spectrum job", event_list=event_list_name
+            )
+
     def create_dynamical_power_spectrum(
         self,
         event_list_name: str,

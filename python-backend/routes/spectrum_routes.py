@@ -84,6 +84,8 @@ class CreateDynamicalPowerSpectrumRequest(BaseModel):
     segment_size: float
     norm: str = "leahy"
     output_name: Optional[str] = None
+    #: Run in a worker process as a cancellable background job.
+    background: bool = False
 
 
 class RebinSpectrumRequest(BaseModel):
@@ -170,9 +172,25 @@ async def create_averaged_cross_spectrum(
 @router.post("/dynamical-power-spectrum")
 async def create_dynamical_power_spectrum(
     request: CreateDynamicalPowerSpectrumRequest,
+    http_request: Request,
     service: SpectrumService = Depends(get_spectrum_service),
 ):
-    """Create a dynamical power spectrum from an EventList."""
+    """Create a dynamical power spectrum from an EventList.
+
+    With ``background`` the same calculation runs in a worker process and the
+    response names the job; its result is identical to a direct request.
+    """
+    if request.background:
+        return await asyncio.to_thread(
+            service.submit_dynamical_power_spectrum_job,
+            http_request.app.state.job_manager,
+            event_list_name=request.event_list_name,
+            selection=request.selection,
+            dt=request.dt,
+            segment_size=request.segment_size,
+            norm=request.norm,
+            output_name=request.output_name,
+        )
     return await asyncio.to_thread(
         service.create_dynamical_power_spectrum,
         event_list_name=request.event_list_name,
