@@ -208,7 +208,6 @@ const DataIngestionPage: React.FC = () => {
   const { addNotification } = useUIStore();
 
   // Job store for watching job completions and refreshing data
-  const { jobs } = useJobStore();
 
   // Form state - Local File (batch mode)
   const [selectedFiles, setSelectedFiles] = useState<GrantedFileSelection[]>([]);
@@ -274,7 +273,8 @@ const DataIngestionPage: React.FC = () => {
 
   // Loaded data state
   const [loadedEventLists, setLoadedEventLists] = useState<EventListSummary[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  // The mount effect below starts the first refresh immediately
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(true);
 
   // Alert state (local page alert)
   const [alert, setAlert] = useState<AlertState>({
@@ -313,32 +313,38 @@ const DataIngestionPage: React.FC = () => {
     () => getLastLoadedFiles()?.files ?? []
   );
 
-  // Fetch loaded event lists on mount and after operations
-  const fetchEventLists = useCallback(async (): Promise<void> => {
-    setIsRefreshing(true);
-    try {
-      // Ensure we have the correct port
-      await apiClient.getPort();
-      const response = await dataApi.listEventLists();
+  // Fetch loaded event lists on mount and after operations. The result is
+  // applied from promise callbacks so the mount effect sets no state synchronously.
+  const applyEventLists = useCallback((): Promise<void> => apiClient
+    // Ensure we have the correct port
+    .getPort()
+    .then(() => dataApi.listEventLists())
+    .then((response) => {
       if (response.success && response.data) {
         setLoadedEventLists(response.data);
       }
-    } catch (error) {
+    })
+    .catch((error: unknown) => {
       console.error('Failed to fetch event lists:', error);
-    } finally {
+    })
+    .finally(() => {
       setIsRefreshing(false);
-    }
-  }, []);
+    }), []);
+
+  const fetchEventLists = useCallback(async (): Promise<void> => {
+    setIsRefreshing(true);
+    await applyEventLists();
+  }, [applyEventLists]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Fetching loaded event lists from the backend on mount.
-    fetchEventLists();
-  }, [fetchEventLists]);
+    void applyEventLists();
+  }, [applyEventLists]);
 
   // Refresh event list when jobs complete
-  useEffect(() => {
+  useEffect(() => useJobStore.subscribe((state, previous) => {
+    if (state.jobs === previous.jobs) return;
     // Count completed load jobs
-    const completedLoadJobs = Object.values(jobs).filter(
+    const completedLoadJobs = Object.values(state.jobs).filter(
       (job) =>
         job.status === 'completed' &&
         (job.type === 'load_event_list' || job.type === 'load_batch' || job.type === 'load_from_url')
@@ -346,10 +352,9 @@ const DataIngestionPage: React.FC = () => {
 
     if (completedLoadJobs.length > 0) {
       // Refresh the event list to show newly loaded data
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Completed load jobs in the job store trigger a backend refresh.
-      fetchEventLists();
+      void fetchEventLists();
     }
-  }, [jobs, fetchEventLists]);
+  }), [fetchEventLists]);
 
   // Show alert helper - sends all alerts to the global notification center
   const showAlert = (message: string, severity: AlertSeverity, title?: string): void => {

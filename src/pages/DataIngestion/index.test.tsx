@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   checkBatchFileSize: vi.fn(),
   listExportableObjects: vi.fn(),
   exportObject: vi.fn(),
+  jobStoreListeners: new Set<(state: unknown, previous: unknown) => void>(),
 }));
 
 vi.mock('@/api/client', () => ({ apiClient: { getPort: mocks.getPort } }));
@@ -37,7 +38,14 @@ vi.mock('@/api/ioApi', () => ({
 vi.mock('@/store/uiStore', () => ({
   useUIStore: () => ({ addNotification: mocks.addNotification }),
 }));
-vi.mock('@/store/jobStore', () => ({ useJobStore: () => ({ jobs: {} }) }));
+vi.mock('@/store/jobStore', () => ({
+  useJobStore: Object.assign(() => ({ jobs: {} }), {
+    subscribe: (listener: (state: unknown, previous: unknown) => void) => {
+      mocks.jobStoreListeners.add(listener);
+      return () => { mocks.jobStoreListeners.delete(listener); };
+    },
+  }),
+}));
 vi.mock('./HeasarcBrowserPanel', () => ({ default: () => null }));
 
 const exportCapabilityResponse = (...names: string[]) => ({
@@ -133,6 +141,27 @@ describe('Data Ingestion granted selections', () => {
       configurable: true,
       value: originalElectronApi,
     });
+  });
+
+  it('refreshes loaded event lists when a load job completes', async () => {
+    render(<DataIngestionPage />);
+    await waitFor(() => expect(mocks.listEventLists).toHaveBeenCalledTimes(1));
+
+    const previous = { jobs: {} };
+    act(() => {
+      for (const listener of mocks.jobStoreListeners) {
+        listener({ jobs: { a: { status: 'running', type: 'load_event_list' } } }, previous);
+      }
+    });
+    await act(async () => {});
+    expect(mocks.listEventLists).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      for (const listener of mocks.jobStoreListeners) {
+        listener({ jobs: { a: { status: 'completed', type: 'load_event_list' } } }, previous);
+      }
+    });
+    await waitFor(() => expect(mocks.listEventLists).toHaveBeenCalledTimes(2));
   });
 
   it('persists historical path hints without persisting grants', () => {

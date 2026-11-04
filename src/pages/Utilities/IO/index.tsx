@@ -846,7 +846,7 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
 
   useEffect(() => {
     dialogRevision.current += 1;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- A backend restart invalidates destination grants issued by the old backend.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- A backend restart must clear destination grants in the same step that bumps dialogRevision, so a dialog resolving in between cannot keep a grant from the old backend.
     setDestination(null);
     setDestinationError(null);
     return () => { dialogRevision.current += 1; };
@@ -859,7 +859,7 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
       if (format && formats.includes(format)) return;
       dialogRevision.current += 1;
       setFormat(formats[0] ?? '');
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Selections must follow the backend's exportable-object catalog.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- When the catalog drops the selection, the destination reset must happen with the dialogRevision bump above, for the same reason as the backend-restart reset.
       setDestination(null);
       setDestinationError(null);
       return;
@@ -1211,7 +1211,7 @@ const IOPage: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- The catalog request is keyed to the backend generation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Losing the backend must clear file and RMF grants after latestBackendKey moves on; a render-time reset could let a grant from the departing backend land and reappear when the same generation is ready again.
     setLoadingObjects(true);
     setObjectsError(null);
     if (!backendAvailable) {
