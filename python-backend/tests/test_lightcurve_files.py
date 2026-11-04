@@ -7,7 +7,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 from astropy.io import fits
+from numba.core.errors import TypingError
 
+from services import lightcurve_files
 from services.lightcurve_files import (
     LightcurveFileError,
     describe_lightcurve_hdus,
@@ -152,6 +154,48 @@ def _read(path, **options):
 
 
 # --- reading -------------------------------------------------------------
+
+
+class _NoExtendedPrecisionLightcurve(lightcurve_files.Lightcurve):
+    """Stingray < 2.2.10 with a recent numba on x86_64: its sortedness check
+    lets numba's TypingError escape for extended-precision (longdouble) times."""
+
+    def __init__(self, time, *args, **kwargs):
+        if np.asarray(time).dtype.char == "g":
+            raise TypingError("Unsupported array dtype: float128")
+        super().__init__(time, *args, **kwargs)
+
+
+@pytest.fixture
+def no_extended_precision(monkeypatch):
+    monkeypatch.setattr(lightcurve_files, "Lightcurve", _NoExtendedPrecisionLightcurve)
+    lightcurve_files.lightcurve_accepts_longdouble.cache_clear()
+    yield
+    lightcurve_files.lightcurve_accepts_longdouble.cache_clear()
+
+
+def test_releases_without_extended_precision_get_float64_times(tmp_path, no_extended_precision):
+    assert not lightcurve_files.lightcurve_accepts_longdouble()
+    for path, reader in (
+        (nicer_like(tmp_path / "nicer.lc"), "stingray.io.lcurve_from_fits"),
+        (DATA / "lcurveA.fits", "stingray.io.lcurve_from_fits"),
+    ):
+        lc, provenance, _ = _read(path)
+        assert provenance["reader"] == reader
+        assert lc.time.dtype.char == "d" and np.asarray(lc.gti).dtype.char == "d"
+        assert provenance["time_precision"] == "float64"
+    lc, provenance, _ = _read(generic_counts(tmp_path / "plain.fits"), mjdref=58000.0)
+    assert provenance["reader"] == "application_ogip"
+    assert lc.time.dtype.char == "d"
+    assert provenance["time_precision"] == "float64"
+
+
+def test_extended_precision_is_kept_where_stingray_supports_it(tmp_path):
+    lightcurve_files.lightcurve_accepts_longdouble.cache_clear()
+    assert lightcurve_files.lightcurve_accepts_longdouble()
+    lc, provenance, _ = _read(generic_counts(tmp_path / "plain.fits"), mjdref=58000.0)
+    assert lc.time.dtype == np.longdouble
+    assert "time_precision" not in provenance
 
 
 def test_nicer_like_file_respects_mjdref_timezero_fracexp_and_gtis(tmp_path):

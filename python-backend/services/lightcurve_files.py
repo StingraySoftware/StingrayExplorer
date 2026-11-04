@@ -8,10 +8,16 @@ OGIP tables (multi-band rate columns, bare COUNTS tables, missing TSTART) use
 an explicit reader following the same conventions. The reference epoch is
 never guessed for times in seconds: a missing MJDREF is an error unless the
 request supplies it or the header states the times are relative.
+
+Times stay in extended precision (``np.longdouble``) wherever the installed
+Stingray accepts them. Releases before 2.2.10 combined with a recent numba
+reject 80-bit times (x86_64) in ``Lightcurve``'s checks; there times and GTIs
+are built in float64 and the provenance records ``time_precision``.
 """
 
 import warnings
 from copy import deepcopy
+from functools import lru_cache
 
 import numpy as np
 import stingray
@@ -28,6 +34,18 @@ ERROR_COLUMNS = {
 }
 GTI_EXTENSIONS = ("GTI", "STDGTI")
 SECONDS_PER = {"s": 1.0, "d": 86400.0}
+
+
+@lru_cache(maxsize=1)
+def lightcurve_accepts_longdouble():
+    """Whether the installed Stingray builds a Lightcurve from longdouble times."""
+    try:
+        Lightcurve(
+            np.array([0.5, 1.5], dtype=np.longdouble), [1.0, 1.0], dt=1.0, skip_checks=False
+        )
+    except Exception:  # numba typing errors escape older releases' checks
+        return False
+    return True
 
 
 class LightcurveFileError(ValueError):
@@ -260,6 +278,11 @@ def read_lightcurve_fits(
                 )
                 reader = "application_ogip"
             errors = fields.pop("err")
+            time_precision = None
+            if not lightcurve_accepts_longdouble():
+                fields["time"] = np.asarray(fields["time"], dtype=np.float64)
+                fields["gti"] = np.asarray(fields["gti"], dtype=np.float64)
+                time_precision = "float64"
             lightcurve = Lightcurve(
                 **fields,
                 err=errors,
@@ -297,6 +320,8 @@ def read_lightcurve_fits(
             "timesys": header.get("TIMESYS"),
             "stingray_version": stingray.__version__,
         }
+        if time_precision is not None:
+            provenance["time_precision"] = time_precision
     for attribute, key in (("mission", "TELESCOP"), ("instr", "INSTRUME"), ("timesys", "TIMESYS")):
         if header.get(key) is not None:
             setattr(lightcurve, attribute, str(header.get(key)))
