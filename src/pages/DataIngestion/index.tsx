@@ -304,8 +304,14 @@ const DataIngestionPage: React.FC = () => {
   const saveFormatsRequestIdRef = useRef(0);
 
   // Last loaded files state (for restore functionality)
-  const [hasLastLoadedFiles, setHasLastLoadedFiles] = useState<boolean>(false);
-  const [lastLoadedHints, setLastLoadedHints] = useState<string[]>([]);
+  // Read the last loaded files once on mount
+  const [hasLastLoadedFiles, setHasLastLoadedFiles] = useState<boolean>(() => {
+    const lastLoaded = getLastLoadedFiles();
+    return lastLoaded !== null && lastLoaded.files.length > 0;
+  });
+  const [lastLoadedHints, setLastLoadedHints] = useState<string[]>(
+    () => getLastLoadedFiles()?.files ?? []
+  );
 
   // Fetch loaded event lists on mount and after operations
   const fetchEventLists = useCallback(async (): Promise<void> => {
@@ -325,6 +331,7 @@ const DataIngestionPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Fetching loaded event lists from the backend on mount.
     fetchEventLists();
   }, [fetchEventLists]);
 
@@ -339,16 +346,10 @@ const DataIngestionPage: React.FC = () => {
 
     if (completedLoadJobs.length > 0) {
       // Refresh the event list to show newly loaded data
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Completed load jobs in the job store trigger a backend refresh.
       fetchEventLists();
     }
   }, [jobs, fetchEventLists]);
-
-  // Check for last loaded files on mount
-  useEffect(() => {
-    const lastLoaded = getLastLoadedFiles();
-    setHasLastLoadedFiles(lastLoaded !== null && lastLoaded.files.length > 0);
-    setLastLoadedHints(lastLoaded?.files ?? []);
-  }, []);
 
   // Show alert helper - sends all alerts to the global notification center
   const showAlert = (message: string, severity: AlertSeverity, title?: string): void => {

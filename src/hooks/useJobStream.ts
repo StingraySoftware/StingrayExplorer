@@ -8,7 +8,7 @@
  * including individual error notifications for batch job failures.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useInsertionEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useJobStore } from '@/store/jobStore';
 import { useUIStore, NotificationType } from '@/store/uiStore';
@@ -122,6 +122,9 @@ export function useJobStream(): void {
   // Track which jobs we've already notified to avoid duplicates on reconnection
   const notifiedJobsRef = useRef<Set<string>>(new Set());
   const connectionSequenceRef = useRef(0);
+  // Reconnection timers call the latest connect without referencing it
+  // inside its own definition.
+  const connectRef = useRef<() => Promise<void>>(async () => undefined);
 
   /**
    * Handle job completion/failure notifications.
@@ -249,7 +252,7 @@ export function useJobStream(): void {
       const delay = RECONNECT_DELAY * Math.min(reconnectAttempts + 1, 3); // Exponential backoff up to 3x
       console.log(`[JobStream] Reconnecting in ${delay}ms (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
       reconnectTimeoutRef.current = setTimeout(() => {
-        if (isCurrentConnection()) void connect();
+        if (isCurrentConnection()) void connectRef.current();
       }, delay);
     } else if (isCurrentConnection() && reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       console.error('[JobStream] Max reconnection attempts reached, giving up');
@@ -264,6 +267,10 @@ export function useJobStream(): void {
     incrementReconnectAttempts,
     resetReconnectAttempts,
   ]);
+
+  useInsertionEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   const disconnect = useCallback(() => {
     shouldConnectRef.current = false;

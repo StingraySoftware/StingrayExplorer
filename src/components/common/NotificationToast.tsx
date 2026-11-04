@@ -5,7 +5,7 @@
  * Notifications slide in from the right side and auto-dismiss after a few seconds.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Snackbar,
   Alert,
@@ -37,19 +37,15 @@ const NotificationToast: React.FC = () => {
   const [currentNotification, setCurrentNotification] = useState<Notification | null>(null);
   const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
 
-  // Watch for new notifications
-  useEffect(() => {
-    if (notifications.length > 0) {
-      const latestNotification = notifications[0];
-
-      // Only show toast for new, unread notifications
-      if (latestNotification.id !== lastNotificationId && !latestNotification.read) {
-        setCurrentNotification(latestNotification);
-        setLastNotificationId(latestNotification.id);
-        setOpen(true);
-      }
-    }
-  }, [notifications, lastNotificationId]);
+  // Watch for new notifications, adjusting state during render when the
+  // newest one changes
+  const latestNotification = notifications.length > 0 ? notifications[0] : null;
+  // Only show toast for new, unread notifications
+  if (latestNotification && latestNotification.id !== lastNotificationId && !latestNotification.read) {
+    setCurrentNotification(latestNotification);
+    setLastNotificationId(latestNotification.id);
+    setOpen(true);
+  }
 
   const handleClose = (_event?: React.SyntheticEvent | Event, reason?: string): void => {
     // Don't close on clickaway - only on explicit close or timeout

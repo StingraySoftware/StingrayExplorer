@@ -1,6 +1,6 @@
 import { useWorkspaceState } from '@/api/workspaceSession';
 import ProjectPanel from '@/components/analysis/ProjectPanel';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useInsertionEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -824,6 +824,7 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
 
   useEffect(() => {
     dialogRevision.current += 1;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- A backend restart invalidates destination grants issued by the old backend.
     setDestination(null);
     setDestinationError(null);
     return () => { dialogRevision.current += 1; };
@@ -836,6 +837,7 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
       if (format && formats.includes(format)) return;
       dialogRevision.current += 1;
       setFormat(formats[0] ?? '');
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Selections must follow the backend's exportable-object catalog.
       setDestination(null);
       setDestinationError(null);
       return;
@@ -859,7 +861,9 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
       : null;
   const selectionKey = `${backendKey}:${selectedObject ? getObjectKey(selectedObject) : ''}:${format}`;
   const latestSelection = useRef(selectionKey);
-  latestSelection.current = selectionKey;
+  useInsertionEffect(() => {
+    latestSelection.current = selectionKey;
+  });
 
   const selectObject = (nextKey: string): void => {
     dialogRevision.current += 1;
@@ -1120,7 +1124,9 @@ const IOPage: React.FC = () => {
   const backendAvailable = generation === null || isReady;
   const backendKey = `${generation ?? 'unmanaged'}:${backendAvailable}`;
   const latestBackendKey = useRef(backendKey);
-  latestBackendKey.current = backendKey;
+  useInsertionEffect(() => {
+    latestBackendKey.current = backendKey;
+  });
   const renderedEpoch = captureBackendEpoch();
   const [tab, setTab] = useWorkspaceState('Utilities/IO/index.tsx:tab:6', 0);
   const [fileResource, setFileResource] = useState<{
@@ -1167,6 +1173,7 @@ const IOPage: React.FC = () => {
 
   useEffect(() => {
     let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- The catalog request is keyed to the backend generation.
     setLoadingObjects(true);
     setObjectsError(null);
     if (!backendAvailable) {

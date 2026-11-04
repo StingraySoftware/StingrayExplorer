@@ -29,7 +29,9 @@ const GrantedFileField: React.FC<GrantedFileFieldProps> = ({
   const mounted = React.useRef(true);
   const selectionKey = JSON.stringify([label, value?.path, value?.grant, filters]);
   const currentSelection = React.useRef({ selectionKey, disabled });
-  currentSelection.current = { selectionKey, disabled };
+  React.useInsertionEffect(() => {
+    currentSelection.current = { selectionKey, disabled };
+  });
   React.useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; requestSequence.current += 1; };

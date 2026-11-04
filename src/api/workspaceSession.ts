@@ -1,5 +1,5 @@
 import { useUIStore } from '@/store/uiStore';
-import { Dispatch, SetStateAction, useCallback, useRef, useSyncExternalStore } from 'react';
+import { Dispatch, SetStateAction, useCallback, useState, useSyncExternalStore } from 'react';
 import { captureBackendEpoch } from './backendEpoch';
 
 export interface WorkspaceSession {
@@ -42,9 +42,13 @@ export function restoreWorkspaceSession(value?: WorkspaceSession): void {
   for (const listener of restoreListeners) listener(value?.path);
 }
 export function useWorkspaceState<T>(key: string, initial: T | (() => T)): [T, Dispatch<SetStateAction<T>>] {
-  const defaults = useRef<{ key: string; value: T } | null>(null);
-  if (!defaults.current || defaults.current.key !== key) defaults.current = { key, value: typeof initial === 'function' ? (initial as () => T)() : initial };
-  const fallback = useCallback(() => defaults.current!.value, []);
+  const resolveDefault = (): { key: string; value: T } => ({ key, value: typeof initial === 'function' ? (initial as () => T)() : initial });
+  const [storedDefaults, setStoredDefaults] = useState(resolveDefault);
+  // Resolve a changed key's default once, during render, as React's derived-state pattern.
+  let defaults = storedDefaults;
+  if (storedDefaults.key !== key) { defaults = resolveDefault(); setStoredDefaults(defaults); }
+  const defaultValue = defaults.value;
+  const fallback = useCallback(() => defaultValue, [defaultValue]);
   const subscribe = useCallback((listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; }, []);
   const read = useCallback((): T => {
     current();

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useInsertionEffect, useRef, useState } from 'react';
 import { rememberAnalysis, forgetAnalysis, restoredAnalysis, onProjectRestored } from '@/api/projectResults';
 import { ApiResponse } from '@/api/client';
 import { captureBackendEpoch, isBackendEpochCurrent } from '@/api/backendEpoch';
@@ -87,7 +87,9 @@ export function useAnalysisRunner<T>(label: string) {
   const addNotification = useUIStore((s) => s.addNotification);
   const backend = useBackendContext();
   const latestBackend = useRef(backend);
-  latestBackend.current = backend;
+  useInsertionEffect(() => {
+    latestBackend.current = backend;
+  });
   const sequence = useRef(0);
   const mounted = useRef(true);
   const inFlight = useRef<{

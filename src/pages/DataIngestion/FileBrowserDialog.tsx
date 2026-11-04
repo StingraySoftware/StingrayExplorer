@@ -303,6 +303,7 @@ const FileBrowserDialog: React.FC<FileBrowserDialogProps> = ({
   // Load files when dialog opens
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Listing the archive is an external request; loadFiles resets its own request state first.
       void loadFiles();
     } else {
       downloadOperationId.current += 1;

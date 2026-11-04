@@ -85,7 +85,12 @@ export const NumericResultTable: React.FC<NumericResultTableProps> = ({
 }) => {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(pageSize);
-  React.useEffect(() => setPage(0), [rows]);
+  // Return to the first page whenever a new result set arrives.
+  const [pagedRows, setPagedRows] = React.useState(rows);
+  if (pagedRows !== rows) {
+    setPagedRows(rows);
+    setPage(0);
+  }
   const visible = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   const copy = (): void => {
     const header = columns.map(formatColumnHeader).join('\t');

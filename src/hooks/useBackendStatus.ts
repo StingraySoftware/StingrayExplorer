@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useInsertionEffect, useRef, useState } from 'react';
 import type { BackendPhase, BackendStatus, BackendStatusSource } from '@/types/backendStatus';
 import { publishBackendEpoch } from '@/api/backendEpoch';
 
@@ -66,7 +66,9 @@ export function useBackendStatus(
     : initialBackendState);
   const currentState = useRef(backendState);
   const transitionListener = useRef(onTransition);
-  transitionListener.current = onTransition;
+  useInsertionEffect(() => {
+    transitionListener.current = onTransition;
+  });
 
   useEffect(() => {
     if (!statusSource) return;
