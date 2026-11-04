@@ -13,6 +13,8 @@ from stingray import Lightcurve
 from stingray.gti import create_gti_mask, cross_two_gtis
 
 from .analysis_helpers import event_gtis
+from models.event_selection import EventSelection
+
 from .base_service import BaseService
 from .scientific_compatibility import (
     compatible_event_lightcurve,
@@ -103,6 +105,7 @@ class LightcurveService(BaseService):
         output_name: str,
         gti: Optional[List[List[float]]] = None,
         max_points: Optional[int] = DEFAULT_MAX_PLOT_POINTS,
+        selection: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Create a Lightcurve from an EventList.
@@ -120,7 +123,9 @@ class LightcurveService(BaseService):
             Result dictionary with lightcurve data
         """
         try:
-            source = self.state.copy_event_data_with_identity(event_list_name)
+            source = self.state.copy_event_data_with_identity(
+                event_list_name, selection
+            )
             if source is None:
                 return self.create_result(
                     success=False,

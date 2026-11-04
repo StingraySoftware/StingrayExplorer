@@ -45,6 +45,9 @@ import numpy as np
 from stingray import Lightcurve
 from stingray.crosscorrelation import AutoCorrelation, CrossCorrelation
 
+from models.event_selection import EventSelection
+
+from .event_selection import band_overlap_warning, selection_record
 from .analysis_helpers import (
     collect_warnings,
     common_gtis,
@@ -302,6 +305,7 @@ class CorrelationService(BaseService):
         dt: float,
         mode: str = "same",
         norm: str = "none",
+        selection: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """Auto-correlate one event list's light curve with itself.
 
@@ -332,7 +336,7 @@ class CorrelationService(BaseService):
                     error=None,
                 )
 
-            event_list = self.state.get_event_data(event_list_name)
+            event_list = self.state.event_data_for_analysis(event_list_name, selection)
             empty = _empty_error(event_list, event_list_name)
             if empty:
                 return self.create_result(
@@ -374,6 +378,7 @@ class CorrelationService(BaseService):
                     correlation = AutoCorrelation(lc, mode=mode)
 
             data = self._build_payload(correlation, mode, norm, warnings_out)
+            data["selection"] = selection_record(event_list)
             return self.create_result(
                 success=True,
                 data=data,
@@ -402,6 +407,8 @@ class CorrelationService(BaseService):
         dt: float,
         mode: str = "same",
         norm: str = "none",
+        selection_1: Optional[EventSelection] = None,
+        selection_2: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """Cross-correlate two event lists binned onto one shared grid.
 
@@ -423,8 +430,8 @@ class CorrelationService(BaseService):
                         error=None,
                     )
 
-            events1 = self.state.get_event_data(event_list_1_name)
-            events2 = self.state.get_event_data(event_list_2_name)
+            events1 = self.state.event_data_for_analysis(event_list_1_name, selection_1)
+            events2 = self.state.event_data_for_analysis(event_list_2_name, selection_2)
             for event_list, name in (
                 (events1, event_list_1_name),
                 (events2, event_list_2_name),
@@ -462,6 +469,15 @@ class CorrelationService(BaseService):
                     )
 
             warnings_out: List[str] = []
+            band_warning = band_overlap_warning(
+                self.state.get_event_data(event_list_1_name),
+                event_list_1_name,
+                selection_1,
+                event_list_2_name,
+                selection_2,
+            )
+            if band_warning:
+                warnings_out.append(band_warning)
             for event_list, name in (
                 (events1, event_list_1_name),
                 (events2, event_list_2_name),
@@ -499,6 +515,10 @@ class CorrelationService(BaseService):
                 correlation = CrossCorrelation(lc1, lc2, mode=mode, norm=norm)
 
             data = self._build_payload(correlation, mode, norm, warnings_out)
+            data["selections"] = [
+                selection_record(events1),
+                selection_record(events2),
+            ]
             return self.create_result(
                 success=True,
                 data=data,

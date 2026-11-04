@@ -9,6 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
+from models.event_selection import EventSelection
 
 from services.deadtime_service import DeadtimeService
 
@@ -29,6 +30,7 @@ class PdsCorrectionRequest(BaseModel):
     # of 2, so the service always builds the spectrum with norm="leahy".
     # No `paralyzable` field: stingray raises NotImplementedError for it.
     event_list_name: str
+    selection: Optional[EventSelection] = None
     dt: float
     segment_size: float
     dead_time: float
@@ -39,6 +41,8 @@ class PdsCorrectionRequest(BaseModel):
 class FadCorrectionRequest(BaseModel):
     event_list_1_name: str
     event_list_2_name: str
+    selection_1: Optional[EventSelection] = None
+    selection_2: Optional[EventSelection] = None
     dt: float
     segment_size: float
     norm: str = "frac"
@@ -55,6 +59,7 @@ async def pds_correction(
     return await asyncio.to_thread(
         service.calculate_pds_correction,
         event_list_name=request.event_list_name,
+        selection=request.selection,
         dt=request.dt,
         segment_size=request.segment_size,
         dead_time=request.dead_time,
@@ -73,6 +78,8 @@ async def fad_correction(
         service.calculate_fad_correction,
         event_list_1_name=request.event_list_1_name,
         event_list_2_name=request.event_list_2_name,
+        selection_1=request.selection_1,
+        selection_2=request.selection_2,
         dt=request.dt,
         segment_size=request.segment_size,
         norm=request.norm,

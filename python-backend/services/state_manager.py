@@ -407,6 +407,17 @@ class StateManager:
 
         return apply_event_selection(detached, selection), dataset_id
 
+    def event_data_for_analysis(self, name: str, selection: Any = None) -> Any:
+        """The stored EventList, or a selected private copy for a selection.
+
+        Without a selection this is exactly ``get_event_data(name)``, so
+        unselected analyses keep their established behaviour.
+        """
+        if selection is None or selection.is_empty():
+            return self.get_event_data(name)
+        source = self.copy_event_data_with_identity(name, selection)
+        return None if source is None else source[0]
+
     def get_event_data(self, name: Optional[str] = None) -> Any:
         """
         Get event list(s) from state.

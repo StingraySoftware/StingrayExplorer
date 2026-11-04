@@ -29,6 +29,9 @@ from stingray.varenergyspectrum import (
     RmsSpectrum,
 )
 
+from models.event_selection import NonSpectralEventSelection
+
+from .event_selection import selection_record
 from .analysis_helpers import collect_warnings, finite_list, segment_size_error
 from .scientific_compatibility import mask_legacy_low_count_rms
 from .base_service import BaseService
@@ -255,11 +258,11 @@ class VarEnergyService(BaseService):
     # shared validation
     # ------------------------------------------------------------------
 
-    def _resolve_event_list(self, event_list_name: str):
+    def _resolve_event_list(self, event_list_name: str, selection=None):
         """Return (event_list, error_message). Exactly one is not None."""
         if not self.state.has_event_data(event_list_name):
             return None, f"EventList '{event_list_name}' not found"
-        event_list = self.state.get_event_data(event_list_name)
+        event_list = self.state.event_data_for_analysis(event_list_name, selection)
         if event_list.time is None or len(event_list.time) == 0:
             return None, f"EventList '{event_list_name}' contains no events"
         if getattr(event_list, "energy", None) is None:
@@ -507,6 +510,7 @@ class VarEnergyService(BaseService):
         n_bands: int = 5,
         log_bands: bool = False,
         norm: str = "frac",
+        selection: Optional[NonSpectralEventSelection] = None,
     ) -> Dict[str, Any]:
         """Fractional (or absolute) rms as a function of energy.
 
@@ -515,7 +519,7 @@ class VarEnergyService(BaseService):
         expose a control that would do nothing.
         """
         try:
-            event_list, error = self._resolve_event_list(event_list_name)
+            event_list, error = self._resolve_event_list(event_list_name, selection)
             if error:
                 return self.create_result(False, None, error, None)
 
@@ -559,6 +563,7 @@ class VarEnergyService(BaseService):
                 "norm": norm,
                 "n_segments_hint": _n_segments_hint(event_list, float(segment_size)),
                 "warnings": _humanize_warnings(warnings),
+                "selection": selection_record(event_list),
             }
             return self.create_result(
                 True, data, f"Computed rms spectrum in {n_bands} energy bands"
@@ -585,10 +590,11 @@ class VarEnergyService(BaseService):
         log_bands: bool = False,
         ref_min: Optional[float] = None,
         ref_max: Optional[float] = None,
+        selection: Optional[NonSpectralEventSelection] = None,
     ) -> Dict[str, Any]:
         """Time lag (seconds) as a function of energy."""
         try:
-            event_list, error = self._resolve_event_list(event_list_name)
+            event_list, error = self._resolve_event_list(event_list_name, selection)
             if error:
                 return self.create_result(False, None, error, None)
 
@@ -631,6 +637,7 @@ class VarEnergyService(BaseService):
                 "ref_band": ref_band,
                 "n_segments_hint": _n_segments_hint(event_list, float(segment_size)),
                 "warnings": _humanize_warnings(warnings),
+                "selection": selection_record(event_list),
             }
             return self.create_result(
                 True, data, f"Computed lag spectrum in {n_bands} energy bands"
@@ -653,6 +660,7 @@ class VarEnergyService(BaseService):
         n_bands: int = 5,
         log_bands: bool = False,
         normalization: str = "fvar",
+        selection: Optional[NonSpectralEventSelection] = None,
     ) -> Dict[str, Any]:
         """Excess variance (F_var or unnormalized) as a function of energy.
 
@@ -664,7 +672,7 @@ class VarEnergyService(BaseService):
         ``_GtiAwareExcessVarianceSpectrum`` rather than stingray's class.
         """
         try:
-            event_list, error = self._resolve_event_list(event_list_name)
+            event_list, error = self._resolve_event_list(event_list_name, selection)
             if error:
                 return self.create_result(False, None, error, None)
 
@@ -713,6 +721,7 @@ class VarEnergyService(BaseService):
                 "spectrum_error": finite_list(spectrum.spectrum_error),
                 "normalization": normalization,
                 "warnings": _humanize_warnings(warnings),
+                "selection": selection_record(event_list),
             }
             return self.create_result(
                 True,
@@ -741,10 +750,11 @@ class VarEnergyService(BaseService):
         log_bands: bool = False,
         ref_min: Optional[float] = None,
         ref_max: Optional[float] = None,
+        selection: Optional[NonSpectralEventSelection] = None,
     ) -> Dict[str, Any]:
         """Counts, fractional rms and lag versus energy from one set of params."""
         try:
-            event_list, error = self._resolve_event_list(event_list_name)
+            event_list, error = self._resolve_event_list(event_list_name, selection)
             if error:
                 return self.create_result(False, None, error, None)
 
@@ -811,6 +821,7 @@ class VarEnergyService(BaseService):
                 "norm": "frac",
                 "n_segments_hint": _n_segments_hint(event_list, float(segment_size)),
                 "warnings": _humanize_warnings(warnings),
+                "selection": selection_record(event_list),
             }
             return self.create_result(
                 True,
@@ -839,6 +850,7 @@ class VarEnergyService(BaseService):
         ref_min: Optional[float] = None,
         ref_max: Optional[float] = None,
         norm: str = "abs",
+        selection: Optional[NonSpectralEventSelection] = None,
     ) -> Dict[str, Any]:
         """Covariance spectrum over the whole observation (a single segment).
 
@@ -867,7 +879,7 @@ class VarEnergyService(BaseService):
         ``avg_covariance_spectrum`` is the endpoint for choosing it explicitly.)
         """
         try:
-            event_list, error = self._resolve_event_list(event_list_name)
+            event_list, error = self._resolve_event_list(event_list_name, selection)
             if error:
                 return self.create_result(False, None, error, None)
             segment_size = _longest_gti(event_list)
@@ -913,10 +925,11 @@ class VarEnergyService(BaseService):
         ref_min: Optional[float] = None,
         ref_max: Optional[float] = None,
         norm: str = "abs",
+        selection: Optional[NonSpectralEventSelection] = None,
     ) -> Dict[str, Any]:
         """Covariance spectrum averaged over segments of ``segment_size``."""
         try:
-            event_list, error = self._resolve_event_list(event_list_name)
+            event_list, error = self._resolve_event_list(event_list_name, selection)
             if error:
                 return self.create_result(False, None, error, None)
         except Exception as exc:
@@ -1005,6 +1018,7 @@ class VarEnergyService(BaseService):
                 # actually used; the UI chip reads "(full GTI)" otherwise.
                 **usage,
                 "warnings": _humanize_warnings(warnings),
+                "selection": selection_record(event_list),
             }
             dropped = usage["n_gtis_total"] - usage["n_gtis_used"]
             message = f"Computed covariance spectrum in {n_bands} energy bands"

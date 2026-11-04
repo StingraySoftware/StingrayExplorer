@@ -37,6 +37,7 @@ from routes import (
     timing_routes,
     varenergy_routes,
 )
+from services.event_selection import EventSelectionError
 from services.job_manager import JobManager
 from services.state_manager import StateManager
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -426,6 +427,13 @@ def create_app(
         allow_methods=list(ALLOWED_CORS_METHODS),
         allow_headers=list(ALLOWED_CORS_HEADERS),
     )
+
+    @app.exception_handler(EventSelectionError)
+    async def event_selection_error(
+        _request: Request, exception: EventSelectionError
+    ) -> JSONResponse:
+        """Report a selection that cannot be applied to the requested data."""
+        return JSONResponse(status_code=422, content={"detail": str(exception)})
 
     @app.exception_handler(RequestValidationError)
     async def json_safe_validation_error(

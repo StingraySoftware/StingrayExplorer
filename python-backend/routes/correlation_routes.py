@@ -5,10 +5,11 @@ Implemented per docs/superpowers/plans/2026-07-29-quicklook-remaining-pages.md.
 """
 
 import asyncio
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
-
+from models.event_selection import EventSelection
 from services.correlation_service import CorrelationService
 
 router = APIRouter()
@@ -25,6 +26,7 @@ def get_correlation_service(request: Request) -> CorrelationService:
 # Request Models
 class AutoCorrelationRequest(BaseModel):
     event_list_name: str
+    selection: Optional[EventSelection] = None
     dt: float
     mode: str = "same"
     norm: str = "none"
@@ -33,6 +35,8 @@ class AutoCorrelationRequest(BaseModel):
 class CrossCorrelationRequest(BaseModel):
     event_list_1_name: str
     event_list_2_name: str
+    selection_1: Optional[EventSelection] = None
+    selection_2: Optional[EventSelection] = None
     dt: float
     mode: str = "same"
     norm: str = "none"
@@ -48,6 +52,7 @@ async def auto_correlation(
     return await asyncio.to_thread(
         service.auto_correlation,
         event_list_name=request.event_list_name,
+        selection=request.selection,
         dt=request.dt,
         mode=request.mode,
         norm=request.norm,
@@ -64,6 +69,8 @@ async def cross_correlation(
         service.cross_correlation,
         event_list_1_name=request.event_list_1_name,
         event_list_2_name=request.event_list_2_name,
+        selection_1=request.selection_1,
+        selection_2=request.selection_2,
         dt=request.dt,
         mode=request.mode,
         norm=request.norm,

@@ -50,17 +50,13 @@ def _within(times, intervals):
     return inside
 
 
-def apply_event_selection(events, selection):
-    """Return a selected copy of ``events``, or ``events`` itself when unselected.
-
-    The copy carries an ``event_selection`` record, which ``input_snapshot``
-    publishes in every result identity built from it.
-    """
-    if selection is None or selection.is_empty():
-        return events
-
+def selection_mask(events, selection):
+    """Return (mask, gti) for ``selection`` without copying any photon arrays."""
     times = np.asarray(events.time)
     mask = np.ones(times.shape, dtype=bool)
+    gti = event_gtis(events)
+    if selection is None or selection.is_empty():
+        return mask, gti
 
     if selection.energy_range is not None:
         if _column(events, "energy") is None:
@@ -87,7 +83,6 @@ def apply_event_selection(events, selection):
             raise EventSelectionError("This EventList has no detector ID column.")
         mask &= np.isin(detectors, selection.detector_ids)
 
-    gti = event_gtis(events)
     for label, intervals in (
         ("time intervals", selection.time_intervals),
         ("GTI list", selection.gti),
@@ -102,10 +97,21 @@ def apply_event_selection(events, selection):
     if selection.time_intervals is not None or selection.gti is not None:
         mask &= _within(times, gti)
 
-    kept = int(np.count_nonzero(mask))
-    if kept == 0:
+    if not np.any(mask):
         raise EventSelectionError("The selection leaves no events.")
+    return mask, gti
 
+
+def apply_event_selection(events, selection):
+    """Return a selected copy of ``events``, or ``events`` itself when unselected.
+
+    The copy carries an ``event_selection`` record, which ``input_snapshot``
+    publishes in every result identity built from it.
+    """
+    if selection is None or selection.is_empty():
+        return events
+
+    mask, gti = selection_mask(events, selection)
     selected = events.apply_mask(mask, inplace=False)
     selected.gti = np.asarray(gti)
     for field in _PRESERVED_FIELDS:
@@ -117,8 +123,35 @@ def apply_event_selection(events, selection):
         "detector_ids": _plain(selection.detector_ids),
         "time_intervals": _plain(selection.time_intervals),
         "gti": _plain(selection.gti),
-        "parent_n_events": int(times.size),
-        "n_events": kept,
+        "parent_n_events": int(mask.size),
+        "n_events": int(np.count_nonzero(mask)),
         "effective_gti": [[_decimal(start), _decimal(stop)] for start, stop in gti],
     }
     return selected
+
+
+def selection_record(events):
+    """The applied-selection record carried by a selected copy, if any."""
+    record = getattr(events, "event_selection", None)
+    return deepcopy(record) if record is not None else None
+
+
+def band_overlap_warning(events, name_1, selection_1, name_2, selection_2):
+    """Warn when two selections of the same EventList share photons.
+
+    Shared photons make the two bands' Poisson noise correlated, which biases
+    cross spectra, lags, coherence and cross-correlations. Selections of two
+    different EventLists, or two unselected inputs, are not checked here.
+    """
+    if name_1 != name_2 or (selection_1 is None and selection_2 is None):
+        return None
+    first, _ = selection_mask(events, selection_1)
+    second, _ = selection_mask(events, selection_2)
+    shared = int(np.count_nonzero(first & second))
+    if shared == 0:
+        return None
+    return (
+        f"The two bands of '{name_1}' share photons ({shared} events). Their "
+        "Poisson noise is correlated, which biases cross spectra, lags, "
+        "coherence and cross-correlation; use disjoint bands."
+    )

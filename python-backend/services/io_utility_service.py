@@ -151,7 +151,15 @@ SPLIT_HIGH_PRECISION_TIMING_KEYWORDS = {
     "TIMEZERO": ("TIMEZERI", "TIMEZERF"),
 }
 
-ANALYSIS_RESERVED_FIELDS = {"warnings", "provenance", "parameters", "metadata"}
+# Lineage published with every analysis result; exported as metadata, not columns.
+ANALYSIS_RESERVED_FIELDS = {
+    "warnings",
+    "provenance",
+    "parameters",
+    "metadata",
+    "selection",
+    "selections",
+}
 ANALYSIS_HDF5_FILL_REASON_ATTRIBUTE = "_stingray_hdf5_fill_reason"
 
 

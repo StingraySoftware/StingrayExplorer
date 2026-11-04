@@ -7,6 +7,7 @@ from typing import Dict, Optional, Tuple
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
+from models.event_selection import EventSelection
 
 from services.timing_service import TimingService
 
@@ -24,6 +25,7 @@ def get_timing_service(request: Request) -> TimingService:
 # Request Models
 class CreateBispectrumRequest(BaseModel):
     event_list_name: str
+    selection: Optional[EventSelection] = None
     dt: float
     maxlag: int = 25
     scale: str = "unbiased"
@@ -33,6 +35,7 @@ class CreateBispectrumRequest(BaseModel):
 
 class CalculatePowerColorsRequest(BaseModel):
     event_list_name: str
+    selection: Optional[EventSelection] = None
     dt: float
     segment_size: float
     freq_ranges: Dict[str, Tuple[float, float]]
@@ -42,6 +45,8 @@ class CalculatePowerColorsRequest(BaseModel):
 class CalculateTimeLagsRequest(BaseModel):
     event_list_1_name: str
     event_list_2_name: str
+    selection_1: Optional[EventSelection] = None
+    selection_2: Optional[EventSelection] = None
     dt: float
     segment_size: float
     freq_range: Optional[Tuple[float, float]] = None
@@ -51,6 +56,8 @@ class CalculateTimeLagsRequest(BaseModel):
 class CalculateCoherenceRequest(BaseModel):
     event_list_1_name: str
     event_list_2_name: str
+    selection_1: Optional[EventSelection] = None
+    selection_2: Optional[EventSelection] = None
     dt: float
     segment_size: float
     output_name: Optional[str] = None
@@ -66,6 +73,7 @@ async def create_bispectrum(
     return await asyncio.to_thread(
         service.create_bispectrum,
         event_list_name=request.event_list_name,
+        selection=request.selection,
         dt=request.dt,
         maxlag=request.maxlag,
         scale=request.scale,
@@ -83,6 +91,7 @@ async def calculate_power_colors(
     return await asyncio.to_thread(
         service.calculate_power_colors,
         event_list_name=request.event_list_name,
+        selection=request.selection,
         dt=request.dt,
         segment_size=request.segment_size,
         freq_ranges=request.freq_ranges,
@@ -100,6 +109,8 @@ async def calculate_time_lags(
         service.calculate_time_lags,
         event_list_1_name=request.event_list_1_name,
         event_list_2_name=request.event_list_2_name,
+        selection_1=request.selection_1,
+        selection_2=request.selection_2,
         dt=request.dt,
         segment_size=request.segment_size,
         freq_range=request.freq_range,
@@ -117,6 +128,8 @@ async def calculate_coherence(
         service.calculate_coherence,
         event_list_1_name=request.event_list_1_name,
         event_list_2_name=request.event_list_2_name,
+        selection_1=request.selection_1,
+        selection_2=request.selection_2,
         dt=request.dt,
         segment_size=request.segment_size,
         output_name=request.output_name,

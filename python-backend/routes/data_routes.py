@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from models.event_formats import InputEventFormat
+from models.event_selection import EventSelection
 from services.data_service import DataService
 
 router = APIRouter()
@@ -345,6 +346,24 @@ async def list_event_lists(
 ):
     """List all loaded EventLists."""
     return service.list_event_lists()
+
+
+class SelectionPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event_list_name: str = Field(min_length=1)
+    selection: EventSelection
+
+
+@router.post("/selection-preview")
+async def preview_event_selection(
+    request: SelectionPreviewRequest,
+    service: DataService = Depends(get_data_service),
+):
+    """Count the events and energy/PI coverage a selection keeps."""
+    return await asyncio.to_thread(
+        service.preview_event_selection, request.event_list_name, request.selection
+    )
 
 
 @router.post("/check-size")

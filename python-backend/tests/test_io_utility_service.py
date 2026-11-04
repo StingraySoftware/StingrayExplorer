@@ -2332,3 +2332,49 @@ async def test_convert_pi_route_end_to_end(rmf_path):
     body = response.json()
     assert body["success"], body
     assert [row["pi"] for row in body["data"]["rows"]] == [0, 2]
+
+
+@pytest.mark.parametrize("export_format", ["json", "ecsv", "fits", "hdf5"])
+def test_saved_result_with_selection_exports_lineage_as_metadata(
+    service, io_state, tmp_path, export_format
+):
+    from models.event_selection import EventSelection
+
+    rng = np.random.default_rng(11)
+    times = np.sort(rng.uniform(0.0, 64.0, 20_000))
+    energy = rng.uniform(0.5, 10.0, 20_000)
+    io_state.add_event_data(
+        "banded", EventList(time=times, energy=energy, gti=[[0.0, 64.0]])
+    )
+    timing_result = TimingService(io_state).calculate_coherence(
+        "banded",
+        "banded",
+        dt=0.125,
+        segment_size=8.0,
+        output_name="band coherence",
+        selection_1=EventSelection(energy_range=[0.5, 3.0]),
+        selection_2=EventSelection(energy_range=[3.0, 10.0]),
+    )
+    assert timing_result["success"], timing_result
+
+    entry = next(
+        item
+        for item in service.list_exportable_objects()["data"]["objects"]
+        if item["name"] == "band coherence"
+    )
+    assert entry["exportable"] is True, entry
+    suffix = {"json": "json", "ecsv": "ecsv", "fits": "fits", "hdf5": "hdf5"}
+    path = tmp_path / f"band-coherence.{suffix[export_format]}"
+    exported = service.export_object(
+        "analysis_result",
+        "band coherence",
+        export_format,
+        str(path),
+        make_grant(path, "write"),
+    )
+    assert exported["success"], exported
+    if export_format == "json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        assert "selections" not in payload["columns"]
+        ranges = [item["energy_range_kev"] for item in payload["metadata"]["selections"]]
+        assert ranges == [[0.5, 3.0], [3.0, 10.0]]

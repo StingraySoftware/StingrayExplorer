@@ -6,6 +6,7 @@ Provides common functionality for all services.
 
 from typing import Any, Dict, Optional
 
+from .event_selection import EventSelectionError
 from .state_manager import StateManager
 from utils.error_handler import ErrorHandler
 from utils.performance_monitor import PerformanceMonitor
@@ -86,6 +87,10 @@ class BaseService:
         Returns:
             Error result dictionary
         """
+        # A selection that cannot be applied is the request's fault, not a
+        # failed analysis: the application maps it to an HTTP 422.
+        if isinstance(exception, EventSelectionError):
+            raise exception
         user_msg, tech_msg = self.error_handler.handle_error(
             exception, context=context, **context_data
         )

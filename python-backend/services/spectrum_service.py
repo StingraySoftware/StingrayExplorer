@@ -16,7 +16,10 @@ from stingray import (
     Powerspectrum,
 )
 
+from models.event_selection import EventSelection
+
 from .base_service import BaseService
+from .event_selection import band_overlap_warning
 from .scientific_compatibility import compatible_event_lightcurve
 from .analysis_helpers import (
     analysis_event_copy,
@@ -64,8 +67,8 @@ class SpectrumService(BaseService):
     Handles power spectrum, cross spectrum, and dynamical power spectrum.
     """
 
-    def _source(self, name):
-        captured = self.state.copy_event_data_with_identity(name)
+    def _source(self, name, selection=None):
+        captured = self.state.copy_event_data_with_identity(name, selection)
         if captured is None:
             raise ValueError(f"EventList '{name}' not found")
         event_list, dataset_id = captured
@@ -154,6 +157,7 @@ class SpectrumService(BaseService):
         dt: float,
         norm: str = "leahy",
         output_name: Optional[str] = None,
+        selection: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Create a power spectrum from an EventList.
@@ -176,7 +180,7 @@ class SpectrumService(BaseService):
                     error=None,
                 )
 
-            event_list, source = self._source(event_list_name)
+            event_list, source = self._source(event_list_name, selection)
             warnings = []
             with collect_warnings(warnings):
                 lc = compatible_event_lightcurve(event_list, dt)
@@ -214,6 +218,7 @@ class SpectrumService(BaseService):
         segment_size: float,
         norm: str = "leahy",
         output_name: Optional[str] = None,
+        selection: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Create an averaged power spectrum from an EventList.
@@ -243,7 +248,7 @@ class SpectrumService(BaseService):
                     success=False, data=None, message=seg_error, error=None
                 )
 
-            event_list, source = self._source(event_list_name)
+            event_list, source = self._source(event_list_name, selection)
             warnings = []
             with collect_warnings(warnings):
                 lc = compatible_event_lightcurve(event_list, dt)
@@ -286,6 +291,8 @@ class SpectrumService(BaseService):
         dt: float,
         norm: str = "leahy",
         output_name: Optional[str] = None,
+        selection_1: Optional[EventSelection] = None,
+        selection_2: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Create a cross spectrum from two EventLists.
@@ -317,8 +324,8 @@ class SpectrumService(BaseService):
                     error=None,
                 )
 
-            event_list_1, source_1 = self._source(event_list_1_name)
-            event_list_2, source_2 = self._source(event_list_2_name)
+            event_list_1, source_1 = self._source(event_list_1_name, selection_1)
+            event_list_2, source_2 = self._source(event_list_2_name, selection_2)
 
             overlap_error = _overlap_error(event_list_1, event_list_2)
             if overlap_error:
@@ -332,6 +339,15 @@ class SpectrumService(BaseService):
                 )
 
             warnings = []
+            band_warning = band_overlap_warning(
+                self.state.get_event_data(event_list_1_name),
+                event_list_1_name,
+                selection_1,
+                event_list_2_name,
+                selection_2,
+            )
+            if band_warning:
+                warnings.append(band_warning)
             with collect_warnings(warnings):
                 cs = Crossspectrum.from_events(
                     events1=analysis_event_copy(event_list_1),
@@ -374,6 +390,8 @@ class SpectrumService(BaseService):
         segment_size: float,
         norm: str = "leahy",
         output_name: Optional[str] = None,
+        selection_1: Optional[EventSelection] = None,
+        selection_2: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Create an averaged cross spectrum from two EventLists.
@@ -412,8 +430,8 @@ class SpectrumService(BaseService):
                     success=False, data=None, message=seg_error, error=None
                 )
 
-            event_list_1, source_1 = self._source(event_list_1_name)
-            event_list_2, source_2 = self._source(event_list_2_name)
+            event_list_1, source_1 = self._source(event_list_1_name, selection_1)
+            event_list_2, source_2 = self._source(event_list_2_name, selection_2)
 
             overlap_error = _overlap_error(
                 event_list_1, event_list_2, segment_size=segment_size
@@ -432,6 +450,15 @@ class SpectrumService(BaseService):
             # separately to light curves anchors their grids at different GTI
             # starts and can manufacture a phase/lag for identical photons.
             warnings = []
+            band_warning = band_overlap_warning(
+                self.state.get_event_data(event_list_1_name),
+                event_list_1_name,
+                selection_1,
+                event_list_2_name,
+                selection_2,
+            )
+            if band_warning:
+                warnings.append(band_warning)
             with collect_warnings(warnings):
                 cs = AveragedCrossspectrum.from_events(
                     events1=analysis_event_copy(event_list_1),
@@ -480,6 +507,7 @@ class SpectrumService(BaseService):
         segment_size: float,
         norm: str = "leahy",
         output_name: Optional[str] = None,
+        selection: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Create a dynamical power spectrum from an EventList.
@@ -509,7 +537,7 @@ class SpectrumService(BaseService):
                     success=False, data=None, message=seg_error, error=None
                 )
 
-            event_list, source = self._source(event_list_name)
+            event_list, source = self._source(event_list_name, selection)
             warnings = []
             with collect_warnings(warnings):
                 lc = compatible_event_lightcurve(event_list, dt)

@@ -10,6 +10,9 @@ import numpy as np
 from stingray import AveragedPowerspectrum, EventList
 from stingray.deadtime.fad import FAD
 
+from models.event_selection import EventSelection
+
+from .event_selection import selection_record
 from .analysis_helpers import (
     collect_warnings,
     finite_list,
@@ -76,6 +79,7 @@ class DeadtimeService(BaseService):
         dead_time: float,
         background_rate: float = 0.0,
         limit_k: int = 200,
+        selection: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Model-based (Zhang+95, non-paralyzable) dead-time correction of a PDS.
@@ -117,7 +121,7 @@ class DeadtimeService(BaseService):
                     success=False, data=None, message=seg_error, error=None
                 )
 
-            event_list = self.state.get_event_data(event_list_name)
+            event_list = self.state.event_data_for_analysis(event_list_name, selection)
             n_events = int(len(event_list.time))
             if n_events == 0:
                 return self.create_result(
@@ -202,6 +206,7 @@ class DeadtimeService(BaseService):
                 "limit_k": int(limit_k),
                 "norm": "leahy",
                 "warnings": warning_messages,
+                "selection": selection_record(event_list),
             }
 
             return self.create_result(
@@ -231,6 +236,8 @@ class DeadtimeService(BaseService):
         segment_size: float,
         norm: str = "frac",
         smoothing_length: Optional[float] = None,
+        selection_1: Optional[EventSelection] = None,
+        selection_2: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Frequency Amplitude Difference correction from two independent detectors.
@@ -275,8 +282,26 @@ class DeadtimeService(BaseService):
                     success=False, data=None, message=seg_error, error=None
                 )
 
-            events1 = self.state.get_event_data(event_list_1_name)
-            events2 = self.state.get_event_data(event_list_2_name)
+            if event_list_1_name == event_list_2_name and (
+                selection_1 is not None or selection_2 is not None
+            ):
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message=(
+                        "FAD needs two independent detectors observing the same "
+                        "source simultaneously. Two selections of one EventList "
+                        "come from the same detector and share its dead time, so "
+                        "the Fourier amplitude difference cannot separate the "
+                        "dead-time distortion from the source signal. Choose a "
+                        "second detector's EventList (for example FPMA and FPMB); "
+                        "each input can still take its own selection."
+                    ),
+                    error=None,
+                )
+
+            events1 = self.state.event_data_for_analysis(event_list_1_name, selection_1)
+            events2 = self.state.event_data_for_analysis(event_list_2_name, selection_2)
 
             # Preflight the degenerate inputs stingray fails on cryptically
             # deep inside FAD (a bare IndexError/AssertionError/ZeroDivision
@@ -350,9 +375,12 @@ class DeadtimeService(BaseService):
                     "The FAD compliance diagnostic (fad_delta) could not be "
                     "computed: the smoothed Fourier difference between the "
                     "two inputs was zero, which happens when the two event "
-                    "lists are identical or otherwise fully correlated. Use "
-                    "two independent, simultaneous detectors; fad_delta and "
-                    "the compliance check are unavailable for this run."
+                    "lists are identical or otherwise fully correlated. FAD "
+                    "relies on two independent detectors whose dead times "
+                    "distort their spectra independently; one detector's data "
+                    "cannot provide that. Use two independent, simultaneous "
+                    "detectors; fad_delta and the compliance check are "
+                    "unavailable for this run."
                 )
             elif not bool(results.meta["is_compliant"]):
                 warning_messages.append(
@@ -382,6 +410,10 @@ class DeadtimeService(BaseService):
                 "is_compliant": bool(results.meta["is_compliant"]),
                 "fad_delta": fad_delta,
                 "warnings": warning_messages,
+                "selections": [
+                    selection_record(events1),
+                    selection_record(events2),
+                ],
             }
 
             return self.create_result(

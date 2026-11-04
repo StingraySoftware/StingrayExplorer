@@ -7,6 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
+from models.event_selection import EventSelection
 
 from services.spectrum_service import SpectrumService
 
@@ -24,6 +25,7 @@ def get_spectrum_service(request: Request) -> SpectrumService:
 # Request Models
 class CreatePowerSpectrumRequest(BaseModel):
     event_list_name: str
+    selection: Optional[EventSelection] = None
     dt: float
     norm: str = "leahy"
     output_name: Optional[str] = None
@@ -31,6 +33,7 @@ class CreatePowerSpectrumRequest(BaseModel):
 
 class CreateAveragedPowerSpectrumRequest(BaseModel):
     event_list_name: str
+    selection: Optional[EventSelection] = None
     dt: float
     segment_size: float
     norm: str = "leahy"
@@ -40,6 +43,8 @@ class CreateAveragedPowerSpectrumRequest(BaseModel):
 class CreateCrossSpectrumRequest(BaseModel):
     event_list_1_name: str
     event_list_2_name: str
+    selection_1: Optional[EventSelection] = None
+    selection_2: Optional[EventSelection] = None
     dt: float
     norm: str = "leahy"
     output_name: Optional[str] = None
@@ -48,6 +53,8 @@ class CreateCrossSpectrumRequest(BaseModel):
 class CreateAveragedCrossSpectrumRequest(BaseModel):
     event_list_1_name: str
     event_list_2_name: str
+    selection_1: Optional[EventSelection] = None
+    selection_2: Optional[EventSelection] = None
     dt: float
     segment_size: float
     norm: str = "leahy"
@@ -56,6 +63,7 @@ class CreateAveragedCrossSpectrumRequest(BaseModel):
 
 class CreateDynamicalPowerSpectrumRequest(BaseModel):
     event_list_name: str
+    selection: Optional[EventSelection] = None
     dt: float
     segment_size: float
     norm: str = "leahy"
@@ -80,6 +88,7 @@ async def create_power_spectrum(
     return await asyncio.to_thread(
         service.create_power_spectrum,
         event_list_name=request.event_list_name,
+        selection=request.selection,
         dt=request.dt,
         norm=request.norm,
         output_name=request.output_name,
@@ -95,6 +104,7 @@ async def create_averaged_power_spectrum(
     return await asyncio.to_thread(
         service.create_averaged_power_spectrum,
         event_list_name=request.event_list_name,
+        selection=request.selection,
         dt=request.dt,
         segment_size=request.segment_size,
         norm=request.norm,
@@ -112,6 +122,8 @@ async def create_cross_spectrum(
         service.create_cross_spectrum,
         event_list_1_name=request.event_list_1_name,
         event_list_2_name=request.event_list_2_name,
+        selection_1=request.selection_1,
+        selection_2=request.selection_2,
         dt=request.dt,
         norm=request.norm,
         output_name=request.output_name,
@@ -128,6 +140,8 @@ async def create_averaged_cross_spectrum(
         service.create_averaged_cross_spectrum,
         event_list_1_name=request.event_list_1_name,
         event_list_2_name=request.event_list_2_name,
+        selection_1=request.selection_1,
+        selection_2=request.selection_2,
         dt=request.dt,
         segment_size=request.segment_size,
         norm=request.norm,
@@ -144,6 +158,7 @@ async def create_dynamical_power_spectrum(
     return await asyncio.to_thread(
         service.create_dynamical_power_spectrum,
         event_list_name=request.event_list_name,
+        selection=request.selection,
         dt=request.dt,
         segment_size=request.segment_size,
         norm=request.norm,

@@ -35,6 +35,33 @@ describe('apiClient validation errors', () => {
     expect(result.error).toBe('probability: Input should be less than 1');
   });
 
+  it('surfaces a plain-text 422 detail, such as an inapplicable event selection', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 422,
+        statusText: 'Unprocessable Entity',
+        json: vi.fn().mockResolvedValue({
+          detail: 'This EventList has no calibrated energy column. Use a PI range instead.',
+        }),
+      })
+    );
+
+    const result = await apiClient.post('/api/spectrum/power-spectrum', {
+      event_list_name: 'pi_only',
+      dt: 0.125,
+      selection: { energy_range: [0.5, 2] },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe(
+      'This EventList has no calibrated energy column. Use a PI range instead.'
+    );
+    expect(result.error).toBe(result.message);
+  });
+
   it('preserves scientific warnings returned with a non-2xx response', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     vi.stubGlobal(

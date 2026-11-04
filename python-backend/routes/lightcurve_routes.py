@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
+from models.event_selection import EventSelection
 
 from services.lightcurve_service import DEFAULT_MAX_PLOT_POINTS, LightcurveService
 
@@ -24,6 +25,7 @@ def get_lightcurve_service(request: Request) -> LightcurveService:
 # Request Models
 class CreateLightcurveFromEventListRequest(BaseModel):
     event_list_name: str
+    selection: Optional[EventSelection] = None
     dt: float
     output_name: str
     gti: Optional[List[List[float]]] = None
@@ -55,6 +57,7 @@ async def create_lightcurve_from_event_list(
     return await asyncio.to_thread(
         service.create_lightcurve_from_event_list,
         event_list_name=request.event_list_name,
+        selection=request.selection,
         dt=request.dt,
         output_name=request.output_name,
         gti=request.gti,

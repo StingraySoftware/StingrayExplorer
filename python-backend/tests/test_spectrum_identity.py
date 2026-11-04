@@ -123,11 +123,11 @@ def test_replacing_source_during_calculation_does_not_relabel_original_photons(
     copy_source = loaded_state.copy_event_data_with_identity
     replacements = []
 
-    def copy_then_replace(name):
+    def copy_then_replace(name, selection=None):
         # Deterministically interleave another source publication after the
         # calculation has taken its atomic input snapshot, before its FFT.
         # The service still performs the actual scientific calculation.
-        copied = copy_source(name)
+        copied = copy_source(name, selection)
         if name == "ev1" and not replacements:
             loaded_state.add_event_data(name, replacement)
             replacements.append(name)

@@ -71,3 +71,17 @@ class EventSelection(BaseModel):
         return all(
             getattr(self, field) is None for field in type(self).model_fields
         )
+
+
+class NonSpectralEventSelection(EventSelection):
+    """Selection for energy-resolved pages, which define their own energy bands."""
+
+    @model_validator(mode="after")
+    def _no_spectral_cut(self):
+        if self.energy_range is not None or self.pi_range is not None:
+            raise ValueError(
+                "Energy-resolved spectra choose photons with this page's energy "
+                "settings (energy_min, energy_max and bands); remove "
+                "energy_range/pi_range from the selection and use those settings"
+            )
+        return self

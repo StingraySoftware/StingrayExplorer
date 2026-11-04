@@ -10,7 +10,14 @@ import numpy as np
 from stingray import DynamicalPowerspectrum
 from stingray.gti import generate_indices_of_segment_boundaries_unbinned
 
+from models.event_selection import EventSelection
+
 from .base_service import BaseService
+from .event_selection import (
+    EventSelectionError,
+    band_overlap_warning,
+    selection_record,
+)
 from .scientific_compatibility import compatible_bispectrum
 from .scientific_compatibility import compatible_event_lightcurve
 from .scientific_compatibility import averaged_raw_coherence
@@ -53,6 +60,7 @@ class TimingService(BaseService):
         scale: str = "unbiased",
         window: str = "uniform",
         output_name: Optional[str] = None,
+        selection: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Create a bispectrum from an EventList.
@@ -80,7 +88,7 @@ class TimingService(BaseService):
                     error=None,
                 )
 
-            event_list = self.state.get_event_data(event_list_name)
+            event_list = self.state.event_data_for_analysis(event_list_name, selection)
             lc = compatible_event_lightcurve(event_list, dt)
             bs = compatible_bispectrum(lc, maxlag=maxlag, scale=scale, window=window)
 
@@ -98,6 +106,7 @@ class TimingService(BaseService):
                 "maxlag": maxlag,
                 "scale": scale,
                 "window": window,
+                "selection": selection_record(event_list),
             }
 
             return self.create_result(
@@ -122,6 +131,7 @@ class TimingService(BaseService):
         segment_size: float,
         freq_ranges: Dict[str, tuple],
         output_name: Optional[str] = None,
+        selection: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """Per-segment, integrated fractional variances and Heil C/A, B/D colours.
 
@@ -137,7 +147,9 @@ class TimingService(BaseService):
                     False, message=f"EventList '{event_list_name}' not found"
                 )
             bands = validate_power_color_inputs(dt, segment_size, freq_ranges)
-            event_list = analysis_event_copy(self.state.get_event_data(event_list_name))
+            event_list = analysis_event_copy(
+                self.state.event_data_for_analysis(event_list_name, selection)
+            )
             binning_error = pair_binning_error(event_list, event_list, dt)
             if binning_error:
                 raise ValueError(binning_error)
@@ -232,6 +244,7 @@ class TimingService(BaseService):
                 "df": float(dps.df),
                 "detection_sigma": 3,
                 "warnings": scientific_warnings,
+                "selection": selection_record(event_list),
                 "metadata": {
                     "units": {
                         "time": "s",
@@ -251,7 +264,11 @@ class TimingService(BaseService):
                 },
                 "provenance": operation_provenance(
                     "timing_power_colors",
-                    input_source={"kind": "event_list", "name": event_list_name},
+                    input_source={
+                        "kind": "event_list",
+                        "name": event_list_name,
+                        "selection": selection_record(event_list),
+                    },
                     parameters={
                         "dt": dt,
                         "segment_size": actual_segment_size,
@@ -271,6 +288,8 @@ class TimingService(BaseService):
                 message=f"Integrated power colours calculated for {len(segment_times)} segments",
                 warnings=scientific_warnings,
             )
+        except EventSelectionError:
+            raise
         except ValueError as error:
             return self.create_result(
                 False, message=str(error), warnings=scientific_warnings
@@ -294,6 +313,8 @@ class TimingService(BaseService):
         segment_size: float,
         freq_range: Optional[tuple] = None,
         output_name: Optional[str] = None,
+        selection_1: Optional[EventSelection] = None,
+        selection_2: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Calculate time lags between two event lists.
@@ -335,8 +356,21 @@ class TimingService(BaseService):
 
             from stingray import AveragedCrossspectrum
 
-            event_list_1 = self.state.get_event_data(event_list_1_name)
-            event_list_2 = self.state.get_event_data(event_list_2_name)
+            event_list_1 = self.state.event_data_for_analysis(
+                event_list_1_name, selection_1
+            )
+            event_list_2 = self.state.event_data_for_analysis(
+                event_list_2_name, selection_2
+            )
+            band_warning = band_overlap_warning(
+                self.state.get_event_data(event_list_1_name),
+                event_list_1_name,
+                selection_1,
+                event_list_2_name,
+                selection_2,
+            )
+            if band_warning:
+                scientific_warnings.append(band_warning)
 
             overlap_error = _overlap_error(
                 event_list_1, event_list_2, segment_size=segment_size
@@ -396,6 +430,10 @@ class TimingService(BaseService):
                 "segment_size": float(cs.segment_size),
                 "requested_segment_size": segment_size,
                 "warnings": scientific_warnings,
+                "selections": [
+                    selection_record(event_list_1),
+                    selection_record(event_list_2),
+                ],
                 "freq": freq.tolist(),
                 "time_lags": _finite_list(time_lags),
                 "time_lags_err": (
@@ -411,6 +449,10 @@ class TimingService(BaseService):
                     input_source={
                         "kind": "event_list_pair",
                         "names": [event_list_1_name, event_list_2_name],
+                        "selections": [
+                            selection_record(event_list_1),
+                            selection_record(event_list_2),
+                        ],
                     },
                     parameters={
                         "dt": float(cs.dt),
@@ -451,6 +493,8 @@ class TimingService(BaseService):
         dt: float,
         segment_size: float,
         output_name: Optional[str] = None,
+        selection_1: Optional[EventSelection] = None,
+        selection_2: Optional[EventSelection] = None,
     ) -> Dict[str, Any]:
         """
         Calculate coherence between two event lists.
@@ -491,8 +535,21 @@ class TimingService(BaseService):
 
             from stingray import AveragedCrossspectrum
 
-            event_list_1 = self.state.get_event_data(event_list_1_name)
-            event_list_2 = self.state.get_event_data(event_list_2_name)
+            event_list_1 = self.state.event_data_for_analysis(
+                event_list_1_name, selection_1
+            )
+            event_list_2 = self.state.event_data_for_analysis(
+                event_list_2_name, selection_2
+            )
+            band_warning = band_overlap_warning(
+                self.state.get_event_data(event_list_1_name),
+                event_list_1_name,
+                selection_1,
+                event_list_2_name,
+                selection_2,
+            )
+            if band_warning:
+                scientific_warnings.append(band_warning)
 
             overlap_error = _overlap_error(
                 event_list_1, event_list_2, segment_size=segment_size
@@ -552,6 +609,10 @@ class TimingService(BaseService):
                 "segment_size": float(cs.segment_size),
                 "requested_segment_size": segment_size,
                 "warnings": scientific_warnings,
+                "selections": [
+                    selection_record(event_list_1),
+                    selection_record(event_list_2),
+                ],
                 "freq": cs.freq.tolist(),
                 "coherence": _finite_list(coherence_vals),
                 "coherence_err": (
@@ -564,6 +625,10 @@ class TimingService(BaseService):
                     input_source={
                         "kind": "event_list_pair",
                         "names": [event_list_1_name, event_list_2_name],
+                        "selections": [
+                            selection_record(event_list_1),
+                            selection_record(event_list_2),
+                        ],
                     },
                     parameters={
                         "dt": float(cs.dt),

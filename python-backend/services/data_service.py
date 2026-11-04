@@ -43,7 +43,10 @@ from models.event_formats import (
     require_input_event_format,
 )
 
+from models.event_selection import EventSelection
+
 from .base_service import BaseService
+from .event_selection import selection_mask
 from .scientific_compatibility import event_read_options
 from .remote_source import (
     GENERAL_HTTPS_POLICY,
@@ -1525,6 +1528,53 @@ class DataService(BaseService):
 
         except Exception as e:
             return self.handle_error(e, "Getting event list info", name=name)
+
+    def preview_event_selection(
+        self, event_list_name: str, selection: EventSelection
+    ) -> Dict[str, Any]:
+        """Count the photons a selection keeps without copying any photon arrays."""
+        try:
+            captured = self.state.copy_event_data_with_identity(event_list_name)
+            if captured is None:
+                return self.create_result(
+                    success=False,
+                    data=None,
+                    message=f"EventList '{event_list_name}' not found",
+                    error=None,
+                )
+            events, _ = captured
+            mask, gti = selection_mask(events, selection)
+
+            def coverage(column, cast):
+                values = getattr(events, column, None)
+                if values is None:
+                    return None
+                kept = np.asarray(values)[mask]
+                return [cast(np.min(kept)), cast(np.max(kept))]
+
+            detectors = getattr(events, "detector_id", None)
+            data = {
+                "event_list_name": event_list_name,
+                "n_events": int(np.count_nonzero(mask)),
+                "parent_n_events": int(mask.size),
+                "energy_coverage": coverage("energy", float),
+                "pi_coverage": coverage("pi", int),
+                "detector_ids": (
+                    None
+                    if detectors is None
+                    else [int(value) for value in np.unique(np.asarray(detectors))]
+                ),
+                "exposure": float(np.sum(np.diff(np.asarray(gti, dtype=float), axis=1))),
+            }
+            return self.create_result(
+                success=True,
+                data=data,
+                message=f"{data['n_events']} of {data['parent_n_events']} events selected",
+            )
+        except Exception as error:
+            return self.handle_error(
+                error, "Previewing an event selection", event_list=event_list_name
+            )
 
     def list_event_lists(self) -> Dict[str, Any]:
         """List all loaded EventLists."""
