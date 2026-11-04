@@ -7,6 +7,7 @@ import {
   Collapse,
   Divider,
   IconButton,
+  InputAdornment,
   ListSubheader,
   Menu,
   MenuItem,
@@ -98,6 +99,15 @@ const EventSelectionField: React.FC<EventSelectionFieldProps> = ({
 
   const update = (changes: Partial<SelectionDraft>): void => onChange({ ...value, ...changes });
   const unit = value.mode === 'pi' ? 'PI channel' : 'keV';
+  const shortUnit = value.mode === 'pi' ? 'PI' : 'keV';
+  // Short visible labels fit the narrow parameters column; the unit sits in an
+  // adornment and stays in each input's accessible name.
+  const rangeInput = (bound: 'From' | 'To') => ({
+    input: {
+      endAdornment: <InputAdornment position="end">{shortUnit}</InputAdornment>,
+    },
+    htmlInput: { 'aria-label': `${bound} (${unit})` },
+  });
   const presets = missionPresets(summary?.mission);
   const applyPreset = (preset: BandPreset): void => {
     update({ mode: 'energy', low: String(preset.range[0]), high: String(preset.range[1]) });
@@ -170,6 +180,18 @@ const EventSelectionField: React.FC<EventSelectionFieldProps> = ({
         <Typography variant="body2" sx={{ fontWeight: 500, flexGrow: 1 }}>
           {label}
         </Typography>
+        {spectral && value.mode === 'energy' && (
+          <Tooltip title="Band presets">
+            <IconButton
+              size="small"
+              aria-label={`${label}: band presets`}
+              onClick={(event) => setPresetAnchor(event.currentTarget)}
+              disabled={disabled}
+            >
+              <ExpandMoreIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         <Tooltip title="Detector, time and GTI filters">
           <IconButton
             size="small"
@@ -204,34 +226,24 @@ const EventSelectionField: React.FC<EventSelectionFieldProps> = ({
           </ToggleButtonGroup>
         )}
         {spectral && value.mode !== 'none' && (
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+          // Stacked: QuickLook parameter columns can be under 200 px wide.
+          <Stack spacing={1.5}>
             <TextField
-              label={`From (${unit})`}
+              label="From"
               size="small"
               value={value.low}
+              slotProps={rangeInput('From')}
               disabled={disabled}
               onChange={(event) => update({ low: event.target.value })}
             />
             <TextField
-              label={`To (${unit})`}
+              label="To"
               size="small"
               value={value.high}
+              slotProps={rangeInput('To')}
               disabled={disabled}
               onChange={(event) => update({ high: event.target.value })}
             />
-            {value.mode === 'energy' && (
-              <Tooltip title="Band presets">
-                <IconButton
-                  size="small"
-                  aria-label={`${label}: band presets`}
-                  onClick={(event) => setPresetAnchor(event.currentTarget)}
-                  disabled={disabled}
-                  sx={{ mt: 0.5 }}
-                >
-                  <ExpandMoreIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
           </Stack>
         )}
         {spectral && value.mode !== 'none' && (
