@@ -11,6 +11,7 @@ import sys
 import threading
 from itertools import chain
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
 import numpy as np
 from astropy import units as u
@@ -331,8 +332,11 @@ class StateManager:
 
     def __init__(self):
         """Initialize the state manager."""
+        self.session_id = str(uuid4())
         self._event_data: Dict[str, Any] = {}
+        self._event_identities: Dict[str, str] = {}
         self._lightcurve_data: Dict[str, Any] = {}
+        self._lightcurve_identities: Dict[str, str] = {}
         self._spectrum_data: Dict[str, Any] = {}
         self._analysis_results: Dict[str, Any] = {}
         self._lock = threading.RLock()
@@ -348,6 +352,7 @@ class StateManager:
         """
         with self._lock:
             self._event_data[name] = event_list
+            self._event_identities[name] = str(uuid4())
 
     def add_event_data_if_absent(self, name: str, event_list: Any) -> bool:
         """Atomically add an EventList without replacing an existing name."""
@@ -355,7 +360,47 @@ class StateManager:
             if name in self._event_data:
                 return False
             self._event_data[name] = event_list
+            self._event_identities[name] = str(uuid4())
             return True
+
+    def get_event_identity(self, name: str) -> Optional[str]:
+        """Return the insertion identity; replacing a name creates a new dataset."""
+        with self._lock:
+            return self._event_identities.get(name)
+
+    def copy_event_data_with_identity(self, name: str) -> Any:
+        """Atomically snapshot the exact photons and identity used by an analysis.
+
+        A name may be replaced or deleted while a worker runs. Capturing both
+        values under the same lock prevents an old calculation being attributed
+        to the replacement dataset, or its arrays being cleared during analysis.
+        """
+        with self._lock:
+            event_list = self._event_data.get(name)
+            if event_list is None:
+                return None
+            # Scientific transformations publish new arrays; stored photon
+            # arrays are read-only inputs. A wrapper retains them even when a
+            # delete clears the original object's attributes, without doubling
+            # the memory cost of a large observation. Never change shared array
+            # writeability flags. GTIs and selected metadata belong to the copy.
+            detached = copy.copy(event_list)
+            detached._gti = copy.deepcopy(getattr(event_list, "_gti", None))
+            for field in (
+                "mjdref",
+                "timesys",
+                "timeref",
+                "ephem",
+                "mission",
+                "instr",
+                "dt",
+                "gti_selection",
+                "rmf_conversion_provenance",
+                "mission_io_provenance_json",
+            ):
+                if hasattr(event_list, field):
+                    setattr(detached, field, copy.deepcopy(getattr(event_list, field)))
+            return detached, self._event_identities[name]
 
     def get_event_data(self, name: Optional[str] = None) -> Any:
         """
@@ -422,6 +467,7 @@ class StateManager:
             if name in self._event_data:
                 # Pop the object from dict (removes reference from dict)
                 event_list = self._event_data.pop(name)
+                self._event_identities.pop(name, None)
                 # Explicitly set internal arrays to None to help GC
                 # This breaks any internal references
                 if hasattr(event_list, "time"):
@@ -468,6 +514,7 @@ class StateManager:
                     event_list.gti = None
             # Clear the dictionary
             self._event_data.clear()
+            self._event_identities.clear()
             # Force garbage collection
             collected = _force_garbage_collection()
             logger.debug(f"Cleared {count} event lists, collected {collected} objects")
@@ -484,6 +531,9 @@ class StateManager:
         """
         with self._lock:
             self._lightcurve_data[name] = lightcurve
+            self._lightcurve_identities[name] = getattr(
+                lightcurve, "result_identity", {}
+            ).get("result_id") or str(uuid4())
 
     def add_lightcurve_data_if_absent(self, name: str, lightcurve: Any) -> bool:
         """Atomically add a Lightcurve without replacing an existing name."""
@@ -491,7 +541,41 @@ class StateManager:
             if name in self._lightcurve_data:
                 return False
             self._lightcurve_data[name] = lightcurve
+            self._lightcurve_identities[name] = getattr(
+                lightcurve, "result_identity", {}
+            ).get("result_id") or str(uuid4())
             return True
+
+    def get_lightcurve_identity(self, name: str) -> Optional[str]:
+        with self._lock:
+            return self._lightcurve_identities.get(name)
+
+    def copy_lightcurve_data_with_identity(
+        self, name: str, expected_result_id: Optional[str] = None
+    ) -> Any:
+        """Capture a read-only analysis wrapper and its exact insertion identity."""
+        with self._lock:
+            lightcurve = self._lightcurve_data.get(name)
+            if lightcurve is None:
+                return None
+            identity = self._lightcurve_identities[name]
+            if expected_result_id is not None and identity != expected_result_id:
+                raise ValueError(
+                    "The selected light curve result is no longer available; refresh the object list"
+                )
+            detached = copy.copy(lightcurve)
+            detached._gti = copy.deepcopy(getattr(lightcurve, "_gti", None))
+            for field in (
+                "result_identity",
+                "gti_selection",
+                "mjdref",
+                "timesys",
+                "timeref",
+                "ephem",
+            ):
+                if hasattr(lightcurve, field):
+                    setattr(detached, field, copy.deepcopy(getattr(lightcurve, field)))
+            return detached, identity
 
     def get_lightcurve_data(self, name: Optional[str] = None) -> Any:
         """
@@ -515,10 +599,19 @@ class StateManager:
         max_columns: Optional[int] = None,
         max_cells: Optional[int] = None,
         max_bytes: Optional[int] = None,
+        expected_result_id: Optional[str] = None,
     ) -> Any:
         """Return a detached Lightcurve snapshot after an optional pre-copy cap."""
         with self._lock:
             lightcurve = self._lightcurve_data.get(name)
+            if (
+                lightcurve is not None
+                and expected_result_id is not None
+                and self._lightcurve_identities.get(name) != expected_result_id
+            ):
+                raise ValueError(
+                    "The selected light curve result is no longer available; refresh the object list"
+                )
             if lightcurve is not None and any(
                 limit is not None
                 for limit in (max_points, max_columns, max_cells, max_bytes)
@@ -543,6 +636,7 @@ class StateManager:
         with self._lock:
             if name in self._lightcurve_data:
                 lc = self._lightcurve_data.pop(name)
+                self._lightcurve_identities.pop(name, None)
                 # Clear numpy arrays
                 if hasattr(lc, "time"):
                     lc.time = None
@@ -581,11 +675,69 @@ class StateManager:
                 return self._spectrum_data.get(name)
             return list(self._spectrum_data.items())
 
-    def copy_spectrum_data(self, name: str) -> Any:
-        """Return a detached spectrum snapshot, or ``None`` if absent."""
+    def copy_spectrum_data(
+        self,
+        name: str,
+        max_rows: Optional[int] = None,
+        max_columns: Optional[int] = None,
+        max_cells: Optional[int] = None,
+        max_bytes: Optional[int] = None,
+        expected_result_id: Optional[str] = None,
+    ) -> Any:
+        """Copy a bounded spectrum only if its immutable result identity matches."""
         with self._lock:
             spectrum = self._spectrum_data.get(name)
+            if spectrum is not None:
+                identity = getattr(spectrum, "result_identity", {})
+                if (
+                    expected_result_id is not None
+                    and identity.get("result_id") != expected_result_id
+                ):
+                    raise ValueError(
+                        "The selected spectrum result is no longer available under this name; "
+                        "refresh the object list and select the current result"
+                    )
+                if any(
+                    limit is not None
+                    for limit in (max_rows, max_columns, max_cells, max_bytes)
+                ):
+                    _enforce_precopy_caps(
+                        spectrum,
+                        f"Spectrum '{name}'",
+                        max_rows=max_rows,
+                        max_columns=max_columns,
+                        max_cells=max_cells,
+                        max_bytes=max_bytes,
+                    )
             return copy.deepcopy(spectrum) if spectrum is not None else None
+
+    def copy_spectrum_for_analysis(
+        self, name: str, expected_result_id: Optional[str] = None
+    ) -> Any:
+        """Read/derive wrapper with a checked identity, retaining immutable arrays.
+
+        Spectrum rebinners allocate new numeric arrays. Keeping the original
+        arrays alive through this wrapper is sufficient for concurrent deletion
+        or name replacement, without copying a potentially large FFT twice.
+        Export uses the separate bounded deep-copy operation above.
+        """
+        with self._lock:
+            spectrum = self._spectrum_data.get(name)
+            if spectrum is None:
+                return None
+            identity = getattr(spectrum, "result_identity", {})
+            if (
+                expected_result_id is not None
+                and identity.get("result_id") != expected_result_id
+            ):
+                raise ValueError(
+                    "The selected spectrum result is no longer available; refresh the object list"
+                )
+            detached = copy.copy(spectrum)
+            detached.result_identity = copy.deepcopy(identity)
+            if getattr(spectrum, "gti", None) is not None:
+                detached.gti = copy.deepcopy(spectrum.gti)
+            return detached
 
     def has_spectrum_data(self, name: str) -> bool:
         """Check if a spectrum with given name exists."""
@@ -700,7 +852,9 @@ class StateManager:
 
             # Clear all dictionaries
             self._event_data.clear()
+            self._event_identities.clear()
             self._lightcurve_data.clear()
+            self._lightcurve_identities.clear()
             self._spectrum_data.clear()
             self._analysis_results.clear()
 
