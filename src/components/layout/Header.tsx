@@ -1,3 +1,4 @@
+import SaveProjectButton from '@/components/analysis/SaveProjectButton';
 import React, { useContext, useEffect, useState } from 'react';
 import {
   AppBar,
@@ -182,6 +183,7 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Spacer */}
         <Box sx={{ flexGrow: 1 }} />
+        <SaveProjectButton />
 
         {/* Search bar */}
         {searchOpen ? (

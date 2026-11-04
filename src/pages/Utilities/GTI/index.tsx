@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React, { useCallback, useState } from 'react';
 import { Box, Paper, Tab, Tabs } from '@mui/material';
 import PageTemplate from '@/components/common/PageTemplate';
@@ -18,15 +19,15 @@ const TAB_LABELS = [
 ] as const;
 
 const GTIPage: React.FC = () => {
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useWorkspaceState('Utilities/GTI/index.tsx:tab:1', 0);
   const [inspectedRows, setInspectedRows] = useState<InspectedGtiRows | null>(null);
-  const [setRows, setSetRows] = useState('');
+  const [setRows, setSetRows] = useWorkspaceState('Utilities/GTI/index.tsx:setRows:2', '');
   const [setTimeReference, setSetTimeReference] =
-    useState<GtiTimeReference>('absolute_mission_time');
-  const [maskRows, setMaskRows] = useState('');
-  const [segmentRows, setSegmentRows] = useState('');
+    useWorkspaceState<GtiTimeReference>('Utilities/GTI/index.tsx:setTimeReference:3', 'absolute_mission_time');
+  const [maskRows, setMaskRows] = useWorkspaceState('Utilities/GTI/index.tsx:maskRows:4', '');
+  const [segmentRows, setSegmentRows] = useWorkspaceState('Utilities/GTI/index.tsx:segmentRows:5', '');
   const [segmentTimeReference, setSegmentTimeReference] =
-    useState<GtiTimeReference>('absolute_mission_time');
+    useWorkspaceState<GtiTimeReference>('Utilities/GTI/index.tsx:segmentTimeReference:6', 'absolute_mission_time');
 
   const useValidatedRows = useCallback(
     (rows: string, reference: GtiTimeReference): void => {
@@ -36,7 +37,7 @@ const GTIPage: React.FC = () => {
       setSegmentTimeReference(reference);
       if (reference === 'absolute_mission_time') setMaskRows(rows);
     },
-    []
+    [setSetRows, setSetTimeReference, setSegmentRows, setSegmentTimeReference, setMaskRows]
   );
 
   return (

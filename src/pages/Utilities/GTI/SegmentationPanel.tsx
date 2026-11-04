@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useMemo } from 'react';
 import { Alert, Button, Card, CardContent, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import {
@@ -45,7 +46,7 @@ const SegmentationPanel: React.FC<SegmentationPanelProps> = ({
   onTimeReferenceChange,
 }) => {
   const parsed = useMemo(() => parseStrictGtis(rows, 'Segment GTIs'), [rows]);
-  const [fixedSize, setFixedSize] = useState('');
+  const [fixedSize, setFixedSize] = useWorkspaceState('Utilities/GTI/SegmentationPanel.tsx:fixedSize:1', '');
   const fixedSizeNumber = positiveNumber(fixedSize);
   const fixedMeaningError = useMemo(() => {
     if (fixedSizeNumber === null || !parsed.rows) return null;
@@ -55,8 +56,8 @@ const SegmentationPanel: React.FC<SegmentationPanelProps> = ({
     return hasUsableInterval ? null : 'Segment size exceeds every GTI length';
   }, [fixedSizeNumber, parsed.rows]);
   const fixedRunner = useAnalysisRunner<GtiFixedSegmentsData>('Generate fixed segments');
-  const [exposurePerChunk, setExposurePerChunk] = useState('');
-  const [separationThreshold, setSeparationThreshold] = useState('');
+  const [exposurePerChunk, setExposurePerChunk] = useWorkspaceState('Utilities/GTI/SegmentationPanel.tsx:exposurePerChunk:2', '');
+  const [separationThreshold, setSeparationThreshold] = useWorkspaceState('Utilities/GTI/SegmentationPanel.tsx:separationThreshold:3', '');
   const exposureNumber = positiveNumber(exposurePerChunk);
   const separationNumber =
     separationThreshold.trim() === '' ? undefined : positiveNumber(separationThreshold);
@@ -298,8 +299,7 @@ const SegmentationPanel: React.FC<SegmentationPanelProps> = ({
             <Typography variant="subtitle2" sx={{ px: 1, pt: 0.5 }}>
               Exposure chunks — bounded plot preview
             </Typography>
-            <PlotlyChart
-              data={intervalTrace(exposurePlotPayload, 'Exposure chunks')}
+            <PlotlyChart workspaceKey='Utilities/GTI/SegmentationPanel.tsx:chart:1'               data={intervalTrace(exposurePlotPayload, 'Exposure chunks')}
               height={320}
               layout={{
                 xaxis: { title: { text: 'Mission/relative time (s)' } },

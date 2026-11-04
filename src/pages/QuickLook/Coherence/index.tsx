@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   Box,
@@ -19,32 +20,38 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
+import { UtilityWarnings } from '@/components/utilities/UtilityResult';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { timingApi, CoherenceData } from '@/api/timingApi';
 import { parsePositiveNumber } from '@/utils/numbers';
 
 const CoherencePage: React.FC = () => {
-  const [eventList1, setEventList1] = useState('');
-  const [eventList2, setEventList2] = useState('');
-  const [dt, setDt] = useState('0.0625');
-  const [segmentSize, setSegmentSize] = useState('16');
-  const [logX, setLogX] = useState(true);
-  const { result, running, error, run } = useAnalysisRunner<CoherenceData>('Coherence');
+  const [eventList1, setEventList1] = useWorkspaceState('QuickLook/Coherence/index.tsx:eventList1:1', '');
+  const [eventList2, setEventList2] = useWorkspaceState('QuickLook/Coherence/index.tsx:eventList2:2', '');
+  const [dt, setDt] = useWorkspaceState('QuickLook/Coherence/index.tsx:dt:3', '0.0625');
+  const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/Coherence/index.tsx:segmentSize:4', '16');
+  const [logX, setLogX] = useWorkspaceState('QuickLook/Coherence/index.tsx:logX:5', true);
+  const {
+    result, running, error, warnings, run,
+    resultInputs, resultIdentity, resultStatus, backendAvailable,
+  } = useAnalysisRunner<CoherenceData>('Coherence');
 
   const dtNum = parsePositiveNumber(dt);
   const segNum = parsePositiveNumber(segmentSize);
-  const canRun = eventList1 !== '' && eventList2 !== '' && dtNum !== null && segNum !== null && !running;
+  const canRun = eventList1 !== '' && eventList2 !== '' && dtNum !== null && segNum !== null && !running && backendAvailable;
+  const requestParams = {
+    event_list_1_name: eventList1,
+    event_list_2_name: eventList2,
+    dt: dtNum,
+    segment_size: segNum,
+  };
 
+  const currentInputs = { operation: 'coherence', ...requestParams };
   const handleRun = (): void => {
-    if (!dtNum || !segNum) return;
-    void run(() =>
-      timingApi.calculateCoherence({
-        event_list_1_name: eventList1,
-        event_list_2_name: eventList2,
-        dt: dtNum,
-        segment_size: segNum,
-      })
-    );
+    if (!canRun || dtNum === null || segNum === null) return;
+    const params = { ...requestParams, dt: dtNum, segment_size: segNum };
+    void run(() => timingApi.calculateCoherence(params), { operation: 'coherence', ...params });
   };
 
   const traces: Data[] = result
@@ -127,9 +134,15 @@ const CoherencePage: React.FC = () => {
                   {error}
                 </Alert>
               )}
+              <UtilityWarnings warnings={warnings} />
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {result ? (
-                <PlotlyChart
-                  data={traces}
+                <PlotlyChart workspaceKey='QuickLook/Coherence/index.tsx:chart:1'                   data={traces}
                   layout={{
                     xaxis: { title: { text: 'Frequency (Hz)' }, type: logX ? 'log' : 'linear' },
                     yaxis: { title: { text: 'Coherence γ²' }, range: [0, 1.2] },

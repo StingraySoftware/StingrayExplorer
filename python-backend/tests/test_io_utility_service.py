@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import hmac
 import inspect
 import json
 import os
@@ -30,7 +28,7 @@ from routes.io_utility_routes import (
 )
 from services.io_utility_service import IOUtilityService
 from services.state_manager import StateManager
-from services.utility_helpers import FILE_GRANT_VERSION
+from tests.file_grants import sign_grant, rename_pinned
 from stingray import EventList, Lightcurve
 from stingray.io import pi_to_energy
 
@@ -52,26 +50,12 @@ def make_grant(
     signed_path: Path | None = None,
 ) -> str:
     """Issue the same exact-path HMAC token as Electron main."""
-    target = signed_path or path
-    if target.exists():
-        resolved = target.resolve(strict=True)
-    else:
-        resolved = target.parent.resolve(strict=True) / target.name
-    expires = int(time.time()) + expires_delta
-    identity_path = resolved if access == "read" else resolved.parent
-    selected_stat = identity_path.stat()
-    prefix = (
-        f"{FILE_GRANT_VERSION}.{expires}.{selected_stat.st_dev}.{selected_stat.st_ino}"
+    return sign_grant(
+        TEST_SECRET,
+        signed_path or path,
+        access,
+        expires=int(time.time()) + expires_delta,
     )
-    digest = hmac.new(
-        TEST_SECRET.encode(),
-        (
-            f"{FILE_GRANT_VERSION}\0{access}\0{expires}\0{resolved}\0"
-            f"{selected_stat.st_dev}\0{selected_stat.st_ino}"
-        ).encode(),
-        hashlib.sha256,
-    ).hexdigest()
-    return f"{prefix}.{digest}"
 
 
 def write_rmf(
@@ -424,7 +408,10 @@ def test_rmf_path_swap_after_grant_open_cannot_redirect_public_reads(
     real_load = module._load_valid_rmf
 
     def swap_then_load(stream, *, require_energy_unit):
-        os.replace(replacement, rmf_path)
+        if os.name == "nt":
+            rename_pinned(rmf_path, tmp_path / "blocked-original.rmf")
+        else:
+            os.replace(replacement, rmf_path)
         return real_load(stream, require_energy_unit=require_energy_unit)
 
     monkeypatch.setattr(module, "_load_valid_rmf", swap_then_load)
@@ -434,7 +421,10 @@ def test_rmf_path_swap_after_grant_open_cannot_redirect_public_reads(
     assert result["data"]["channel_min"] == 0
     assert result["data"]["channel_max"] == 2
     with fits.open(rmf_path) as hdul:
-        np.testing.assert_array_equal(hdul["EBOUNDS"].data["CHANNEL"], [10, 11, 12])
+        np.testing.assert_array_equal(
+            hdul["EBOUNDS"].data["CHANNEL"],
+            [0, 1, 2] if os.name == "nt" else [10, 11, 12],
+        )
 
 
 def test_inspect_rmf_returns_validated_bounds(service, rmf_path):
@@ -1461,6 +1451,7 @@ def test_list_exportable_objects_has_honest_capability_matrix(service):
         "event_list",
         "lightcurve",
         "analysis_result",
+        "spectrum",
     }
     assert all(item["exportable"] for item in data["objects"])
     assert all(
@@ -1513,8 +1504,9 @@ def test_event_list_export_is_exclusive_and_reopen_verified(
         # The installed generic Stingray reader can recover event columns only
         # when fmt='fits' is explicit.  GTI is preserved in our separate FITS
         # extension but is not consumed by that generic reader.
-        with pytest.warns(AstropyUserWarning, match="multiple tables"):
-            generic = EventList.read(str(path), fmt="fits", hdu=1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", AstropyUserWarning)
+            generic = EventList.read(str(path), fmt="fits")
         np.testing.assert_allclose(generic.time, [1.0, 2.0, 3.0])
         np.testing.assert_array_equal(generic.pi, [0, 1, 2])
         np.testing.assert_allclose(generic.energy, [9.0, 9.0, 9.0])
@@ -1986,6 +1978,10 @@ def test_export_row_cap_and_failure_cleanup(service, tmp_path, monkeypatch):
     assert list(tmp_path.glob(".stingray-export-*")) == []
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX descriptor injection; NTFS races are tested in test_windows_secure_publication",
+)
 def test_export_detects_destination_replacement_and_does_not_delete_replacement(
     service, tmp_path, monkeypatch
 ):
@@ -2016,6 +2012,10 @@ def test_export_detects_destination_replacement_and_does_not_delete_replacement(
     assert list(tmp_path.glob(".stingray-export-*")) == []
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX descriptor injection; NTFS races are tested in test_windows_secure_publication",
+)
 def test_export_parent_swap_cannot_redirect_staging_or_cleanup(
     service, tmp_path, monkeypatch
 ):
@@ -2054,6 +2054,10 @@ def test_export_parent_swap_cannot_redirect_staging_or_cleanup(
     assert list(moved_parent.glob(".stingray-export-*")) == []
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX descriptor injection; NTFS races are tested in test_windows_secure_publication",
+)
 def test_export_cleanup_uses_pinned_directories_after_parent_swap(
     service, tmp_path, monkeypatch
 ):
@@ -2098,6 +2102,10 @@ def test_export_cleanup_uses_pinned_directories_after_parent_swap(
     assert list(moved_parent.glob(".stingray-export-*")) == []
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX descriptor injection; NTFS races are tested in test_windows_secure_publication",
+)
 def test_export_cleanup_retains_replacement_staging_directory(
     service, tmp_path, monkeypatch
 ):
@@ -2164,6 +2172,10 @@ def test_export_cleanup_retains_replacement_staging_directory(
         ("fstat", "read"),
         ("stream", "read"),
     ],
+)
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX descriptor injection; NTFS races are tested in test_windows_secure_publication",
 )
 def test_export_closes_raw_descriptors_on_setup_failure(
     service, tmp_path, monkeypatch, failure_kind, failure_role

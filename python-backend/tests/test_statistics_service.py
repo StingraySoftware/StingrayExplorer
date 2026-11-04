@@ -1,6 +1,9 @@
+
 """Scientific, serialization, validation, and concurrency tests for statistics."""
 
 from __future__ import annotations
+
+import stingray
 
 import inspect
 import json
@@ -29,7 +32,7 @@ def _assert_success(result):
     assert set(result) == {"success", "data", "message", "error"}
     assert result["error"] is None
     assert isinstance(result["data"]["warnings"], list)
-    assert result["data"]["provenance"]["stingray_version"] == "2.2.10"
+    assert result["data"]["provenance"]["stingray_version"] == stingray.__version__
     json.dumps(result, allow_nan=False)
     return result["data"]
 

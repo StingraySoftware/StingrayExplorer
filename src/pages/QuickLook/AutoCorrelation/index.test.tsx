@@ -10,6 +10,7 @@ vi.mock('@/api/dataApi', () => ({
 }));
 
 const autoCorrelation = vi.fn();
+const chartProps = vi.fn();
 vi.mock('@/api/correlationApi', () => ({
   correlationApi: {
     autoCorrelation: (...a: unknown[]) => autoCorrelation(...a),
@@ -17,13 +18,17 @@ vi.mock('@/api/correlationApi', () => ({
 }));
 
 vi.mock('@/components/plots/PlotlyChart', () => ({
-  default: () => <div data-testid="chart" />,
+  default: (props: unknown) => {
+    chartProps(props);
+    return <div data-testid="chart" />;
+  },
 }));
 
 import AutoCorrelationPage from './index';
 
 describe('AutoCorrelationPage', () => {
   beforeEach(() => {
+    chartProps.mockClear();
     useUIStore.setState({ notifications: [], unreadNotificationCount: 0 });
     listEventLists.mockResolvedValue({
       success: true,
@@ -68,6 +73,24 @@ describe('AutoCorrelationPage', () => {
     renderWithProviders(<AutoCorrelationPage />);
     const button = await screen.findByRole('button', { name: /Compute/ });
     expect(button).toBeDisabled();
+  });
+
+  it('keeps the original normalization label when the next request is edited', async () => {
+    renderWithProviders(<AutoCorrelationPage />);
+    await userEvent.click(await screen.findByLabelText('Event list'));
+    await userEvent.click(await screen.findByText(/obs1/));
+    await userEvent.click(screen.getByRole('button', { name: /Compute/ }));
+    await screen.findByTestId('chart');
+
+    await userEvent.click(screen.getByLabelText('Normalization'));
+    await userEvent.click(screen.getByRole('option', { name: 'variance' }));
+
+    const lastChart = chartProps.mock.calls.at(-1)?.[0];
+    expect(lastChart.layout.yaxis.title.text).toBe('Correlation (counts²)');
+    expect(screen.getByText(/Inputs have changed since this result/)).toBeInTheDocument();
+    expect(autoCorrelation).toHaveBeenLastCalledWith({
+      event_list_name: 'obs1', dt: 0.1, mode: 'same', norm: 'none',
+    });
   });
 
   it('renders warnings from the result when present', async () => {

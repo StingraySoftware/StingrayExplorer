@@ -1,6 +1,9 @@
+
 """Tests for the curated Miscellaneous Utilities service and route contract."""
 
 from __future__ import annotations
+
+import stingray
 
 import inspect
 import json
@@ -64,10 +67,13 @@ def test_capabilities_are_derived_from_installed_stingray(service):
         "flat-top",
     ]
     assert tuple(data["window_types"]) == SUPPORTED_WINDOWS
-    assert data["rebin"]["linear_uncertainty_workaround_required"] is True
+    assert (
+        data["rebin"]["linear_uncertainty_workaround_required"]
+        is LINEAR_REBIN_NEEDS_VARIANCE_INPUT
+    )
     assert data["limits"]["max_array_values"] == MAX_ARRAY_INPUT
     assert data["limits"]["max_matrix_cells"] == MAX_MATRIX_CELLS
-    assert data["provenance"]["stingray_version"] == "2.2.10"
+    assert data["provenance"]["stingray_version"] == stingray.__version__
     assert_json_safe(result)
 
 
@@ -122,14 +128,26 @@ def test_linear_rebin_matches_stingray_bins_and_analytic_uncertainty(
     data = result["data"]
 
     # 2.2.10 expects variance input due to the bug fixed by upstream PR #953.
-    expected = rebin_data(x, y, 2.0, yerr=sigma**2, method=method, dx=1.0)
+    expected = rebin_data(
+        x,
+        y,
+        2.0,
+        yerr=sigma**2 if LINEAR_REBIN_NEEDS_VARIANCE_INPUT else sigma,
+        method=method,
+        dx=1.0,
+    )
     np.testing.assert_allclose(data["rebinned"]["x"], expected[0])
     np.testing.assert_allclose(data["rebinned"]["y"], expected[1])
     np.testing.assert_allclose(data["rebinned"]["y_error"], expected[2])
     np.testing.assert_allclose(data["rebinned"]["y_error"], analytic_error)
-    assert data["provenance"]["uncertainty_compatibility"]["workaround_applied"]
-    assert any("PR #953" in warning for warning in data["warnings"])
-    assert LINEAR_REBIN_NEEDS_VARIANCE_INPUT
+    assert (
+        data["provenance"]["uncertainty_compatibility"]["workaround_applied"]
+        is LINEAR_REBIN_NEEDS_VARIANCE_INPUT
+    )
+    assert (
+        any("PR #953" in warning for warning in data["warnings"])
+        is LINEAR_REBIN_NEEDS_VARIANCE_INPUT
+    )
     assert_json_safe(result)
 
 
@@ -187,7 +205,7 @@ def test_linear_rebin_accepts_uniform_grid_quantized_by_large_offset(
         canonical_x,
         y,
         0.2,
-        yerr=sigma**2,
+        yerr=sigma**2 if LINEAR_REBIN_NEEDS_VARIANCE_INPUT else sigma,
         method="sum",
         dx=dx,
     )

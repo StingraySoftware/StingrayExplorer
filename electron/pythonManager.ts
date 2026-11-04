@@ -18,6 +18,14 @@ const MAX_SELECTED_PATH_LENGTH = 4096;
 const MAX_FILE_GRANT_REQUEST_BYTES = 16 * 1024;
 export const DEFAULT_BACKEND_PORT = 8765;
 
+export function pixiPythonExecutable(appPath: string, platform: NodeJS.Platform): string {
+  const paths = platform === 'win32' ? path.win32 : path.posix;
+  const environment = paths.join(appPath, '.pixi', 'envs', 'default');
+  return platform === 'win32'
+    ? paths.join(environment, 'python.exe')
+    : paths.join(environment, 'bin', 'python');
+}
+
 /** Parse the backend's stdout protocol without accepting ambiguous port text. */
 export function parseBackendPortAnnouncement(line: string): number | null {
   const match = /^BACKEND_PORT:([1-9][0-9]{0,4})$/.exec(line);
@@ -314,7 +322,7 @@ export class PythonManager {
       // Development: run main.py from python-backend directory
       // The cwd is set to python-backend in the spawn call
       // Use pixi environment Python if available, otherwise fall back to system python
-      const pixiPython = path.join(app.getAppPath(), '.pixi', 'envs', 'default', 'bin', 'python');
+      const pixiPython = pixiPythonExecutable(app.getAppPath(), process.platform);
       return {
         pythonPath: pixiPython,
         args: ['main.py'],

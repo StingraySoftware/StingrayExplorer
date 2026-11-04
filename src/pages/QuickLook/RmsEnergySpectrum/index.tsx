@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   Box,
@@ -23,6 +24,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, RmsSpectrumData } from '@/api/varenergyApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -30,18 +32,27 @@ import { parsePositiveNumber } from '@/utils/numbers';
 type RmsNorm = 'frac' | 'abs';
 
 const RmsEnergySpectrumPage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
-  const [binTime, setBinTime] = useState('0.1');
-  const [segmentSize, setSegmentSize] = useState('8');
-  const [freqMin, setFreqMin] = useState('0.1');
-  const [freqMax, setFreqMax] = useState('1');
-  const [energyMin, setEnergyMin] = useState('0.5');
-  const [energyMax, setEnergyMax] = useState('10');
-  const [nBands, setNBands] = useState('5');
-  const [logBands, setLogBands] = useState(false);
-  const [norm, setNorm] = useState<RmsNorm>('frac');
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:eventList:1', '');
+  const [binTime, setBinTime] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:binTime:2', '0.1');
+  const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:segmentSize:3', '8');
+  const [freqMin, setFreqMin] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:freqMin:4', '0.1');
+  const [freqMax, setFreqMax] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:freqMax:5', '1');
+  const [energyMin, setEnergyMin] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:energyMin:6', '0.5');
+  const [energyMax, setEnergyMax] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:energyMax:7', '10');
+  const [nBands, setNBands] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:nBands:8', '5');
+  const [logBands, setLogBands] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:logBands:9', false);
+  const [norm, setNorm] = useWorkspaceState<RmsNorm>('QuickLook/RmsEnergySpectrum/index.tsx:norm:10', 'frac');
 
-  const { result, running, error, run } = useAnalysisRunner<RmsSpectrumData>('RMS Energy Spectrum');
+  const {
+    result,
+    running,
+    error,
+    run,
+    resultInputs,
+    resultIdentity,
+    resultStatus,
+    backendAvailable,
+  } = useAnalysisRunner<RmsSpectrumData>('RMS Energy Spectrum');
 
   const binTimeNum = parsePositiveNumber(binTime);
   const segNum = parsePositiveNumber(segmentSize);
@@ -57,7 +68,22 @@ const RmsEnergySpectrumPage: React.FC = () => {
   const energyRangeInverted =
     energyMinNum !== null && energyMaxNum !== null && energyMaxNum <= energyMinNum;
 
+  const currentInputs = {
+    operation: 'rms_energy_spectrum',
+    event_list_name: eventList,
+    bin_time: binTimeNum,
+    segment_size: segNum,
+    freq_min: freqMinNum,
+    freq_max: freqMaxNum,
+    energy_min: energyMinNum,
+    energy_max: energyMaxNum,
+    n_bands: nBandsNum,
+    log_bands: logBands,
+    norm,
+  };
+
   const canRun =
+    backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
     segNum !== null &&
@@ -71,6 +97,7 @@ const RmsEnergySpectrumPage: React.FC = () => {
     !running;
 
   const handleRun = (): void => {
+    if (!canRun) return;
     if (
       binTimeNum === null ||
       segNum === null ||
@@ -82,19 +109,21 @@ const RmsEnergySpectrumPage: React.FC = () => {
     ) {
       return;
     }
-    void run(() =>
-      varenergyApi.rmsSpectrum({
-        event_list_name: eventList,
-        bin_time: binTimeNum,
-        segment_size: segNum,
-        freq_min: freqMinNum,
-        freq_max: freqMaxNum,
-        energy_min: energyMinNum,
-        energy_max: energyMaxNum,
-        n_bands: nBandsNum,
-        log_bands: logBands,
-        norm,
-      })
+    const parameters = {
+      event_list_name: eventList,
+      bin_time: binTimeNum,
+      segment_size: segNum,
+      freq_min: freqMinNum,
+      freq_max: freqMaxNum,
+      energy_min: energyMinNum,
+      energy_max: energyMaxNum,
+      n_bands: nBandsNum,
+      log_bands: logBands,
+      norm,
+    };
+    void run(
+      () => varenergyApi.rmsSpectrum(parameters),
+      { operation: 'rms_energy_spectrum', ...parameters }
     );
   };
 
@@ -277,6 +306,12 @@ const RmsEnergySpectrumPage: React.FC = () => {
                   </>
                 )}
               </Box>
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {error && (
                 <Alert severity="error" sx={{ mb: 1 }}>
                   {error}
@@ -302,8 +337,7 @@ const RmsEnergySpectrumPage: React.FC = () => {
                     </Typography>
                   </Box>
                 ) : (
-                  <PlotlyChart
-                    data={traces}
+                  <PlotlyChart workspaceKey='QuickLook/RmsEnergySpectrum/index.tsx:chart:1'                     data={traces}
                     layout={{
                       xaxis: { title: { text: 'Energy (keV)' } },
                       yaxis: { title: { text: yAxisLabel }, type: 'linear' },

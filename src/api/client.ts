@@ -1,6 +1,7 @@
 /**
  * API client for communicating with the Python backend
  */
+import { captureBackendEpoch, isBackendEpochCurrent } from './backendEpoch';
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -40,8 +41,19 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
+    const epoch = captureBackendEpoch();
+    const obsoleteResponse = (): ApiResponse<T> => ({
+      success: false,
+      data: null,
+      message: epoch.isReady
+        ? 'The backend changed while this request was running. Refresh the inputs and try again.'
+        : 'The backend is not ready. Wait for it to reconnect before trying again.',
+      error: epoch.isReady ? 'backend_session_changed' : 'backend_unavailable',
+    });
+    if (!isBackendEpochCurrent(epoch)) return obsoleteResponse();
     // Always sync port before request
     await this.getPort();
+    if (!isBackendEpochCurrent(epoch)) return obsoleteResponse();
     const url = `${this.baseUrl}${endpoint}`;
 
     console.log(`[ApiClient] ${options.method || 'GET'} ${url}`);
@@ -60,9 +72,11 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
+      if (!isBackendEpochCurrent(epoch)) return obsoleteResponse();
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        if (!isBackendEpochCurrent(epoch)) return obsoleteResponse();
         console.error(`[ApiClient] HTTP ${response.status}:`, errorData);
         const validationMessage = Array.isArray(errorData.detail)
           ? errorData.detail
@@ -88,9 +102,11 @@ class ApiClient {
       }
 
       const data = await response.json();
+      if (!isBackendEpochCurrent(epoch)) return obsoleteResponse();
       console.log(`[ApiClient] Response:`, data.success ? 'success' : 'failed');
       return data;
     } catch (error) {
+      if (!isBackendEpochCurrent(epoch)) return obsoleteResponse();
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[ApiClient] Fetch error:`, error);
       return {
@@ -119,12 +135,19 @@ class ApiClient {
 
   /** Stream JSON SSE events through Electron's authenticated network session. */
   async *stream<T>(endpoint: string, signal?: AbortSignal): AsyncGenerator<T, void, unknown> {
+    const epoch = captureBackendEpoch();
+    if (!isBackendEpochCurrent(epoch)) throw new Error('The backend is not ready for streaming.');
     await this.getPort();
+    if (!isBackendEpochCurrent(epoch)) return;
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'GET',
       headers: { Accept: 'text/event-stream' },
       signal,
     });
+    if (!isBackendEpochCurrent(epoch)) {
+      await response.body?.cancel();
+      return;
+    }
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -137,6 +160,7 @@ class ApiClient {
     try {
       while (true) {
         const { done, value } = await reader.read();
+        if (!isBackendEpochCurrent(epoch)) return;
         buffer += decoder.decode(value, { stream: !done });
         const events = buffer.split(/\r?\n\r?\n/);
         buffer = events.pop() ?? '';
@@ -146,7 +170,7 @@ class ApiClient {
             .filter((line) => line.startsWith('data:'))
             .map((line) => line.slice(5).trimStart())
             .join('\n');
-          if (data) yield JSON.parse(data) as T;
+          if (data && isBackendEpochCurrent(epoch)) yield JSON.parse(data) as T;
         }
         if (done) break;
       }
@@ -156,8 +180,11 @@ class ApiClient {
         .filter((line) => line.startsWith('data:'))
         .map((line) => line.slice(5).trimStart())
         .join('\n');
-      if (finalData) yield JSON.parse(finalData) as T;
+      if (finalData && isBackendEpochCurrent(epoch)) yield JSON.parse(finalData) as T;
     } finally {
+      if (!isBackendEpochCurrent(epoch)) {
+        await reader.cancel().catch(() => undefined);
+      }
       reader.releaseLock();
     }
   }

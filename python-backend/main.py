@@ -26,6 +26,7 @@ from routes import (
     gti_routes,
     internal_grant_routes,
     io_utility_routes,
+    project_routes,
     job_routes,
     lightcurve_routes,
     log_routes,
@@ -143,15 +144,24 @@ class BackendSessionMiddleware:
 class RequestBodyLimitMiddleware:
     """Reject oversized HTTP bodies even when Content-Length is absent or false."""
 
-    def __init__(self, app: ASGIApp, max_body_size: int) -> None:
+    def __init__(
+        self, app: ASGIApp, max_body_size: int, project_body_size: int | None = None
+    ) -> None:
         self.app = app
         self.max_body_size = max_body_size
+        self.project_body_size = project_body_size or max_body_size
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
+        limit = (
+            self.project_body_size
+            if scope.get("path") == "/api/projects/save"
+            and scope.get("method") == "POST"
+            else self.max_body_size
+        )
         for name, value in scope.get("headers", []):
             if name.lower() != b"content-length":
                 continue
@@ -161,8 +171,8 @@ class RequestBodyLimitMiddleware:
                 # The server normally rejects malformed Content-Length values.
                 # Counting the received bytes is still safe if one reaches here.
                 continue
-            if declared_size > self.max_body_size:
-                await self._send_too_large(scope, receive, send)
+            if declared_size > limit:
+                await self._send_too_large(scope, receive, send, limit)
                 return
 
         buffered_messages: list[Message] = []
@@ -176,8 +186,8 @@ class RequestBodyLimitMiddleware:
                 continue
 
             received_size += len(message.get("body", b""))
-            if received_size > self.max_body_size:
-                await self._send_too_large(scope, receive, send)
+            if received_size > limit:
+                await self._send_too_large(scope, receive, send, limit)
                 return
             if not message.get("more_body", False):
                 break
@@ -197,8 +207,10 @@ class RequestBodyLimitMiddleware:
 
         await self.app(scope, replay_receive, send)
 
-    async def _send_too_large(self, scope: Scope, receive: Receive, send: Send) -> None:
-        limit_mib = self.max_body_size // 1024**2
+    async def _send_too_large(
+        self, scope: Scope, receive: Receive, send: Send, limit: int
+    ) -> None:
+        limit_mib = limit // 1024**2
         response = JSONResponse(
             status_code=413,
             content={"detail": f"Request body exceeds the {limit_mib} MiB limit"},
@@ -397,7 +409,11 @@ def create_app(
     # It is never returned by an endpoint or added to renderer request headers.
     app.state._file_grant_secret = resolved_file_grant_secret
 
-    app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BODY_BYTES)
+    app.add_middleware(
+        RequestBodyLimitMiddleware,
+        max_body_size=MAX_REQUEST_BODY_BYTES,
+        project_body_size=64 * 1024**2,
+    )
     app.add_middleware(BackendSessionMiddleware, session_secret=resolved_session_secret)
 
     # The renderer is either the fixed development origin or an authenticated
@@ -422,6 +438,7 @@ def create_app(
         )
 
     # Register routes
+    app.include_router(project_routes.router, prefix="/api/projects", tags=["Projects"])
     app.include_router(internal_grant_routes.router, prefix="/internal")
     app.include_router(data_routes.router, prefix="/api/data", tags=["Data"])
     app.include_router(

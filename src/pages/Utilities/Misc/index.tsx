@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React from 'react';
 import {
   Alert,
@@ -245,14 +246,14 @@ function ResultCard<T extends UtilityData>({
 }
 
 function RebinWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): React.ReactElement {
-  const [mode, setMode] = React.useState<RebinMode>('linear');
-  const [xText, setXText] = React.useState('');
-  const [yText, setYText] = React.useState('');
+  const [mode, setMode] = useWorkspaceState<RebinMode>('Utilities/Misc/index.tsx:mode:1', 'linear');
+  const [xText, setXText] = useWorkspaceState('Utilities/Misc/index.tsx:xText:2', '');
+  const [yText, setYText] = useWorkspaceState('Utilities/Misc/index.tsx:yText:3', '');
   const [errorText, setErrorText] = React.useState('');
-  const [resolution, setResolution] = React.useState('2');
-  const [factor, setFactor] = React.useState('0.1');
-  const [oldResolution, setOldResolution] = React.useState('');
-  const [method, setMethod] = React.useState<'sum' | 'mean'>('sum');
+  const [resolution, setResolution] = useWorkspaceState('Utilities/Misc/index.tsx:resolution:4', '2');
+  const [factor, setFactor] = useWorkspaceState('Utilities/Misc/index.tsx:factor:5', '0.1');
+  const [oldResolution, setOldResolution] = useWorkspaceState('Utilities/Misc/index.tsx:oldResolution:6', '');
+  const [method, setMethod] = useWorkspaceState<'sum' | 'mean'>('Utilities/Misc/index.tsx:method:7', 'sum');
   const linearRunner = useAnalysisRunner<RebinData>('Linear rebinning');
   const logarithmicRunner = useAnalysisRunner<RebinData>('Logarithmic rebinning');
   const activeRunner = mode === 'linear' ? linearRunner : logarithmicRunner;
@@ -506,8 +507,7 @@ function RebinWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
                   x and every dx use the same input unit. Mean preserves y units; sum reports the
                   summed y quantity. {result.error_semantics ?? 'No uncertainties were supplied.'}
                 </Alert>
-                <PlotlyChart
-                  data={traces}
+                <PlotlyChart workspaceKey='Utilities/Misc/index.tsx:chart:1'                   data={traces}
                   layout={{
                     showlegend: true,
                     xaxis: { title: { text: 'x (input units)' } },
@@ -540,12 +540,12 @@ function RebinWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
 }
 
 function BaselineWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): React.ReactElement {
-  const [xText, setXText] = React.useState('');
-  const [yText, setYText] = React.useState('');
-  const [lambda, setLambda] = React.useState('100000000000');
-  const [asymmetry, setAsymmetry] = React.useState('0.001');
-  const [iterations, setIterations] = React.useState('10');
-  const [offsetCorrection, setOffsetCorrection] = React.useState(false);
+  const [xText, setXText] = useWorkspaceState('Utilities/Misc/index.tsx:xText:8', '');
+  const [yText, setYText] = useWorkspaceState('Utilities/Misc/index.tsx:yText:9', '');
+  const [lambda, setLambda] = useWorkspaceState('Utilities/Misc/index.tsx:lambda:10', '100000000000');
+  const [asymmetry, setAsymmetry] = useWorkspaceState('Utilities/Misc/index.tsx:asymmetry:11', '0.001');
+  const [iterations, setIterations] = useWorkspaceState('Utilities/Misc/index.tsx:iterations:12', '10');
+  const [offsetCorrection, setOffsetCorrection] = useWorkspaceState('Utilities/Misc/index.tsx:offsetCorrection:13', false);
   const runner = useAnalysisRunner<BaselineData>('Baseline estimation');
   const maxValues = capabilities?.limits.max_array_values;
   const x = React.useMemo(
@@ -606,7 +606,7 @@ function BaselineWorkbench({ capabilities }: { capabilities?: MiscCapabilities }
             return (
               <>
                 <Alert severity="info">x keeps the supplied x unit. Original, baseline and corrected values all share the supplied y unit; corrected = original − baseline.</Alert>
-                <PlotlyChart data={[
+                <PlotlyChart workspaceKey='Utilities/Misc/index.tsx:chart:2' data={[
                   { x: values.x ?? [], y: values.original ?? [], type: 'scattergl', mode: 'lines', name: 'Original' } as Data,
                   { x: values.x ?? [], y: values.baseline ?? [], type: 'scattergl', mode: 'lines', name: 'Baseline' } as Data,
                   { x: values.x ?? [], y: values.corrected ?? [], type: 'scattergl', mode: 'lines', name: 'Corrected' } as Data,
@@ -624,12 +624,12 @@ function BaselineWorkbench({ capabilities }: { capabilities?: MiscCapabilities }
 }
 
 function WindowWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): React.ReactElement {
-  const [sampleCount, setSampleCount] = React.useState('64');
-  const [windowType, setWindowType] = React.useState('');
+  const [sampleCount, setSampleCount] = useWorkspaceState('Utilities/Misc/index.tsx:sampleCount:14', '64');
+  const [windowType, setWindowType] = useWorkspaceState('Utilities/Misc/index.tsx:windowType:15', '');
   const runner = useAnalysisRunner<WindowData>('Window generation');
   React.useEffect(() => {
     if (!windowType && capabilities?.window_types.length) setWindowType(capabilities.window_types[0]);
-  }, [capabilities, windowType]);
+  }, [capabilities, windowType, setWindowType]);
   const count = parsePositiveInteger(sampleCount);
   const cap = capabilities?.limits.max_exact_output_values;
   const validationError = !capabilities
@@ -668,7 +668,7 @@ function WindowWorkbench({ capabilities }: { capabilities?: MiscCapabilities }):
             return (
               <>
                 <Alert severity="info">Sample index and coefficients are dimensionless. ENBW is reported in FFT-bin units; coherent gain is the coefficient mean.</Alert>
-                <PlotlyChart data={[{ x: previewValues(result.plot_preview, 'sample_index'), y: previewValues(result.plot_preview, 'window'), type: 'scattergl', mode: 'lines', name: result.window_type } as Data]} layout={{ xaxis: { title: { text: 'Sample index' } }, yaxis: { title: { text: 'Window coefficient' } } }} />
+                <PlotlyChart workspaceKey='Utilities/Misc/index.tsx:chart:3' data={[{ x: previewValues(result.plot_preview, 'sample_index'), y: previewValues(result.plot_preview, 'window'), type: 'scattergl', mode: 'lines', name: result.window_type } as Data]} layout={{ xaxis: { title: { text: 'Sample index' } }, yaxis: { title: { text: 'Window coefficient' } } }} />
                 <Grid container spacing={2}>
                   <Grid item xs={12} lg={5}><NumericResultTable title="Window summary" columns={[{ key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }]} rows={summaryRows} /></Grid>
                   <Grid item xs={12} lg={7}><NumericResultTable title="Exact coefficients" columns={[{ key: 'index', label: 'Sample index' }, { key: 'coefficient', label: 'Coefficient' }]} rows={rows} /></Grid>
@@ -683,13 +683,13 @@ function WindowWorkbench({ capabilities }: { capabilities?: MiscCapabilities }):
 }
 
 function SamplingWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): React.ReactElement {
-  const [mode, setMode] = React.useState<SamplingMode>('optimal');
-  const [fftLength, setFftLength] = React.useState('512');
-  const [proposedBinTime, setProposedBinTime] = React.useState('2.1');
-  const [powerValue, setPowerValue] = React.useState('6');
-  const [segmentSize, setSegmentSize] = React.useState('10.1');
-  const [dt, setDt] = React.useState('1');
-  const [tolerance, setTolerance] = React.useState('0.01');
+  const [mode, setMode] = useWorkspaceState<SamplingMode>('Utilities/Misc/index.tsx:mode:16', 'optimal');
+  const [fftLength, setFftLength] = useWorkspaceState('Utilities/Misc/index.tsx:fftLength:17', '512');
+  const [proposedBinTime, setProposedBinTime] = useWorkspaceState('Utilities/Misc/index.tsx:proposedBinTime:18', '2.1');
+  const [powerValue, setPowerValue] = useWorkspaceState('Utilities/Misc/index.tsx:powerValue:19', '6');
+  const [segmentSize, setSegmentSize] = useWorkspaceState('Utilities/Misc/index.tsx:segmentSize:20', '10.1');
+  const [dt, setDt] = useWorkspaceState('Utilities/Misc/index.tsx:dt:21', '1');
+  const [tolerance, setTolerance] = useWorkspaceState('Utilities/Misc/index.tsx:tolerance:22', '0.01');
   type SamplingResult = OptimalBinTimeData | NearestPowerOfTwoData | SegmentSizeData;
   const optimalRunner = useAnalysisRunner<SamplingResult>('Optimal FFT bin time');
   const powerRunner = useAnalysisRunner<SamplingResult>('Nearest power of two');
@@ -774,10 +774,10 @@ function SamplingWorkbench({ capabilities }: { capabilities?: MiscCapabilities }
 }
 
 function ErrorWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): React.ReactElement {
-  const [mode, setMode] = React.useState<ErrorMode>('poisson');
-  const [countsText, setCountsText] = React.useState('');
-  const [matrixText, setMatrixText] = React.useState('');
-  const [meanText, setMeanText] = React.useState('');
+  const [mode, setMode] = useWorkspaceState<ErrorMode>('Utilities/Misc/index.tsx:mode:23', 'poisson');
+  const [countsText, setCountsText] = useWorkspaceState('Utilities/Misc/index.tsx:countsText:24', '');
+  const [matrixText, setMatrixText] = useWorkspaceState('Utilities/Misc/index.tsx:matrixText:25', '');
+  const [meanText, setMeanText] = useWorkspaceState('Utilities/Misc/index.tsx:meanText:26', '');
   type ErrorResult = PoissonErrorData | StandardErrorData;
   const poissonRunner = useAnalysisRunner<ErrorResult>('Poisson errors');
   const standardRunner = useAnalysisRunner<ErrorResult>('Standard error');
@@ -843,7 +843,7 @@ function ErrorWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
             const rows = value.counts.map((count, index) => ({ index, count, error: value.symmetric_error[index] }));
             return <>
               <Alert severity="info">{value.assumptions} Count and error units are counts; the confidence convention is {value.confidence_sigma}σ.</Alert>
-              <PlotlyChart data={[{ x: previewValues(value.plot_preview, 'counts'), y: previewValues(value.plot_preview, 'symmetric_error'), type: 'scattergl', mode: 'markers', name: '1σ error' } as Data]} layout={{ xaxis: { title: { text: 'Observed counts' } }, yaxis: { title: { text: 'Symmetric 1σ error (counts)' } } }} />
+              <PlotlyChart workspaceKey='Utilities/Misc/index.tsx:chart:4' data={[{ x: previewValues(value.plot_preview, 'counts'), y: previewValues(value.plot_preview, 'symmetric_error'), type: 'scattergl', mode: 'markers', name: '1σ error' } as Data]} layout={{ xaxis: { title: { text: 'Observed counts' } }, yaxis: { title: { text: 'Symmetric 1σ error (counts)' } } }} />
               <NumericResultTable title="Exact Poisson errors" columns={[{ key: 'index', label: 'Index' }, { key: 'count', label: 'Count' }, { key: 'error', label: 'Symmetric 1σ error' }]} rows={rows} />
             </>;
           })() : (() => {
@@ -851,7 +851,7 @@ function ErrorWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
             const rows = value.mean.map((mean, index) => ({ column: index, mean, sampleMean: value.calculated_sample_mean[index], standardError: value.standard_error[index] }));
             return <>
               <Alert severity="info">{value.assumptions} Mean and standard error retain each input column's units. Samples: {value.sample_count}; mean source: {value.mean_source}.</Alert>
-              <PlotlyChart data={[{ x: previewValues(value.plot_preview, 'column_index'), y: previewValues(value.plot_preview, 'mean'), error_y: { type: 'data', array: previewValues(value.plot_preview, 'standard_error'), visible: true }, type: 'scattergl', mode: 'markers', name: 'Mean ± SEM' } as Data]} layout={{ xaxis: { title: { text: 'Column index' } }, yaxis: { title: { text: 'Mean ± standard error (column units)' } } }} />
+              <PlotlyChart workspaceKey='Utilities/Misc/index.tsx:chart:5' data={[{ x: previewValues(value.plot_preview, 'column_index'), y: previewValues(value.plot_preview, 'mean'), error_y: { type: 'data', array: previewValues(value.plot_preview, 'standard_error'), visible: true }, type: 'scattergl', mode: 'markers', name: 'Mean ± SEM' } as Data]} layout={{ xaxis: { title: { text: 'Column index' } }, yaxis: { title: { text: 'Mean ± standard error (column units)' } } }} />
               <NumericResultTable title="Exact standard errors" columns={[{ key: 'column', label: 'Column' }, { key: 'mean', label: 'Reference mean' }, { key: 'sampleMean', label: 'Sample mean' }, { key: 'standardError', label: 'Standard error' }]} rows={rows} />
             </>;
           })()}
@@ -862,13 +862,13 @@ function ErrorWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
 }
 
 function EnergyRangesWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): React.ReactElement {
-  const [source, setSource] = React.useState<'pasted' | 'event'>('pasted');
-  const [energiesText, setEnergiesText] = React.useState('');
-  const [eventList, setEventList] = React.useState('');
-  const [rangeCount, setRangeCount] = React.useState('4');
-  const [minimum, setMinimum] = React.useState('');
-  const [maximum, setMaximum] = React.useState('');
-  const [unit, setUnit] = React.useState('keV');
+  const [source, setSource] = useWorkspaceState<'pasted' | 'event'>('Utilities/Misc/index.tsx:source:27', 'pasted');
+  const [energiesText, setEnergiesText] = useWorkspaceState('Utilities/Misc/index.tsx:energiesText:28', '');
+  const [eventList, setEventList] = useWorkspaceState('Utilities/Misc/index.tsx:eventList:29', '');
+  const [rangeCount, setRangeCount] = useWorkspaceState('Utilities/Misc/index.tsx:rangeCount:30', '4');
+  const [minimum, setMinimum] = useWorkspaceState('Utilities/Misc/index.tsx:minimum:31', '');
+  const [maximum, setMaximum] = useWorkspaceState('Utilities/Misc/index.tsx:maximum:32', '');
+  const [unit, setUnit] = useWorkspaceState('Utilities/Misc/index.tsx:unit:33', 'keV');
   const runner = useAnalysisRunner<EnergyRangesData>('Equal-count energy ranges');
   const maxValues = capabilities?.limits.max_array_values;
   const energies = React.useMemo(() => parseNumericArray(energiesText, 'Energies', maxValues), [energiesText, maxValues]);
@@ -955,7 +955,7 @@ function EnergyRangesWorkbench({ capabilities }: { capabilities?: MiscCapabiliti
             const rows = result.counts.map((count, index) => ({ bin: index + 1, lower: result.bin_edges[index], upper: result.bin_edges[index + 1], count }));
             return <>
               <Alert severity="info">Edges use {result.energy_unit}; counts are dimensionless event counts. {result.selected_count.toLocaleString()} selected and {result.excluded_count.toLocaleString()} excluded by the requested limits.</Alert>
-              <PlotlyChart data={[{ x: previewValues(result.plot_preview, 'rank'), y: previewValues(result.plot_preview, 'energy'), type: 'scattergl', mode: 'markers', name: 'Sorted energy' } as Data]} layout={{ xaxis: { title: { text: 'Selected-event rank' } }, yaxis: { title: { text: `Energy (${result.energy_unit})` } } }} />
+              <PlotlyChart workspaceKey='Utilities/Misc/index.tsx:chart:6' data={[{ x: previewValues(result.plot_preview, 'rank'), y: previewValues(result.plot_preview, 'energy'), type: 'scattergl', mode: 'markers', name: 'Sorted energy' } as Data]} layout={{ xaxis: { title: { text: 'Selected-event rank' } }, yaxis: { title: { text: `Energy (${result.energy_unit})` } } }} />
               <NumericResultTable title="Exact energy ranges" columns={[{ key: 'bin', label: 'Range' }, { key: 'lower', label: 'Lower edge', unit: result.energy_unit }, { key: 'upper', label: 'Upper edge', unit: result.energy_unit }, { key: 'count', label: 'Event count' }]} rows={rows} />
             </>;
           }}
@@ -966,7 +966,7 @@ function EnergyRangesWorkbench({ capabilities }: { capabilities?: MiscCapabiliti
 }
 
 const MiscPage: React.FC = () => {
-  const [tab, setTab] = React.useState<MainTab>('rebin');
+  const [tab, setTab] = useWorkspaceState<MainTab>('Utilities/Misc/index.tsx:tab:34', 'rebin');
   const [visitedTabs, setVisitedTabs] = React.useState<Set<MainTab>>(
     () => new Set<MainTab>(['rebin'])
   );

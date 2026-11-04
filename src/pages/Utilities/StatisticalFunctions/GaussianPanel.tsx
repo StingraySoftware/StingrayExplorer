@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import { type FormEvent } from 'react';
 import {
   Alert,
   Card,
@@ -22,9 +23,9 @@ import { finiteNumber } from './validation';
 type InputMode = 'probability' | 'log_probability';
 
 export function GaussianPanel() {
-  const [inputMode, setInputMode] = useState<InputMode>('probability');
-  const [rawValue, setRawValue] = useState('0.0027');
-  const [sidedness, setSidedness] = useState<StatisticalSidedness>('one-sided');
+  const [inputMode, setInputMode] = useWorkspaceState<InputMode>('Utilities/StatisticalFunctions/GaussianPanel.tsx:inputMode:1', 'probability');
+  const [rawValue, setRawValue] = useWorkspaceState('Utilities/StatisticalFunctions/GaussianPanel.tsx:rawValue:2', '0.0027');
+  const [sidedness, setSidedness] = useWorkspaceState<StatisticalSidedness>('Utilities/StatisticalFunctions/GaussianPanel.tsx:sidedness:3', 'one-sided');
   const runner = useAnalysisRunner<GaussianResult>('Gaussian Significance');
 
   const parsed = finiteNumber(

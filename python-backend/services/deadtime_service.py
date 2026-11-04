@@ -17,6 +17,7 @@ from .analysis_helpers import (
     segment_size_error,
 )
 from .base_service import BaseService
+from .scientific_compatibility import correct_pds_deadtime
 
 # Below this many averaged segments the FAD correction is unreliable
 # (Bachetti & Huppenkothen 2018 / stingray docstring recommendation).
@@ -178,7 +179,8 @@ class DeadtimeService(BaseService):
                 pds = AveragedPowerspectrum.from_events(
                     event_list, dt=dt, segment_size=segment_size, norm="leahy"
                 )
-                corrected = pds.deadtime_correct(
+                corrected = correct_pds_deadtime(
+                    pds,
                     dead_time=dead_time,
                     rate=rate,
                     background_rate=background_rate,

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   AlertTitle,
@@ -28,6 +29,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { deadtimeApi, PdsCorrectionData, FadCorrectionData } from '@/api/deadtimeApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -63,39 +65,47 @@ const DeadTimeCorrectionsPage: React.FC = () => {
   const referenceLineColor = theme.palette.text.secondary;
 
   // Panel (a) — client-side rate calculator
-  const [rateMode, setRateMode] = useState<'incident' | 'detected'>('incident');
-  const [knownRate, setKnownRate] = useState('300');
-  const [calculatorDeadTime, setCalculatorDeadTime] = useState('0.0025');
+  const [rateMode, setRateMode] = useWorkspaceState<'incident' | 'detected'>('QuickLook/DeadTimeCorrections/index.tsx:rateMode:1', 'incident');
+  const [knownRate, setKnownRate] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:knownRate:2', '300');
+  const [calculatorDeadTime, setCalculatorDeadTime] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:calculatorDeadTime:3', '0.0025');
 
   // Panel (b) — model (Zhang+95) PDS correction
-  const [pdsEventList, setPdsEventList] = useState('');
-  const [pdsDt, setPdsDt] = useState('0.001');
-  const [pdsSegmentSize, setPdsSegmentSize] = useState('20');
-  const [pdsDeadTime, setPdsDeadTime] = useState('0.0025');
-  const [pdsBackgroundRate, setPdsBackgroundRate] = useState('0');
-  const [pdsLimitK, setPdsLimitK] = useState('200');
-  const [pdsLogAxes, setPdsLogAxes] = useState(true);
+  const [pdsEventList, setPdsEventList] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsEventList:4', '');
+  const [pdsDt, setPdsDt] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsDt:5', '0.001');
+  const [pdsSegmentSize, setPdsSegmentSize] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsSegmentSize:6', '20');
+  const [pdsDeadTime, setPdsDeadTime] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsDeadTime:7', '0.0025');
+  const [pdsBackgroundRate, setPdsBackgroundRate] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsBackgroundRate:8', '0');
+  const [pdsLimitK, setPdsLimitK] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsLimitK:9', '200');
+  const [pdsLogAxes, setPdsLogAxes] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsLogAxes:10', true);
 
   // Panel (c) — FAD correction
-  const [fadEventList1, setFadEventList1] = useState('');
-  const [fadEventList2, setFadEventList2] = useState('');
-  const [fadDt, setFadDt] = useState('0.001');
-  const [fadSegmentSize, setFadSegmentSize] = useState('8');
-  const [fadNorm, setFadNorm] = useState('frac');
-  const [fadSmoothingLength, setFadSmoothingLength] = useState('');
-  const [showCospectrum, setShowCospectrum] = useState(false);
+  const [fadEventList1, setFadEventList1] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadEventList1:11', '');
+  const [fadEventList2, setFadEventList2] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadEventList2:12', '');
+  const [fadDt, setFadDt] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadDt:13', '0.001');
+  const [fadSegmentSize, setFadSegmentSize] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadSegmentSize:14', '8');
+  const [fadNorm, setFadNorm] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadNorm:15', 'frac');
+  const [fadSmoothingLength, setFadSmoothingLength] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadSmoothingLength:16', '');
+  const [showCospectrum, setShowCospectrum] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:showCospectrum:17', false);
   const fadNormLabelId = React.useId();
 
   const {
     result: pdsResult,
     running: pdsRunning,
     error: pdsError,
+    resultInputs: pdsResultInputs,
+    resultIdentity: pdsResultIdentity,
+    resultStatus: pdsResultStatus,
+    backendAvailable: pdsBackendAvailable,
     run: runPds,
   } = useAnalysisRunner<PdsCorrectionData>('Dead-time PDS Correction');
   const {
     result: fadResult,
     running: fadRunning,
     error: fadError,
+    resultInputs: fadResultInputs,
+    resultIdentity: fadResultIdentity,
+    resultStatus: fadResultStatus,
+    backendAvailable: fadBackendAvailable,
     run: runFad,
   } = useAnalysisRunner<FadCorrectionData>('FAD Correction');
 
@@ -136,7 +146,18 @@ const DeadTimeCorrectionsPage: React.FC = () => {
     pdsDeadTimeNum !== null &&
     pdsBackgroundNum !== null &&
     pdsLimitKValid &&
+    pdsBackendAvailable &&
     !pdsRunning;
+
+  const pdsCurrentInputs = {
+    operation: 'pds_correction',
+    event_list_name: pdsEventList,
+    dt: pdsDtNum,
+    segment_size: pdsSegmentNum,
+    dead_time: pdsDeadTimeNum,
+    background_rate: pdsBackgroundNum,
+    limit_k: pdsLimitKNum,
+  };
 
   const handleRunPds = (): void => {
     if (
@@ -144,19 +165,22 @@ const DeadTimeCorrectionsPage: React.FC = () => {
       pdsSegmentNum === null ||
       pdsDeadTimeNum === null ||
       pdsBackgroundNum === null ||
-      pdsLimitKNum === null
+      pdsLimitKNum === null ||
+      !canRunPds
     ) {
       return;
     }
-    void runPds(() =>
-      deadtimeApi.pdsCorrection({
-        event_list_name: pdsEventList,
-        dt: pdsDtNum,
-        segment_size: pdsSegmentNum,
-        dead_time: pdsDeadTimeNum,
-        background_rate: pdsBackgroundNum,
-        limit_k: pdsLimitKNum,
-      })
+    const params = {
+      event_list_name: pdsEventList,
+      dt: pdsDtNum,
+      segment_size: pdsSegmentNum,
+      dead_time: pdsDeadTimeNum,
+      background_rate: pdsBackgroundNum,
+      limit_k: pdsLimitKNum,
+    };
+    void runPds(
+      () => deadtimeApi.pdsCorrection(params),
+      { operation: 'pds_correction', ...params }
     );
   };
 
@@ -198,20 +222,33 @@ const DeadTimeCorrectionsPage: React.FC = () => {
     fadDtNum !== null &&
     fadSegmentNum !== null &&
     !fadSmoothingInvalid &&
+    fadBackendAvailable &&
     !fadRunning;
 
+  const fadCurrentInputs = {
+    operation: 'fad_correction',
+    event_list_1_name: fadEventList1,
+    event_list_2_name: fadEventList2,
+    dt: fadDtNum,
+    segment_size: fadSegmentNum,
+    norm: fadNorm,
+    smoothing_length: fadSmoothingNum,
+  };
+
   const handleRunFad = (): void => {
-    if (fadDtNum === null || fadSegmentNum === null || fadSmoothingInvalid || fadListsIdentical)
+    if (fadDtNum === null || fadSegmentNum === null || !canRunFad)
       return;
-    void runFad(() =>
-      deadtimeApi.fadCorrection({
-        event_list_1_name: fadEventList1,
-        event_list_2_name: fadEventList2,
-        dt: fadDtNum,
-        segment_size: fadSegmentNum,
-        norm: fadNorm,
-        smoothing_length: fadSmoothingNum,
-      })
+    const params = {
+      event_list_1_name: fadEventList1,
+      event_list_2_name: fadEventList2,
+      dt: fadDtNum,
+      segment_size: fadSegmentNum,
+      norm: fadNorm,
+      smoothing_length: fadSmoothingNum,
+    };
+    void runFad(
+      () => deadtimeApi.fadCorrection(params),
+      { operation: 'fad_correction', ...params }
     );
   };
 
@@ -555,6 +592,12 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                     {pdsError}
                   </Alert>
                 )}
+                <AnalysisResultIdentity
+                  inputs={pdsResultInputs}
+                  identity={pdsResultIdentity}
+                  status={pdsResultStatus}
+                  currentInputs={pdsCurrentInputs}
+                />
                 {pdsResult && pdsResult.warnings.length > 0 && (
                   <Alert severity="warning" sx={{ mt: 1, mb: 1 }}>
                     <WarningLines warnings={pdsResult.warnings} />
@@ -567,8 +610,7 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                   </Alert>
                 )}
                 {pdsResult ? (
-                  <PlotlyChart
-                    data={pdsTraces}
+                  <PlotlyChart workspaceKey='QuickLook/DeadTimeCorrections/index.tsx:chart:1'                     data={pdsTraces}
                     layout={{
                       showlegend: true,
                       xaxis: {
@@ -646,6 +688,12 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                     {fadError}
                   </Alert>
                 )}
+                <AnalysisResultIdentity
+                  inputs={fadResultInputs}
+                  identity={fadResultIdentity}
+                  status={fadResultStatus}
+                  currentInputs={fadCurrentInputs}
+                />
                 {fadResult && (fadResult.warnings.length > 0 || fadNonCompliant) && (
                   <Alert
                     severity="warning"
@@ -668,8 +716,7 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                   </Alert>
                 )}
                 {fadResult ? (
-                  <PlotlyChart
-                    data={fadTraces}
+                  <PlotlyChart workspaceKey='QuickLook/DeadTimeCorrections/index.tsx:chart:2'                     data={fadTraces}
                     layout={{
                       showlegend: true,
                       xaxis: { title: { text: 'Frequency (Hz)' }, type: 'log' },

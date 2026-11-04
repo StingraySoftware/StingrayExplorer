@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React from 'react';
 import { Box, Tab, Tabs } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
@@ -22,7 +23,7 @@ const TabPanel: React.FC<{
   ) : null;
 
 const MissionIOPage: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState(0);
+  const [activeTab, setActiveTab] = useWorkspaceState('Utilities/MissionIO/index.tsx:activeTab:1', 0);
 
   return (
     <PageTemplate

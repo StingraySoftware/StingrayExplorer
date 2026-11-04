@@ -30,6 +30,7 @@ from stingray.varenergyspectrum import (
 )
 
 from .analysis_helpers import collect_warnings, finite_list, segment_size_error
+from .scientific_compatibility import mask_legacy_low_count_rms
 from .base_service import BaseService
 
 VALID_NORMS = ("frac", "abs")
@@ -322,8 +323,7 @@ class VarEnergyService(BaseService):
     def _norm_error(self, norm: str) -> Optional[str]:
         if norm not in VALID_NORMS:
             return (
-                f"norm '{norm}' is not supported; use one of "
-                f"{', '.join(VALID_NORMS)}"
+                f"norm '{norm}' is not supported; use one of {', '.join(VALID_NORMS)}"
             )
         return None
 
@@ -470,9 +470,7 @@ class VarEnergyService(BaseService):
             segment_size, bin_time, _longest_gti(event_list)
         )
         notes = [note] if note else []
-        error = self._freq_resolution_error(
-            freq_min, freq_max, segment_size, bin_time
-        )
+        error = self._freq_resolution_error(freq_min, freq_max, segment_size, bin_time)
         return segment_size, notes, error
 
     def _energy_spec(
@@ -548,6 +546,9 @@ class VarEnergyService(BaseService):
                     segment_size=float(segment_size),
                     norm=norm,
                 )
+            mask_legacy_low_count_rms(
+                spectrum, event_list, float(segment_size), warnings
+            )
             self._add_nan_advice(spectrum.spectrum, warnings, "rms")
 
             data = {
@@ -787,6 +788,7 @@ class VarEnergyService(BaseService):
                     bin_time=float(bin_time),
                     segment_size=float(segment_size),
                 )
+            mask_legacy_low_count_rms(rms, event_list, float(segment_size), warnings)
             self._add_nan_advice(rms.spectrum, warnings, "rms")
             self._add_nan_advice(lag.spectrum, warnings, "lag")
 

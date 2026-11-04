@@ -1,4 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Box,
@@ -24,6 +26,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { spectrumApi, PowerSpectrumData } from '@/api/spectrumApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -31,53 +34,89 @@ import { parsePositiveNumber } from '@/utils/numbers';
 const NORM_OPTIONS = ['leahy', 'frac', 'abs', 'none'];
 
 const AvgPowerSpectrumPage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
-  const [dt, setDt] = useState('0.0625');
-  const [segmentSize, setSegmentSize] = useState('16');
-  const [norm, setNorm] = useState('leahy');
-  const [outputName, setOutputName] = useState('');
-  const [logX, setLogX] = useState(true);
-  const [logY, setLogY] = useState(true);
-  const [rebinFactor, setRebinFactor] = useState('0.02');
-  const [logRebin, setLogRebin] = useState(true);
-  const [lastStoredName, setLastStoredName] = useState<string | null>(null);
-  const lastActionRef = useRef<'create' | 'rebin'>('create');
-  const { result, running, error, run } = useAnalysisRunner<PowerSpectrumData>('Averaged Power Spectrum');
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:eventList:1', '');
+  const [dt, setDt] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:dt:2', '0.0625');
+  const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:segmentSize:3', '16');
+  const [norm, setNorm] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:norm:4', 'leahy');
+  const [outputName, setOutputName] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:outputName:5', '');
+  const [logX, setLogX] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:logX:6', true);
+  const [logY, setLogY] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:logY:7', true);
+  const [rebinFactor, setRebinFactor] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:rebinFactor:8', '0.02');
+  const [logRebin, setLogRebin] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:logRebin:9', true);
+  const [rebinOutputName, setRebinOutputName] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:rebinOutputName:10', '');
+  const queryClient = useQueryClient();
+  const { result, running, error, run, resultInputs, resultIdentity, resultStatus, resultStale, backendAvailable } = useAnalysisRunner<PowerSpectrumData>('Averaged Power Spectrum');
 
+  const lastStoredName = result?.name ?? null;
+  const existingSpectra = useQuery({
+    queryKey: ['spectra'],
+    enabled: lastStoredName !== null && backendAvailable && !resultStale,
+    staleTime: 0,
+    refetchInterval: 5_000,
+    queryFn: async () => {
+      const response = await spectrumApi.listSpectra();
+      if (!response.success) throw new Error(response.error || response.message);
+      return response.data ?? [];
+    },
+  });
+  const matchingStoredResult = existingSpectra.data?.some((spectrum) =>
+    spectrum.name === lastStoredName &&
+    (result?.result_id === undefined || spectrum.result_id === result.result_id)
+  ) ?? false;
+  const storedResultAvailable = backendAvailable && !resultStale && existingSpectra.isSuccess && matchingStoredResult;
+  const backingResultMissing = lastStoredName !== null && !resultStale &&
+    existingSpectra.isSuccess && !existingSpectra.isFetching && !matchingStoredResult;
+
+  const suggestedFor = React.useRef(result);
   useEffect(() => {
-    if (result?.name) {
-      setLastStoredName(result.name);
-    } else if (result && lastActionRef.current === 'create') {
-      setLastStoredName(null);
-    }
-  }, [result]);
+    if (!result || suggestedFor.current === result) return;
+    suggestedFor.current = result;
+    void queryClient.invalidateQueries({ queryKey: ['spectra'] });
+    setRebinOutputName(result.name
+      ? `${result.name.slice(0, 43)}_r_${result.result_id?.slice(0, 8) ?? 'derived'}`
+      : '');
+  }, [result, queryClient, setRebinOutputName]);
 
   const dtNum = parsePositiveNumber(dt);
   const segNum = parsePositiveNumber(segmentSize);
   const rebinNum = parsePositiveNumber(rebinFactor);
-  const canRun = eventList !== '' && dtNum !== null && segNum !== null && !running;
+  const canRun = eventList !== '' && dtNum !== null && segNum !== null && !running && backendAvailable;
   const rebinValid = logRebin ? rebinNum !== null : rebinNum !== null && rebinNum > 1;
 
+  const createParams = {
+    event_list_name: eventList,
+    dt: dtNum,
+    segment_size: segNum,
+    norm,
+    output_name: outputName.trim() || undefined,
+  };
+  const creationInputs = { operation: 'averaged_power_spectrum', ...createParams };
+  const currentInputs = resultInputs?.operation === 'rebin_spectrum'
+    ? { ...resultInputs, rebin_factor: rebinNum, log: logRebin, creation_inputs: creationInputs }
+    : creationInputs;
+
   const handleRun = (): void => {
-    lastActionRef.current = 'create';
-    if (!dtNum || !segNum) return;
-    void run(() =>
-      spectrumApi.createAveragedPowerSpectrum({
-        event_list_name: eventList,
-        dt: dtNum,
-        segment_size: segNum,
-        norm,
-        output_name: outputName.trim() || undefined,
-      })
-    );
+    if (!dtNum || !backendAvailable || !segNum) return;
+    const params = { ...createParams, dt: dtNum, segment_size: segNum };
+    void run(() => spectrumApi.createAveragedPowerSpectrum(params), { operation: 'averaged_power_spectrum', ...params });
   };
 
   const handleRebin = (): void => {
-    lastActionRef.current = 'rebin';
-    if (!lastStoredName || !rebinNum) return;
-    void run(() =>
-      spectrumApi.rebinSpectrum({ name: lastStoredName, rebin_factor: rebinNum, log: logRebin })
-    );
+    if (!lastStoredName || !rebinNum || !storedResultAvailable || !rebinOutputName.trim()) return;
+    const params = {
+      name: lastStoredName,
+      expected_result_id: result?.result_id,
+      rebin_factor: rebinNum,
+      log: logRebin,
+      output_name: rebinOutputName.trim(),
+    };
+    const originalInputs = resultInputs?.operation === 'rebin_spectrum'
+      ? resultInputs.creation_inputs : resultInputs;
+    void run(() => spectrumApi.rebinSpectrum(params), {
+      operation: 'rebin_spectrum',
+      ...params,
+      creation_inputs: originalInputs,
+    });
   };
 
   const plotData: Data[] = result
@@ -183,7 +222,18 @@ const AvgPowerSpectrumPage: React.FC = () => {
                       }
                       label="Logarithmic"
                     />
-                    <Button variant="outlined" disabled={!rebinValid || running} onClick={handleRebin}>
+                    <TextField
+                      label="Store rebinned as"
+                      size="small"
+                      value={rebinOutputName}
+                      onChange={(event) => setRebinOutputName(event.target.value)}
+                      helperText="Creates a separate stored spectrum available in General I/O."
+                    />
+                    <Button
+                      variant="outlined"
+                      disabled={!rebinValid || running || !storedResultAvailable || !rebinOutputName.trim()}
+                      onClick={handleRebin}
+                    >
                       Rebin
                     </Button>
                   </Stack>
@@ -202,12 +252,16 @@ const AvgPowerSpectrumPage: React.FC = () => {
                 </Typography>
                 {result?.norm && <Chip size="small" label={`norm: ${result.norm}`} />}
                 {result && <Chip size="small" label={`${result.n_freq.toLocaleString()} freqs`} variant="outlined" />}
-                {result?.n_segments != null && (
+                {typeof result?.n_segments === 'number' && (
                   <Chip size="small" label={`${result.n_segments} segments`} variant="outlined" />
                 )}
-                {result?.df !== undefined && (
+                {typeof result?.df === 'number' && (
                   <Chip size="small" label={`df = ${result.df.toPrecision(3)} Hz`} variant="outlined" />
                 )}
+                {Array.isArray(result?.df) || result?.frequency_bin_width ||
+                  (result !== null && result.df === undefined && resultInputs?.operation === 'rebin_spectrum' && resultInputs.log === true) ? (
+                  <Chip size="small" label="Variable frequency bin widths" variant="outlined" />
+                ) : null}
                 <FormControlLabel
                   control={<Switch size="small" checked={logX} onChange={(e) => setLogX(e.target.checked)} />}
                   label="log f"
@@ -222,9 +276,25 @@ const AvgPowerSpectrumPage: React.FC = () => {
                   {error}
                 </Alert>
               )}
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+                result={result}
+              />
+              {backingResultMissing ? (
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                  The stored spectrum was deleted or replaced. This plot is a read-only snapshot.
+                </Alert>
+              ) : null}
+              {existingSpectra.isError && lastStoredName && !resultStale ? (
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                  The stored spectrum could not be verified. Rebinning is unavailable until its list refreshes.
+                </Alert>
+              ) : null}
               {result ? (
-                <PlotlyChart
-                  data={plotData}
+                <PlotlyChart workspaceKey='QuickLook/AvgPowerSpectrum/index.tsx:chart:1'                   data={plotData}
                   layout={{
                     xaxis: { title: { text: 'Frequency (Hz)' }, type: logX ? 'log' : 'linear' },
                     yaxis: { title: { text: 'Power' }, type: logY ? 'log' : 'linear' },

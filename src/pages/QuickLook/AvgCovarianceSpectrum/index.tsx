@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   Box,
@@ -23,26 +24,36 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, CovarianceSpectrumData } from '@/api/varenergyApi';
 import { parsePositiveNumber } from '@/utils/numbers';
 
 const AvgCovarianceSpectrumPage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
-  const [binTime, setBinTime] = useState('0.01');
-  const [segmentSize, setSegmentSize] = useState('8');
-  const [freqMin, setFreqMin] = useState('0.1');
-  const [freqMax, setFreqMax] = useState('1');
-  const [energyMin, setEnergyMin] = useState('0.5');
-  const [energyMax, setEnergyMax] = useState('10');
-  const [nBands, setNBands] = useState('5');
-  const [logBands, setLogBands] = useState(false);
-  const [refMin, setRefMin] = useState('');
-  const [refMax, setRefMax] = useState('');
-  const [norm, setNorm] = useState<'abs' | 'frac'>('abs');
-  const [logEnergy, setLogEnergy] = useState(false);
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:eventList:1', '');
+  const [binTime, setBinTime] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:binTime:2', '0.01');
+  const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:segmentSize:3', '8');
+  const [freqMin, setFreqMin] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:freqMin:4', '0.1');
+  const [freqMax, setFreqMax] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:freqMax:5', '1');
+  const [energyMin, setEnergyMin] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:energyMin:6', '0.5');
+  const [energyMax, setEnergyMax] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:energyMax:7', '10');
+  const [nBands, setNBands] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:nBands:8', '5');
+  const [logBands, setLogBands] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:logBands:9', false);
+  const [refMin, setRefMin] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:refMin:10', '');
+  const [refMax, setRefMax] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:refMax:11', '');
+  const [norm, setNorm] = useWorkspaceState<'abs' | 'frac'>('QuickLook/AvgCovarianceSpectrum/index.tsx:norm:12', 'abs');
+  const [logEnergy, setLogEnergy] = useWorkspaceState('QuickLook/AvgCovarianceSpectrum/index.tsx:logEnergy:13', false);
 
-  const { result, running, error, run } = useAnalysisRunner<CovarianceSpectrumData>(
+  const {
+    result,
+    running,
+    error,
+    run,
+    resultInputs,
+    resultIdentity,
+    resultStatus,
+    backendAvailable,
+  } = useAnalysisRunner<CovarianceSpectrumData>(
     'Averaged Covariance Spectrum'
   );
 
@@ -76,7 +87,24 @@ const AvgCovarianceSpectrumPage: React.FC = () => {
   const refInverted = refMinNum !== null && refMaxNum !== null && refMaxNum <= refMinNum;
   const refValid = !refMinInvalid && !refMaxInvalid && !refPartial && !refInverted;
 
+  const currentInputs = {
+    operation: 'averaged_covariance_spectrum',
+    event_list_name: eventList,
+    bin_time: binTimeNum,
+    segment_size: segNum,
+    freq_min: freqMinNum,
+    freq_max: freqMaxNum,
+    energy_min: energyMinNum,
+    energy_max: energyMaxNum,
+    n_bands: nBandsNum,
+    log_bands: logBands,
+    ref_min: refMinNum,
+    ref_max: refMaxNum,
+    norm,
+  };
+
   const canRun =
+    backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
     segNum !== null &&
@@ -106,6 +134,7 @@ const AvgCovarianceSpectrumPage: React.FC = () => {
   };
 
   const handleRun = (): void => {
+    if (!canRun) return;
     if (
       binTimeNum === null ||
       segNum === null ||
@@ -117,21 +146,23 @@ const AvgCovarianceSpectrumPage: React.FC = () => {
     ) {
       return;
     }
-    void run(() =>
-      varenergyApi.avgCovarianceSpectrum({
-        event_list_name: eventList,
-        bin_time: binTimeNum,
-        segment_size: segNum,
-        freq_min: freqMinNum,
-        freq_max: freqMaxNum,
-        energy_min: energyMinNum,
-        energy_max: energyMaxNum,
-        n_bands: nBandsNum,
-        log_bands: logBands,
-        ref_min: refMinNum,
-        ref_max: refMaxNum,
-        norm,
-      })
+    const parameters = {
+      event_list_name: eventList,
+      bin_time: binTimeNum,
+      segment_size: segNum,
+      freq_min: freqMinNum,
+      freq_max: freqMaxNum,
+      energy_min: energyMinNum,
+      energy_max: energyMaxNum,
+      n_bands: nBandsNum,
+      log_bands: logBands,
+      ref_min: refMinNum,
+      ref_max: refMaxNum,
+      norm,
+    };
+    void run(
+      () => varenergyApi.avgCovarianceSpectrum(parameters),
+      { operation: 'averaged_covariance_spectrum', ...parameters }
     );
   };
 
@@ -336,6 +367,12 @@ const AvgCovarianceSpectrumPage: React.FC = () => {
                   label="log energy"
                 />
               </Box>
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {error && (
                 <Alert severity="error" sx={{ mb: 1 }}>
                   {error}
@@ -363,13 +400,12 @@ const AvgCovarianceSpectrumPage: React.FC = () => {
                     </Typography>
                   </Box>
                 ) : (
-                  <PlotlyChart
-                    data={traces}
+                  <PlotlyChart workspaceKey='QuickLook/AvgCovarianceSpectrum/index.tsx:chart:1'                     data={traces}
                     layout={{
                       xaxis: { title: { text: 'Energy (keV)' }, type: logEnergy ? 'log' : 'linear' },
                       yaxis: {
                         title: {
-                          text: norm === 'frac' ? 'Covariance (fractional)' : 'Covariance (absolute)',
+                          text: result.norm === 'frac' ? 'Covariance (fractional)' : 'Covariance (absolute)',
                         },
                       },
                       shapes: [

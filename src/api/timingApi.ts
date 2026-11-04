@@ -21,6 +21,33 @@ export interface PowerColorsData {
   power_colors: Record<string, Array<number | null>>;
   time: number[];
   freq_ranges: Record<string, [number, number]>;
+  band_order: string[];
+  band_variance_errors: Record<string, Array<number | null>>;
+  pc1: Array<number | null>;
+  pc1_err: Array<number | null>;
+  pc2: Array<number | null>;
+  pc2_err: Array<number | null>;
+  valid_segments: boolean[];
+  band_bin_counts: Record<string, number>;
+  normalization: 'frac';
+  variance_unit: string;
+  /** Mean Poisson level; integration uses the per-segment levels below. */
+  poisson_power: number;
+  poisson_power_by_segment: number[];
+  segment_count_rates: number[];
+  common_mean_count_rate: number;
+  normalization_reference: string;
+  dt: number;
+  segment_size: number;
+  df: number;
+  detection_sigma: number;
+  warnings: string[];
+  metadata: Record<string, unknown>;
+  provenance: {
+    input_source: { kind: string; name: string };
+    parameters: Record<string, unknown>;
+    [key: string]: unknown;
+  };
 }
 
 export interface TimeLagsData {

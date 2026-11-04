@@ -18,6 +18,10 @@ from itertools import islice
 from typing import Any
 
 import numpy as np
+
+# Manual GTIs enter through JSON binary64 scalars. Use the same arithmetic
+# precision on every OS: native longdouble is binary64, x87 or IEEE quad
+# depending on the compiler/architecture, changing upstream chunk boundaries.
 from stingray.gti import (
     append_gtis,
     check_gtis,
@@ -135,12 +139,12 @@ def _validate_gti_array(
         )
     if row_count == 0:
         if allow_empty:
-            return np.empty((0, 2), dtype=np.longdouble), None
+            return np.empty((0, 2), dtype=np.float64), None
         return None, f"{label} must contain at least one [start, stop] interval"
 
-    parsed = np.empty((row_count, 2), dtype=np.longdouble)
-    previous_start: np.longdouble | None = None
-    previous_stop: np.longdouble | None = None
+    parsed = np.empty((row_count, 2), dtype=np.float64)
+    previous_start: np.float64 | None = None
+    previous_stop: np.float64 | None = None
 
     for index, row in enumerate(rows):
         row_number = index + 1
@@ -249,7 +253,7 @@ def _validate_gti_array(
 
     with np.errstate(over="ignore", invalid="ignore"):
         lengths = parsed[:, 1] - parsed[:, 0]
-        exposure = np.sum(lengths, dtype=np.longdouble)
+        exposure = np.sum(lengths, dtype=np.float64)
         span = parsed[-1, 1] - parsed[0, 0]
         separations = parsed[1:, 0] - parsed[:-1, 1]
     if not np.isfinite(exposure):
@@ -285,10 +289,10 @@ def _validate_gti_array(
 def _normalise_upstream_gtis(value: Any, *, label: str) -> np.ndarray:
     """Normalize only Stingray's inconsistent empty return shapes to ``(0, 2)``."""
     if value is None:
-        return np.empty((0, 2), dtype=np.longdouble)
-    result = np.asanyarray(value, dtype=np.longdouble)
+        return np.empty((0, 2), dtype=np.float64)
+    result = np.asanyarray(value, dtype=np.float64)
     if result.size == 0:
-        return np.empty((0, 2), dtype=np.longdouble)
+        return np.empty((0, 2), dtype=np.float64)
     if result.ndim != 2 or result.shape[1] != 2:
         raise RuntimeError(
             f"Stingray returned malformed {label} with shape {result.shape}"
@@ -312,11 +316,12 @@ def _stored_event_list_gti(event_list: Any) -> Any:
     return getattr(event_list, "_gti", None)
 
 
-def _float64_ulp_tolerance(*values: Any, factor: float = 4.0) -> np.longdouble:
+def _float64_ulp_tolerance(*values: Any, factor: float = 4.0) -> np.float64:
     """Return a small tolerance for arithmetic performed from JSON floats.
 
     Renderer numbers and Stingray's scalar parameters enter this boundary as
-    binary64 values even though GTI arithmetic is promoted to ``longdouble``.
+    binary64 values. GTI utility arithmetic uses that same fixed precision on
+    every platform, including systems with wider native ``longdouble``.
     Comparing an upstream endpoint with its source boundary therefore needs a
     few binary64 ULPs, not Stingray's much larger absolute epsilon.
     """
@@ -334,7 +339,7 @@ def _float64_ulp_tolerance(*values: Any, factor: float = 4.0) -> np.longdouble:
             else:
                 ulp = float(numeric - np.nextafter(numeric, 0.0))
         largest_ulp = max(largest_ulp, ulp)
-    return np.longdouble(largest_ulp) * factor
+    return np.float64(largest_ulp) * factor
 
 
 def _step_resolution_error(
@@ -344,7 +349,7 @@ def _step_resolution_error(
 ) -> str | None:
     """Reject output steps that collapse when serialized as absolute floats."""
     timestamp_resolution = _float64_ulp_tolerance(*source_gtis.reshape(-1), factor=1.0)
-    if np.longdouble(step) >= timestamp_resolution:
+    if np.float64(step) >= timestamp_resolution:
         return None
     return (
         f"{label} ({step:.12g} s) is smaller than the binary64 timestamp "
@@ -365,7 +370,7 @@ def _relative_gtis_for_step(
     step: float,
     *,
     allow_upward_snap: bool,
-) -> tuple[np.longdouble, np.ndarray]:
+) -> tuple[np.float64, np.ndarray]:
     """Translate GTIs and remove only epoch-resolution endpoint residue.
 
     Subtracting two binary64 mission timestamps can make a duration differ
@@ -377,7 +382,7 @@ def _relative_gtis_for_step(
     """
     origin = source_gtis[0, 0]
     relative_gtis = source_gtis - origin
-    step_value = np.longdouble(step)
+    step_value = np.float64(step)
 
     for index, (source_start, source_stop) in enumerate(source_gtis):
         relative_length = relative_gtis[index, 1] - relative_gtis[index, 0]
@@ -386,13 +391,13 @@ def _relative_gtis_for_step(
         if (
             not np.isfinite(quotient)
             or quotient > MAX_GTI_ROWS + 1
-            or quotient < np.longdouble(0.5)
+            or quotient < np.float64(0.5)
         ):
             continue
         nearest_count = round(float(quotient))
         if nearest_count <= 0:
             continue
-        nearest_length = np.longdouble(nearest_count) * step_value
+        nearest_length = np.float64(nearest_count) * step_value
         # At most half an endpoint ULP can be attributed to round-to-nearest
         # subtraction residue. One or more full ULPs are representable source
         # exposure and must never be quantized away.
@@ -417,7 +422,7 @@ def _relative_gtis_for_step(
                     continue
                 if Decimal.from_float(decimal_length) > exact_decimal_length:
                     decimal_length = float(np.nextafter(decimal_length, -math.inf))
-                snapped_length = np.longdouble(decimal_length)
+                snapped_length = np.float64(decimal_length)
                 if snapped_length <= 0 or snapped_length > relative_length:
                     continue
             snapped_stop = relative_gtis[index, 0] + snapped_length
@@ -452,7 +457,7 @@ def _contained_fixed_segments(
     previous_source_index: int | None = None
 
     for segment_index, segment in enumerate(result, start=1):
-        candidate = np.asarray(segment, dtype=np.longdouble).copy()
+        candidate = np.asarray(segment, dtype=np.float64).copy()
         start, stop = candidate
         if not np.isfinite(start) or not np.isfinite(stop) or stop <= start:
             raise RuntimeError(
@@ -500,8 +505,8 @@ def _contained_fixed_segments(
         previous_source_index = source_index
 
     if not contained:
-        return np.empty((0, 2), dtype=np.longdouble), omitted
-    return np.asarray(contained, dtype=np.longdouble), omitted
+        return np.empty((0, 2), dtype=np.float64), omitted
+    return np.asarray(contained, dtype=np.float64), omitted
 
 
 def _interval_payload(gtis: np.ndarray) -> dict[str, Any]:
@@ -529,7 +534,7 @@ def _interval_payload(gtis: np.ndarray) -> dict[str, Any]:
     lengths = stops - starts
     separations = starts[1:] - stops[:-1]
     span = stops[-1] - starts[0]
-    exposure = np.sum(lengths, dtype=np.longdouble)
+    exposure = np.sum(lengths, dtype=np.float64)
     plot = bounded_plot_preview(starts, stops, np.arange(1, len(gtis) + 1))
     return {
         "intervals": [
@@ -585,7 +590,7 @@ class GTIService(BaseService):
             warning_messages: list[str] = []
             effective_gti = _stored_event_list_gti(event_list)
             if effective_gti is None:
-                gtis = np.empty((0, 2), dtype=np.longdouble)
+                gtis = np.empty((0, 2), dtype=np.float64)
                 gti_status = "missing"
                 warning_messages.append(
                     "This EventList has no effective GTI; exposure and duty cycle are unavailable."
@@ -1010,7 +1015,7 @@ class GTIService(BaseService):
             )
 
         if len(effective) == 0:
-            applied = np.empty((0, 2), dtype=np.longdouble)
+            applied = np.empty((0, 2), dtype=np.float64)
             mask = np.zeros(len(time_array), dtype=bool)
             warning_messages.append(
                 "The source EventList has zero effective good-time exposure; no events are retained."
@@ -1058,7 +1063,7 @@ class GTIService(BaseService):
 
         requested_exposure = np.sum(requested[:, 1] - requested[:, 0])
         applied_exposure = (
-            np.sum(applied[:, 1] - applied[:, 0]) if len(applied) else np.longdouble(0)
+            np.sum(applied[:, 1] - applied[:, 0]) if len(applied) else np.float64(0)
         )
         tolerance = np.finfo(float).eps * max(1.0, abs(float(requested_exposure))) * 16
         if float(requested_exposure - applied_exposure) > tolerance:
@@ -1161,7 +1166,7 @@ class GTIService(BaseService):
             # copied source GTI on its result, and rejects an empty GTI. Public
             # apply_mask avoids all three quirks.
             derived = event_list.apply_mask(mask, inplace=False)
-            derived.gti = np.array(applied, dtype=np.longdouble, copy=True)
+            derived.gti = np.array(applied, dtype=np.float64, copy=True)
 
             if not self.state.add_event_data_if_absent(destination_name, derived):
                 return self.create_result(
@@ -1255,10 +1260,10 @@ class GTIService(BaseService):
                 if length + epsilon < size:
                     continue
                 numerator = length - size + epsilon
-                if numerator >= np.longdouble(size) * MAX_GTI_ROWS:
+                if numerator >= np.float64(size) * MAX_GTI_ROWS:
                     predicted = MAX_GTI_ROWS + 1
                     break
-                quotient = numerator / np.longdouble(size)
+                quotient = numerator / np.float64(size)
                 predicted += math.floor(float(quotient)) + 1
                 if predicted > MAX_GTI_ROWS:
                     break
@@ -1332,13 +1337,13 @@ class GTIService(BaseService):
                     "Stingray because they exceeded a source GTI boundary."
                 )
             source_lengths = array[:, 1] - array[:, 0]
-            source_exposure_value = np.sum(source_lengths, dtype=np.longdouble)
+            source_exposure_value = np.sum(source_lengths, dtype=np.float64)
             segmented_exposure_value = np.sum(
-                result[:, 1] - result[:, 0], dtype=np.longdouble
+                result[:, 1] - result[:, 0], dtype=np.float64
             )
             exposure_tolerance = (
-                np.longdouble(np.finfo(float).eps)
-                * max(np.longdouble(1.0), abs(source_exposure_value))
+                np.float64(np.finfo(float).eps)
+                * max(np.float64(1.0), abs(source_exposure_value))
                 * 16
             )
             if segmented_exposure_value - source_exposure_value > exposure_tolerance:
@@ -1449,7 +1454,7 @@ class GTIService(BaseService):
                     error=None,
                 )
             with np.errstate(over="ignore", invalid="ignore"):
-                source_exposure_value = np.sum(lengths, dtype=np.longdouble)
+                source_exposure_value = np.sum(lengths, dtype=np.float64)
             if not np.isfinite(source_exposure_value):
                 return self.create_result(
                     success=False,
@@ -1463,7 +1468,7 @@ class GTIService(BaseService):
             predicted_rows = 0
             for length in lengths:
                 with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
-                    quotient = length / np.longdouble(exposure)
+                    quotient = length / np.float64(exposure)
                 remaining_rows = MAX_GTI_ROWS - predicted_rows
                 if not np.isfinite(quotient) or quotient > remaining_rows:
                     predicted_rows = MAX_GTI_ROWS + 1

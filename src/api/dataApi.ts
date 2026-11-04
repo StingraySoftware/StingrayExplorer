@@ -52,6 +52,8 @@ export interface FitsHeaderInfo {
 
 export interface EventListSummary {
   name: string;
+  /** Stable identity of this loaded dataset, independent of its display name. */
+  dataset_id?: string;
   n_events: number;
   time_range: [number, number];
   has_energy?: boolean;

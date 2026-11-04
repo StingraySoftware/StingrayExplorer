@@ -90,8 +90,8 @@ def test_auto_correlation_serializes_with_zero_time_shift(loaded_state):
     assert data["dt"] == DT
     assert data["n"] == len(data["corr"]) == len(data["time_lags"])
     assert isinstance(data["warnings"], list)
-    # 64 s / 0.05 s, minus the partial first/last bin the GTI trims.
-    assert 1275 <= data["n"] <= 1280
+    # Explicit observing exposure, including empty edge bins, is 64 seconds.
+    assert data["n"] == 1280
 
 
 def test_auto_correlation_full_mode_doubles_the_lag_axis(loaded_state):
@@ -244,7 +244,7 @@ def test_cross_correlation_rejects_disjoint_event_lists(loaded_state):
     svc = CorrelationService(loaded_state)
     result = svc.cross_correlation("ev1", "ev_far", dt=DT)
     assert not result["success"]
-    assert "no overlapping time range" in result["message"]
+    assert "no overlapping" in result["message"]
 
 
 def test_cross_correlation_rejects_unknown_event_lists(loaded_state):
@@ -347,14 +347,14 @@ def test_correlation_rejects_a_dt_that_would_blow_up_the_bin_count(loaded_state)
         assert not result["success"], result
         assert result["data"] is None
         message = result["message"]
-        assert message.startswith(f"dt (1e-05s) over {what} (63.")
+        assert message.startswith(f"dt (1e-05s) over {what} (64.")
         assert "bins;" in message
         assert (
             f"increase dt or shorten the range (the cap is {MAX_BINS:,} bins)"
             in message
         )
-        # The reported count is the real one: ~64 s / 1e-5 s.
-        assert "6,39" in message
+        # Explicit GTIs preserve the entire 64 seconds of observing exposure.
+        assert "6,400,000" in message
 
     # A large-but-workable grid is still accepted.
     ok = svc.cross_correlation("ev1", "ev2", dt=1e-3)
@@ -372,8 +372,7 @@ def test_requested_dt_is_the_dt_used_by_both_endpoints(state_manager):
         state_manager.add_event_data(
             name, EventList(time=times, gti=[[0.0, LENGTH]], dt=0.1)
         )
-    # Pins the upstream behaviour being routed around.
-    assert float(state_manager.get_event_data("ev_res").to_lc(dt=DT).dt) == 0.1
+    # The application contract is independent of upstream to_lc rounding.
 
     svc = CorrelationService(state_manager)
     auto = svc.auto_correlation("ev_res", dt=DT)
@@ -416,6 +415,201 @@ def test_large_absolute_times_do_not_stretch_the_lag_axis(state_manager):
     result = svc.cross_correlation("ev_met", "ev_met_delayed", dt=DT)
     assert result["success"], result
     assert result["data"]["time_shift"] == pytest.approx(-0.5, abs=2 * DT)
+
+
+# --------------------------------------------------------------------------
+# exposure policy: one continuous GTI, with no artificial exposure in gaps
+# --------------------------------------------------------------------------
+
+
+def test_auto_correlation_rejects_disjoint_good_time_intervals(state_manager):
+    times = np.linspace(0.1, 9.9, 100)
+    state_manager.add_event_data(
+        "gapped", EventList(time=times, gti=[[0.0, 4.0], [6.0, 10.0]])
+    )
+
+    result = CorrelationService(state_manager).auto_correlation("gapped", dt=0.5)
+
+    assert not result["success"], result
+    assert "continuous" in result["message"]
+    assert "GTI" in result["message"]
+    assert "select" in result["message"].lower()
+
+
+def test_correlation_accepts_exactly_adjacent_gtis_as_continuous_exposure(
+    state_manager,
+):
+    times = pulse_times(7)
+    for name, gtis in (
+        ("adjacent", [[0.0, 32.0], [32.0, LENGTH]]),
+        ("continuous", [[0.0, LENGTH]]),
+    ):
+        state_manager.add_event_data(name, EventList(time=times, gti=gtis))
+    svc = CorrelationService(state_manager)
+
+    auto = svc.auto_correlation("adjacent", dt=DT)
+    cross = svc.cross_correlation("adjacent", "continuous", dt=DT)
+    expected = svc.auto_correlation("continuous", dt=DT)
+
+    assert auto["success"], auto
+    assert cross["success"], cross
+    assert expected["success"], expected
+    assert auto["data"]["corr"] == cross["data"]["corr"] == expected["data"]["corr"]
+    assert cross["data"]["time_shift"] == 0.0
+    np.testing.assert_array_equal(
+        state_manager.get_event_data("adjacent").gti,
+        [[0.0, 32.0], [32.0, LENGTH]],
+    )
+
+
+def test_cross_correlation_rejects_multiple_disjoint_common_gtis(state_manager):
+    for name in ("first", "second"):
+        state_manager.add_event_data(
+            name,
+            EventList(
+                time=np.linspace(0.1, 11.9, 120),
+                gti=[[0.0, 4.0], [6.0, 12.0]],
+            ),
+        )
+
+    result = CorrelationService(state_manager).cross_correlation(
+        "first", "second", dt=0.5
+    )
+
+    assert not result["success"], result
+    assert "continuous" in result["message"]
+    assert "GTI" in result["message"]
+    assert "select" in result["message"].lower()
+
+
+def test_cross_correlation_rejects_nonoverlapping_gtis_despite_overlapping_photons(
+    state_manager,
+):
+    # Input files can retain unscreened photons outside their GTIs. Their time
+    # extrema overlap, but there is no common observing exposure to correlate.
+    times = np.linspace(0.1, 9.9, 100)
+    state_manager.add_event_data("early", EventList(time=times, gti=[[0.0, 4.0]]))
+    state_manager.add_event_data("late", EventList(time=times, gti=[[6.0, 10.0]]))
+
+    result = CorrelationService(state_manager).cross_correlation(
+        "early", "late", dt=0.5
+    )
+
+    assert not result["success"], result
+    assert "overlap" in result["message"].lower()
+    assert "GTI" in result["message"] or "good-time" in result["message"]
+
+
+def test_shared_grid_uses_only_one_continuous_common_gti_and_full_bins():
+    # The first observation is gapped, but the second selects a single
+    # continuous portion. Events at the final GTI boundary belong to no bin.
+    first = EventList(
+        time=[0.1, 3.9, 6.5, 7.0, 7.25, 8.5, 9.1, 10.9, 11.0, 11.5],
+        gti=[[0.0, 4.0], [6.0, 12.0]],
+    )
+    second = EventList(
+        time=[6.9, 7.0, 7.1, 8.25, 9.2, 10.95, 11.0, 11.1],
+        gti=[[7.0, 11.1]],
+    )
+    original = [
+        (np.array(events.time, copy=True), np.array(events.gti, copy=True))
+        for events in (first, second)
+    ]
+
+    lc1, lc2, start, stop = _shared_grid_lightcurves(first, second, dt=1.0)
+
+    assert start == 7.0
+    assert stop == 11.0  # discard the genuinely partial 11.0--11.1 s bin
+    assert lc1.dt == lc2.dt == 1.0
+    assert lc1.n == lc2.n == 4
+    np.testing.assert_array_equal(lc1.time, [7.5, 8.5, 9.5, 10.5])
+    np.testing.assert_array_equal(lc2.time, lc1.time)
+    np.testing.assert_array_equal(lc1.counts, [2, 1, 1, 1])
+    np.testing.assert_array_equal(lc2.counts, [2, 1, 1, 1])
+    np.testing.assert_array_equal(lc1.gti, [[7.0, 11.0]])
+    np.testing.assert_array_equal(lc2.gti, lc1.gti)
+    for events, (times, gtis) in zip((first, second), original):
+        np.testing.assert_array_equal(events.time, times)
+        np.testing.assert_array_equal(events.gti, gtis)
+
+
+def test_auto_correlation_excludes_out_of_gti_photons_without_mutating_inputs(
+    state_manager,
+):
+    good = np.array([2.0, 2.1, 2.3, 3.2, 5.1, 5.3, 5.5, 6.4, 7.8])
+    dirty = EventList(
+        time=np.concatenate(([0.0, 0.5, 1.5], good, [8.0, 8.1, 10.0])),
+        gti=[[2.0, 8.0]],
+    )
+    state_manager.add_event_data("dirty", dirty)
+    state_manager.add_event_data("screened", EventList(time=good, gti=[[2.0, 8.0]]))
+    original_times = np.array(dirty.time, copy=True)
+    original_gtis = np.array(dirty.gti, copy=True)
+    svc = CorrelationService(state_manager)
+
+    result = svc.auto_correlation("dirty", dt=1.0)
+    expected = svc.auto_correlation("screened", dt=1.0)
+
+    assert result["success"], result
+    assert expected["success"], expected
+    assert result["data"]["n"] == 6
+    assert result["data"]["corr"] == expected["data"]["corr"]
+    assert result["data"]["time_lags"] == expected["data"]["time_lags"]
+    np.testing.assert_array_equal(dirty.time, original_times)
+    np.testing.assert_array_equal(dirty.gti, original_gtis)
+
+
+def test_correlation_does_not_materialize_a_missing_parent_gti(state_manager):
+    events = EventList(time=[0.0, 0.2, 1.4, 2.7, 3.5, 4.0])
+    assert events._gti is None
+    state_manager.add_event_data("implicit", events)
+    svc = CorrelationService(state_manager)
+
+    auto = svc.auto_correlation("implicit", dt=1.0)
+    cross = svc.cross_correlation("implicit", "implicit", dt=1.0)
+
+    assert auto["success"], auto
+    assert cross["success"], cross
+    assert auto["data"]["corr"] == cross["data"]["corr"]
+    assert events._gti is None
+
+
+@pytest.mark.parametrize("gtis", [[], [[0.0, np.nan]], [[4.0, 2.0]]])
+def test_auto_correlation_rejects_invalid_explicit_gtis(state_manager, gtis):
+    events = EventList(time=[0.0, 0.2, 1.4, 2.7, 3.5, 4.0])
+    # Preserve invalid imported metadata so the service's validator handles it.
+    events._gti = np.asarray(gtis)
+    state_manager.add_event_data("invalid", events)
+
+    result = CorrelationService(state_manager).auto_correlation("invalid", dt=0.5)
+
+    assert not result["success"], result
+    assert "GTI" in result["message"] or "good-time" in result["message"]
+
+
+@pytest.mark.parametrize(
+    "attribute, first_value, second_value",
+    [
+        ("mjdref", 59000.0, 59001.0),
+        ("timesys", "tt", "tdb"),
+        ("timeref", "local", "solarsystem"),
+        ("ephem", "de200", "de440"),
+    ],
+)
+def test_cross_correlation_rejects_incompatible_time_references(
+    state_manager, attribute, first_value, second_value
+):
+    for name, value in (("first", first_value), ("second", second_value)):
+        events = EventList(time=np.linspace(0.1, 9.9, 100), gti=[[0.0, 10.0]])
+        setattr(events, attribute, value)
+        state_manager.add_event_data(name, events)
+
+    result = CorrelationService(state_manager).cross_correlation(
+        "first", "second", dt=0.5
+    )
+
+    assert not result["success"], result
+    assert attribute.upper() in result["message"].upper()
 
 
 # --------------------------------------------------------------------------

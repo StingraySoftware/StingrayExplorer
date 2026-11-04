@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useMemo } from 'react';
 import {
   Alert,
   Button,
@@ -52,13 +53,13 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
   timeReference,
   onTimeReferenceChange,
 }) => {
-  const [rightRows, setRightRows] = useState('');
-  const [operation, setOperation] = useState<GtiSetOperation>('intersection');
+  const [rightRows, setRightRows] = useWorkspaceState('Utilities/GTI/SetOperationsPanel.tsx:rightRows:1', '');
+  const [operation, setOperation] = useWorkspaceState<GtiSetOperation>('Utilities/GTI/SetOperationsPanel.tsx:operation:2', 'intersection');
   const leftParsed = useMemo(() => parseStrictGtis(leftRows, 'Left GTIs'), [leftRows]);
   const rightParsed = useMemo(() => parseStrictGtis(rightRows, 'Right GTIs'), [rightRows]);
   const setRunner = useAnalysisRunner<GtiSetOperationData>('GTI set operation');
-  const [observationStart, setObservationStart] = useState('');
-  const [observationStop, setObservationStop] = useState('');
+  const [observationStart, setObservationStart] = useWorkspaceState('Utilities/GTI/SetOperationsPanel.tsx:observationStart:3', '');
+  const [observationStop, setObservationStop] = useWorkspaceState('Utilities/GTI/SetOperationsPanel.tsx:observationStop:4', '');
   const startNumber = finiteNumber(observationStart);
   const stopNumber = finiteNumber(observationStop);
   const badRangeError =

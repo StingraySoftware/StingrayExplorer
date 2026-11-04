@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React, { Suspense, useMemo } from 'react';
 import { Box, CircularProgress, useTheme } from '@mui/material';
 import type { Config, Data, Layout } from 'plotly.js';
@@ -9,6 +10,7 @@ export interface PlotlyChartProps {
   data: Data[];
   layout?: Partial<Layout>;
   height?: number | string;
+  workspaceKey?: string;
 }
 
 const PLOT_CONFIG: Partial<Config> = {
@@ -36,7 +38,23 @@ function webglAvailable(): boolean {
   return webglSupport;
 }
 
-const PlotlyChart: React.FC<PlotlyChartProps> = ({ data, layout = {}, height = 440 }) => {
+const PlotlyChart: React.FC<PlotlyChartProps> = ({ data, layout = {}, height = 440, workspaceKey }) => {
+  const id = React.useId();
+  const [view, setView] = useWorkspaceState<Record<string, { range?: [number, number]; autorange?: boolean }>>(
+    workspaceKey ? `${workspaceKey}:view` : `ephemeral:${id}`, {}
+  );
+  const onRelayout = (event: Record<string, unknown>) => {
+    if (!workspaceKey) return;
+    setView((previous) => {
+      const next = { ...previous };
+      for (const axis of ['xaxis', 'yaxis', 'xaxis2', 'yaxis2']) {
+        if (event[`${axis}.autorange`] === true) next[axis] = { autorange: true };
+        const low = event[`${axis}.range[0]`], high = event[`${axis}.range[1]`];
+        if (typeof low === 'number' && typeof high === 'number' && Number.isFinite(low) && Number.isFinite(high)) next[axis] = { range: [low, high], autorange: false };
+      }
+      return JSON.stringify(next) === JSON.stringify(previous) ? previous : next;
+    });
+  };
   const displayData = useMemo<Data[]>(() => {
     if (webglAvailable()) return data;
     return data.map((trace) =>
@@ -62,8 +80,8 @@ const PlotlyChart: React.FC<PlotlyChartProps> = ({ data, layout = {}, height = 4
     margin: { l: 64, r: 24, t: 24, b: 52 },
     showlegend: false,
     ...layout,
-    xaxis: { gridcolor: gridColor, zeroline: false, ...layout.xaxis },
-    yaxis: { gridcolor: gridColor, zeroline: false, ...layout.yaxis },
+    xaxis: { gridcolor: gridColor, zeroline: false, ...layout.xaxis, ...view.xaxis },
+    yaxis: { gridcolor: gridColor, zeroline: false, ...layout.yaxis, ...view.yaxis },
   };
 
   return (
@@ -78,6 +96,7 @@ const PlotlyChart: React.FC<PlotlyChartProps> = ({ data, layout = {}, height = 4
         data={displayData}
         layout={mergedLayout}
         config={PLOT_CONFIG}
+        onRelayout={onRelayout}
         useResizeHandler
         style={{ width: '100%', height }}
       />

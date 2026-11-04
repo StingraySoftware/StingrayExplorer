@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/testUtils';
 import { useUIStore } from '@/store/uiStore';
+import { BackendContext } from '@/context/BackendContext';
 
 const listEventLists = vi.fn();
 vi.mock('@/api/dataApi', () => ({
@@ -158,6 +159,76 @@ describe('DeadTimeCorrectionsPage', () => {
     // is_compliant === false must surface the warnings prominently
     expect(screen.getByText(/FAD self-check failed/)).toBeInTheDocument();
     expect(screen.getByText('FAD is not compliant: 42% deviation')).toBeInTheDocument();
+  });
+
+  it('retains separate submitted inputs for model and FAD results when controls change', async () => {
+    renderWithProviders(<DeadTimeCorrectionsPage />);
+    await selectEventList('Event list', /obs1/);
+    await userEvent.click(screen.getByRole('button', { name: /Compute correction/ }));
+    await screen.findByText('detected rate: 171.50 c/s');
+
+    await selectEventList('Detector 1 event list', /obs1/);
+    await selectEventList('Detector 2 event list', /obs2/);
+    await userEvent.click(screen.getByRole('button', { name: /Compute FAD/ }));
+    await screen.findByText('FAD Δ: 0.420');
+
+    const deadTime = screen.getByLabelText('Detector dead time (s)');
+    await userEvent.clear(deadTime);
+    await userEvent.type(deadTime, '0.1');
+    await userEvent.click(screen.getByLabelText('FAD normalization'));
+    await userEvent.click(screen.getByRole('option', { name: 'leahy' }));
+
+    const modelResult = screen.getByText('Model correction (Zhang+95)').closest('.MuiCard-root');
+    const fadResult = screen.getByText('FAD correction (two detectors)').closest('.MuiCard-root');
+    expect(modelResult).toHaveTextContent('0.0025');
+    expect(fadResult).toHaveTextContent('frac');
+    expect(pdsCorrection).toHaveBeenCalledTimes(1);
+    expect(fadCorrection).toHaveBeenCalledTimes(1);
+    expect(pdsCorrection).toHaveBeenCalledWith(
+      expect.objectContaining({ dead_time: 0.0025, segment_size: 20 })
+    );
+    expect(fadCorrection).toHaveBeenCalledWith(
+      expect.objectContaining({ norm: 'frac', segment_size: 8 })
+    );
+  });
+
+  it('marks both retained results read-only and disables requests while the backend restarts', async () => {
+    const readyBackend = {
+      generation: 1,
+      phase: 'ready' as const,
+      port: 54321,
+      isReady: true,
+      error: null,
+    };
+    const { rerender } = renderWithProviders(
+      <BackendContext.Provider value={readyBackend}>
+        <DeadTimeCorrectionsPage />
+      </BackendContext.Provider>
+    );
+    await selectEventList('Event list', /obs1/);
+    await userEvent.click(screen.getByRole('button', { name: /Compute correction/ }));
+    await screen.findByText('detected rate: 171.50 c/s');
+    await selectEventList('Detector 1 event list', /obs1/);
+    await selectEventList('Detector 2 event list', /obs2/);
+    await userEvent.click(screen.getByRole('button', { name: /Compute FAD/ }));
+    await screen.findByText('FAD Δ: 0.420');
+
+    rerender(
+      <BackendContext.Provider
+        value={{ ...readyBackend, generation: 2, phase: 'starting', port: null, isReady: false }}
+      >
+        <DeadTimeCorrectionsPage />
+      </BackendContext.Provider>
+    );
+
+    expect(screen.getByRole('button', { name: /Compute correction/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Compute FAD/ })).toBeDisabled();
+    expect(await screen.findAllByText(/previous backend session and is read-only/)).toHaveLength(2);
+    expect(screen.getAllByTestId('chart')).toHaveLength(2);
+    // The local calculator remains useful while scientific backend objects are unavailable.
+    expect(screen.getByText('Detected: 171.43 c/s')).toBeInTheDocument();
+    expect(pdsCorrection).toHaveBeenCalledTimes(1);
+    expect(fadCorrection).toHaveBeenCalledTimes(1);
   });
 
   it('disables each Compute button until that panel has valid inputs', async () => {

@@ -10,18 +10,23 @@ vi.mock('@/api/dataApi', () => ({
 }));
 
 const excessVariance = vi.fn();
+const plotProps = vi.fn();
 vi.mock('@/api/varenergyApi', () => ({
   varenergyApi: { excessVariance: (...a: unknown[]) => excessVariance(...a) },
 }));
 
 vi.mock('@/components/plots/PlotlyChart', () => ({
-  default: () => <div data-testid="chart" />,
+  default: (props: unknown) => {
+    plotProps(props);
+    return <div data-testid="chart" />;
+  },
 }));
 
 import ExcessVarianceSpectrumPage from './index';
 
 describe('ExcessVarianceSpectrumPage', () => {
   beforeEach(() => {
+    plotProps.mockClear();
     useUIStore.setState({ notifications: [], unreadNotificationCount: 0 });
     listEventLists.mockReset();
     excessVariance.mockReset();
@@ -72,6 +77,36 @@ describe('ExcessVarianceSpectrumPage', () => {
     renderWithProviders(<ExcessVarianceSpectrumPage />);
     const button = await screen.findByRole('button', { name: /Compute/ });
     expect(button).toBeDisabled();
+  });
+
+  it('keeps the displayed variance definition when normalization controls change', async () => {
+    excessVariance.mockResolvedValue({
+      success: true,
+      data: {
+        energy: [1, 2],
+        spectrum: [0.4, 0.5],
+        spectrum_error: [0.02, 0.03],
+        normalization: 'fvar',
+        warnings: [],
+      },
+      message: 'ok',
+      error: null,
+    });
+    renderWithProviders(<ExcessVarianceSpectrumPage />);
+    await userEvent.click(await screen.findByLabelText('Event list'));
+    await userEvent.click(await screen.findByText(/obs1/));
+    await userEvent.click(screen.getByRole('button', { name: /Compute/ }));
+    await screen.findByTestId('chart');
+
+    await userEvent.click(screen.getByLabelText('Normalization'));
+    await userEvent.click(screen.getByRole('option', { name: 'none' }));
+    expect(screen.getByText('Inputs have changed since this result.')).toBeInTheDocument();
+    const chart = plotProps.mock.calls.at(-1)?.[0] as {
+      layout: { yaxis: { title: { text: string } } };
+    };
+    expect(chart.layout.yaxis.title.text).toBe('F_var');
+    expect(screen.getByText('normalization: fvar')).toBeInTheDocument();
+    expect(excessVariance).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces the all-null advisory from warnings prominently when nothing computes', async () => {

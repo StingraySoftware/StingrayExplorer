@@ -3,6 +3,8 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/testUtils';
 import { useUIStore } from '@/store/uiStore';
+import { BackendContext } from '@/context/BackendContext';
+import type { BackendState } from '@/hooks/useBackendStatus';
 
 const listEventLists = vi.fn();
 vi.mock('@/api/dataApi', () => ({
@@ -75,5 +77,54 @@ describe('LightCurvePage', () => {
     renderWithProviders(<LightCurvePage />);
     const button = await screen.findByRole('button', { name: /Generate/ });
     expect(button).toBeDisabled();
+  });
+
+  it('retains a deleted curve as a read-only snapshot and disables rebinning', async () => {
+    listLightcurves.mockResolvedValue({
+      success: true,
+      data: [{ name: 'obs1_lc', n_bins: 3, dt: 1, time_range: [0.5, 2.5] }],
+    });
+    deleteLightcurve.mockImplementation(async () => {
+      listLightcurves.mockResolvedValue({ success: true, data: [] });
+      return { success: true, data: { name: 'obs1_lc' }, message: 'deleted', error: null };
+    });
+    renderWithProviders(<LightCurvePage />);
+    await userEvent.click(await screen.findByLabelText('Event list'));
+    await userEvent.click(await screen.findByRole('option', { name: /obs1/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rebin' })).toBeEnabled());
+    await userEvent.click(screen.getByLabelText('Light curve'));
+    await userEvent.click(screen.getByRole('option', { name: /obs1_lc/ }));
+    await userEvent.click(screen.getByLabelText('Delete selected light curve'));
+    expect(await screen.findByText(/stored light curve was deleted or replaced/)).toBeInTheDocument();
+    expect(screen.getByTestId('chart')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rebin' })).toBeDisabled();
+  });
+
+  it('keeps its original plot and inputs read-only after a backend restart', async () => {
+    const ready = (generation: number): BackendState => ({
+      generation, phase: 'ready', port: 54321, isReady: true, error: null,
+    });
+    listLightcurves.mockResolvedValue({
+      success: true,
+      data: [{ name: 'obs1_lc', n_bins: 3, dt: 1, time_range: [0.5, 2.5] }],
+    });
+    const page = (generation: number) => (
+      <BackendContext.Provider value={ready(generation)}><LightCurvePage /></BackendContext.Provider>
+    );
+    const view = renderWithProviders(page(1));
+    await userEvent.click(await screen.findByLabelText('Event list'));
+    await userEvent.click(await screen.findByRole('option', { name: /obs1/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rebin' })).toBeEnabled());
+    await userEvent.click(screen.getByLabelText('Light curve'));
+    await userEvent.click(screen.getByRole('option', { name: /obs1_lc/ }));
+    expect(screen.getByLabelText('Light curve')).toHaveTextContent('obs1_lc');
+    view.rerender(page(2));
+    expect(await screen.findByText(/previous backend session and is read-only/)).toBeInTheDocument();
+    expect(screen.getByTestId('chart')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rebin' })).toBeDisabled();
+    expect(screen.getByLabelText('Light curve')).not.toHaveTextContent('obs1_lc');
+    expect(rebin).not.toHaveBeenCalled();
   });
 });

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import hashlib
-import hmac
+from tests.file_grants import sign_grant
+
 import json
-import time
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -16,7 +16,7 @@ from astropy.io import fits
 from pydantic import ValidationError
 from routes.mission_io_routes import MissionIdentifyRequest, RoughPiConversionRequest
 from services.mission_io_service import MissionIOService
-from services.utility_helpers import FILE_GRANT_SECRET_ENV, FILE_GRANT_VERSION
+from services.utility_helpers import FILE_GRANT_SECRET_ENV
 from stingray import EventList
 from stingray.mission_support import (
     get_rough_conversion_function,
@@ -26,19 +26,7 @@ from stingray.mission_support import (
 
 
 def _grant(secret: str, path: Path, access: str = "read") -> str:
-    expires = int(time.time()) + 60
-    resolved = path.resolve()
-    identity_path = resolved if access == "read" else resolved.parent
-    selected_stat = identity_path.stat()
-    prefix = (
-        f"{FILE_GRANT_VERSION}.{expires}.{selected_stat.st_dev}.{selected_stat.st_ino}"
-    )
-    payload = (
-        f"{FILE_GRANT_VERSION}\0{access}\0{expires}\0{resolved}\0"
-        f"{selected_stat.st_dev}\0{selected_stat.st_ino}"
-    ).encode()
-    digest = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
-    return f"{prefix}.{digest}"
+    return sign_grant(secret, path, access)
 
 
 def _write_identification_fits(
@@ -328,8 +316,13 @@ def test_simple_rough_conversions_match_public_stingray(service, mission, pi_val
         mission_override=mission,
     )
 
+    try:
+        expected = get_rough_conversion_function(mission)(np.asarray(pi_values))
+    except ValueError:
+        assert not result["success"]
+        assert "conversion" in result["message"].lower()
+        return
     assert result["success"] is True
-    expected = get_rough_conversion_function(mission)(np.asarray(pi_values))
     actual = np.array([row["energy_kev"] for row in result["data"]["rows"]])
     np.testing.assert_allclose(actual, expected)
     assert result["data"]["approximate"] is True

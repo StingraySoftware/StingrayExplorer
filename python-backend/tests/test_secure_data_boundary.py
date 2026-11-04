@@ -42,6 +42,7 @@ from services.remote_source import GENERAL_HTTPS_POLICY, RemoteSourceError
 from services.state_manager import StateManager
 from services.utility_helpers import GrantedReadFile, issue_file_grant
 from tests.backend_auth import TEST_BACKEND_SESSION_SECRET
+from tests.file_grants import rename_pinned
 
 
 SECRET = "secure-data-boundary-secret-at-least-32-bytes"
@@ -205,7 +206,7 @@ def test_hdf5_load_uses_h5py_over_anonymous_spool_not_selected_path(
         file_grant=_grant(selected),
     )
 
-    assert result["success"] is True
+    assert result["success"] is True, result
     assert seen
 
 
@@ -224,8 +225,8 @@ def test_path_swap_after_grant_open_cannot_redirect_hdf5_read(
         nonlocal swapped
         if not swapped:
             swapped = True
-            selected.rename(original)
-            _write_hdf5(selected, [90.0, 91.0])
+            if rename_pinned(selected, original):
+                _write_hdf5(selected, [90.0, 91.0])
         with original_spool(
             source,
             max_bytes=max_bytes,
@@ -239,7 +240,7 @@ def test_path_swap_after_grant_open_cannot_redirect_hdf5_read(
         str(selected), "events", fmt="hdf5", file_grant=grant
     )
 
-    assert result["success"] is True
+    assert result["success"] is True, result
     assert state.get_event_data("events").time.tolist() == [1.0, 2.0]
 
 
@@ -276,8 +277,8 @@ def test_rmf_swap_after_grant_open_cannot_redirect_calibration(
         nonlocal swapped
         if source.path == rmf.resolve() and not swapped:
             swapped = True
-            rmf.rename(original_rmf)
-            _write_rmf(rmf, (100.0, 200.0))
+            if rename_pinned(rmf, original_rmf):
+                _write_rmf(rmf, (100.0, 200.0))
         with original_spool(
             source,
             max_bytes=max_bytes,
@@ -296,7 +297,7 @@ def test_rmf_swap_after_grant_open_cannot_redirect_calibration(
         rmf_grant=rmf_grant,
     )
 
-    assert result["success"] is True
+    assert result["success"] is True, result
     assert state.get_event_data("events").energy.tolist() == [1.0, 2.0]
 
 
@@ -313,7 +314,7 @@ def test_gzip_ogip_load_is_preserved_without_reopening_selected_path(
         str(selected), "events", fmt="ogip", file_grant=_grant(selected)
     )
 
-    assert result["success"] is True
+    assert result["success"] is True, result
     assert result["data"]["n_events"] == 2
     assert "stingray-input-" not in repr(result)
 
@@ -393,7 +394,7 @@ def test_shared_rmf_batch_is_serialized_to_avoid_seek_races(
         max_workers=3,
     )
 
-    assert result["success"] is True
+    assert result["success"] is True, result
     assert result["data"]["summary"]["workers_used"] == 1
     assert maximum_active == 1
 
@@ -559,8 +560,8 @@ def test_queued_job_pins_before_return_redacts_and_cleans_after_success(
     assert str(selected) not in repr(public)
     assert job.id in manager._resources
 
-    selected.rename(original)
-    _write_hdf5(selected, [90.0, 91.0])
+    if rename_pinned(selected, original):
+        _write_hdf5(selected, [90.0, 91.0])
     target, args = executor.calls[0]
     target(*args)
     executor.futures[0].set_result(None)
@@ -824,7 +825,7 @@ def test_remote_loader_uses_general_policy_cap_and_returns_no_url(
         supplied, "events", fmt="hdf5"
     )
 
-    assert result["success"] is True
+    assert result["success"] is True, result
     assert observed["policy"] is GENERAL_HTTPS_POLICY
     assert observed["max_bytes"] == data_service_module.REMOTE_EVENT_LIMIT
     assert supplied not in repr(result)
@@ -854,8 +855,8 @@ def test_direct_remote_load_pins_optional_rmf_before_network(
 
         @asynccontextmanager
         async def stream(self, _url, *, max_bytes, cancellation_check=None):
-            selected_rmf.rename(original_rmf)
-            _write_rmf(selected_rmf, (100.0, 200.0))
+            if rename_pinned(selected_rmf, original_rmf):
+                _write_rmf(selected_rmf, (100.0, 200.0))
             yield FakeRemoteStream()
 
     monkeypatch.setattr(data_service_module, "RemoteSourceClient", SwappingRemoteClient)
@@ -868,7 +869,7 @@ def test_direct_remote_load_pins_optional_rmf_before_network(
         rmf_grant=_grant(selected_rmf),
     )
 
-    assert result["success"] is True
+    assert result["success"] is True, result
     assert state.get_event_data("events").energy.tolist() == [1.0, 2.0]
 
 
@@ -896,8 +897,8 @@ def test_streaming_remote_load_pins_optional_rmf_before_network(
 
         @asynccontextmanager
         async def stream(self, _url, *, max_bytes, cancellation_check=None):
-            selected_rmf.rename(original_rmf)
-            _write_rmf(selected_rmf, (100.0, 200.0))
+            if rename_pinned(selected_rmf, original_rmf):
+                _write_rmf(selected_rmf, (100.0, 200.0))
             yield FakeRemoteStream()
 
     monkeypatch.setattr(data_service_module, "RemoteSourceClient", SwappingRemoteClient)

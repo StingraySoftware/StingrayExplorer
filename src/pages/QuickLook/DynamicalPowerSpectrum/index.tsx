@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useMemo } from 'react';
 import {
   Alert,
   Box,
@@ -23,6 +24,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { spectrumApi, DynamicalPowerSpectrumData } from '@/api/spectrumApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -30,31 +32,40 @@ import { parsePositiveNumber } from '@/utils/numbers';
 const NORM_OPTIONS = ['leahy', 'frac', 'abs', 'none'];
 
 const DynamicalPowerSpectrumPage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
-  const [dt, setDt] = useState('0.0625');
-  const [segmentSize, setSegmentSize] = useState('8');
-  const [norm, setNorm] = useState('leahy');
-  const [outputName, setOutputName] = useState('');
-  const [logZ, setLogZ] = useState(true);
-  const { result, running, error, run } = useAnalysisRunner<DynamicalPowerSpectrumData>(
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:eventList:1', '');
+  const [dt, setDt] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:dt:2', '0.0625');
+  const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:segmentSize:3', '8');
+  const [norm, setNorm] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:norm:4', 'leahy');
+  const [outputName, setOutputName] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:outputName:5', '');
+  const [logZ, setLogZ] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:logZ:6', true);
+  const { result, running, error, run, resultInputs, resultIdentity, resultStatus, backendAvailable } = useAnalysisRunner<DynamicalPowerSpectrumData>(
     'Dynamical Power Spectrum'
   );
 
   const dtNum = parsePositiveNumber(dt);
   const segNum = parsePositiveNumber(segmentSize);
-  const canRun = eventList !== '' && dtNum !== null && segNum !== null && !running;
+  const canRun = eventList !== '' && dtNum !== null && segNum !== null && !running && backendAvailable;
 
+  const currentInputs = {
+    operation: 'dynamical_power_spectrum',
+    event_list_name: eventList,
+    dt: dtNum,
+    segment_size: segNum,
+    norm,
+    output_name: outputName.trim() || undefined,
+  };
   const handleRun = (): void => {
-    if (!dtNum || !segNum) return;
-    void run(() =>
-      spectrumApi.createDynamicalPowerSpectrum({
-        event_list_name: eventList,
-        dt: dtNum,
-        segment_size: segNum,
-        norm,
-        output_name: outputName.trim() || undefined,
-      })
-    );
+    if (!dtNum || !segNum || !backendAvailable) return;
+    const params = {
+      event_list_name: eventList,
+      dt: dtNum,
+      segment_size: segNum,
+      norm,
+      output_name: outputName.trim() || undefined,
+    };
+    void run(() => spectrumApi.createDynamicalPowerSpectrum(params), {
+      operation: 'dynamical_power_spectrum', ...params,
+    });
   };
 
   // dyn_ps rows correspond to frequencies (n_freq x n_times) — matches
@@ -174,9 +185,15 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
                   {error}
                 </Alert>
               )}
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+                result={result}
+              />
               {result ? (
-                <PlotlyChart
-                  data={heatmap}
+                <PlotlyChart workspaceKey='QuickLook/DynamicalPowerSpectrum/index.tsx:chart:1'                   data={heatmap}
                   layout={{
                     xaxis: { title: { text: 'Time (s)' } },
                     yaxis: { title: { text: 'Frequency (Hz)' } },

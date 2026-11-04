@@ -11,6 +11,10 @@ export interface LightcurveData {
   counts: number[];
   dt: number;
   n_bins: number;
+  result_id?: string;
+  backend_session_id?: string;
+  inputs?: unknown[];
+  parameters?: Record<string, unknown>;
   plot_stride?: number;
   time_range?: [number, number];
   count_rate_mean?: number;
@@ -27,6 +31,7 @@ export interface LightcurveSummary {
   n_bins: number;
   dt: number;
   time_range: [number, number];
+  result_id?: string;
 }
 
 // API functions
@@ -70,12 +75,14 @@ export const lightcurveApi = {
     rebin_factor: number;
     output_name: string;
     max_points?: number;
+    expected_result_id?: string;
   }): Promise<ApiResponse<LightcurveData>> {
     return apiClient.post('/api/lightcurve/rebin', {
       name: params.name,
       rebin_factor: params.rebin_factor,
       output_name: params.output_name,
       max_points: params.max_points,
+      expected_result_id: params.expected_result_id,
     });
   },
 

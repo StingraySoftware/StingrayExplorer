@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   Box,
@@ -20,6 +21,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, VariableEnergySpectrumData } from '@/api/varenergyApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -34,20 +36,29 @@ const rangeHelperText = (raw: string, parsed: number | null, inverted: boolean):
 const VariableEnergySpectrumPage: React.FC = () => {
   const theme = useTheme();
 
-  const [eventList, setEventList] = useState('');
-  const [binTime, setBinTime] = useState('0.1');
-  const [segmentSize, setSegmentSize] = useState('8');
-  const [freqMin, setFreqMin] = useState('0.1');
-  const [freqMax, setFreqMax] = useState('1');
-  const [energyMin, setEnergyMin] = useState('0.5');
-  const [energyMax, setEnergyMax] = useState('10');
-  const [nBands, setNBands] = useState('5');
-  const [logBands, setLogBands] = useState(false);
-  const [refMin, setRefMin] = useState('');
-  const [refMax, setRefMax] = useState('');
-  const [logX, setLogX] = useState(false);
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:eventList:1', '');
+  const [binTime, setBinTime] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:binTime:2', '0.1');
+  const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:segmentSize:3', '8');
+  const [freqMin, setFreqMin] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:freqMin:4', '0.1');
+  const [freqMax, setFreqMax] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:freqMax:5', '1');
+  const [energyMin, setEnergyMin] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:energyMin:6', '0.5');
+  const [energyMax, setEnergyMax] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:energyMax:7', '10');
+  const [nBands, setNBands] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:nBands:8', '5');
+  const [logBands, setLogBands] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:logBands:9', false);
+  const [refMin, setRefMin] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:refMin:10', '');
+  const [refMax, setRefMax] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:refMax:11', '');
+  const [logX, setLogX] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:logX:12', false);
 
-  const { result, running, error, run } = useAnalysisRunner<VariableEnergySpectrumData>(
+  const {
+    result,
+    running,
+    error,
+    run,
+    resultInputs,
+    resultIdentity,
+    resultStatus,
+    backendAvailable,
+  } = useAnalysisRunner<VariableEnergySpectrumData>(
     'Variable Energy Spectrum'
   );
 
@@ -87,7 +98,23 @@ const VariableEnergySpectrumPage: React.FC = () => {
     return ' ';
   };
 
+  const currentInputs = {
+    operation: 'variable_energy_spectrum',
+    event_list_name: eventList,
+    bin_time: binTimeNum,
+    segment_size: segNum,
+    freq_min: freqMinNum,
+    freq_max: freqMaxNum,
+    energy_min: energyMinNum,
+    energy_max: energyMaxNum,
+    n_bands: nBandsNum,
+    log_bands: logBands,
+    ref_min: refMinNum ?? null,
+    ref_max: refMaxNum ?? null,
+  };
+
   const canRun =
+    backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
     segNum !== null &&
@@ -102,6 +129,7 @@ const VariableEnergySpectrumPage: React.FC = () => {
     !running;
 
   const handleRun = (): void => {
+    if (!canRun) return;
     if (
       !binTimeNum ||
       !segNum ||
@@ -113,20 +141,22 @@ const VariableEnergySpectrumPage: React.FC = () => {
     ) {
       return;
     }
-    void run(() =>
-      varenergyApi.variableEnergySpectrum({
-        event_list_name: eventList,
-        bin_time: binTimeNum,
-        segment_size: segNum,
-        freq_min: freqMinNum,
-        freq_max: freqMaxNum,
-        energy_min: energyMinNum,
-        energy_max: energyMaxNum,
-        n_bands: nBandsNum,
-        log_bands: logBands,
-        ref_min: refMinNum ?? undefined,
-        ref_max: refMaxNum ?? undefined,
-      })
+    const parameters = {
+      event_list_name: eventList,
+      bin_time: binTimeNum,
+      segment_size: segNum,
+      freq_min: freqMinNum,
+      freq_max: freqMaxNum,
+      energy_min: energyMinNum,
+      energy_max: energyMaxNum,
+      n_bands: nBandsNum,
+      log_bands: logBands,
+      ref_min: refMinNum ?? null,
+      ref_max: refMaxNum ?? null,
+    };
+    void run(
+      () => varenergyApi.variableEnergySpectrum(parameters),
+      { operation: 'variable_energy_spectrum', ...parameters }
     );
   };
 
@@ -313,6 +343,12 @@ const VariableEnergySpectrumPage: React.FC = () => {
                   label="log E"
                 />
               </Box>
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {error && (
                 <Alert severity="error" sx={{ mb: 1 }}>
                   {error}
@@ -335,8 +371,7 @@ const VariableEnergySpectrumPage: React.FC = () => {
                     <Typography variant="subtitle2" gutterBottom>
                       Counts vs energy
                     </Typography>
-                    <PlotlyChart
-                      data={countsTraces}
+                    <PlotlyChart workspaceKey='QuickLook/VariableEnergySpectrum/index.tsx:chart:1'                       data={countsTraces}
                       layout={{
                         xaxis: energyAxis,
                         // Linear, not log: CountSpectrum legitimately returns 0 for an
@@ -351,8 +386,7 @@ const VariableEnergySpectrumPage: React.FC = () => {
                     <Typography variant="subtitle2" gutterBottom>
                       Fractional rms vs energy
                     </Typography>
-                    <PlotlyChart
-                      data={rmsTraces}
+                    <PlotlyChart workspaceKey='QuickLook/VariableEnergySpectrum/index.tsx:chart:2'                       data={rmsTraces}
                       layout={{
                         xaxis: energyAxis,
                         yaxis: { title: { text: 'Fractional rms' } },
@@ -364,8 +398,7 @@ const VariableEnergySpectrumPage: React.FC = () => {
                     <Typography variant="subtitle2" gutterBottom>
                       Lag vs energy
                     </Typography>
-                    <PlotlyChart
-                      data={lagTraces}
+                    <PlotlyChart workspaceKey='QuickLook/VariableEnergySpectrum/index.tsx:chart:3'                       data={lagTraces}
                       layout={{
                         xaxis: energyAxis,
                         yaxis: { title: { text: 'Lag (s)' } },

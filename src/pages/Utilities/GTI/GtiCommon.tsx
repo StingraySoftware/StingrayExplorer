@@ -303,8 +303,7 @@ export const IntervalResult: React.FC<{
               {payload.plot.source_points.toLocaleString()} source intervals. The table above remains exact.
             </Typography>
           ) : null}
-          <PlotlyChart
-            data={intervalTrace(payload, title)}
+          <PlotlyChart workspaceKey='Utilities/GTI/GtiCommon.tsx:chart:1'             data={intervalTrace(payload, title)}
             height={320}
             layout={{
               xaxis: { title: { text: 'Mission/relative time (s)' } },

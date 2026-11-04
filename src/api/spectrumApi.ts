@@ -12,10 +12,19 @@ export interface PowerSpectrumData {
   power_phase?: Array<number | null> | null;
   norm?: string;
   n_freq: number;
-  df?: number;
+  df?: number | number[];
+  frequency_bin_width?: number[];
   freq_range?: [number, number];
   segment_size?: number;
   n_segments?: number;
+  result_id?: string;
+  backend_session_id?: string;
+  operation?: string;
+  inputs?: unknown[];
+  parameters?: Record<string, unknown>;
+  provenance?: Record<string, unknown>;
+  warnings?: string[];
+  created_at?: string;
 }
 
 export interface DynamicalPowerSpectrumData {
@@ -26,12 +35,18 @@ export interface DynamicalPowerSpectrumData {
   norm: string;
   segment_size: number;
   shape: [number, number];
+  result_id?: string;
+  backend_session_id?: string;
+  inputs?: unknown[];
+  parameters?: Record<string, unknown>;
 }
 
 export interface SpectrumSummary {
   name: string;
   type: string;
   n_freq: number | null;
+  result_id?: string;
+  backend_session_id?: string;
 }
 
 // API functions
@@ -139,12 +154,14 @@ export const spectrumApi = {
     rebin_factor: number;
     log?: boolean;
     output_name?: string;
+    expected_result_id?: string;
   }): Promise<ApiResponse<PowerSpectrumData>> {
     return apiClient.post('/api/spectrum/rebin', {
       name: params.name,
       rebin_factor: params.rebin_factor,
       log: params.log || false,
       output_name: params.output_name,
+      expected_result_id: params.expected_result_id,
     });
   },
 

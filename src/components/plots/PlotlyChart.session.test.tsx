@@ -1,0 +1,20 @@
+import { act, render, waitFor } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
+import { workspaceSession, restoreWorkspaceSession } from '@/api/workspaceSession';
+const plot = vi.hoisted(() => vi.fn());
+vi.mock('react-plotly.js', () => ({ default: (props: unknown) => { plot(props); return <div />; } }));
+import PlotlyChart from './PlotlyChart';
+it('restores plot zoom and reset-to-autorange through the project workspace', async () => {
+  const view = render(<PlotlyChart workspaceKey="power-plot" data={[]} />);
+  await waitFor(() => expect(plot).toHaveBeenCalled());
+  act(() => plot.mock.lastCall![0].onRelayout({ 'xaxis.range[0]': 2, 'xaxis.range[1]': 12 }));
+  const saved = workspaceSession();
+  view.unmount();
+  restoreWorkspaceSession();
+  restoreWorkspaceSession(saved);
+  render(<PlotlyChart workspaceKey="power-plot" data={[]} />);
+  await waitFor(() => expect(plot.mock.lastCall![0].layout.xaxis.range).toEqual([2, 12]));
+  act(() => plot.mock.lastCall![0].onRelayout({ 'xaxis.autorange': true }));
+  expect(plot.mock.lastCall![0].layout.xaxis.autorange).toBe(true);
+  expect(plot.mock.lastCall![0].layout.xaxis.range).toBeUndefined();
+});

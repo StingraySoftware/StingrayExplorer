@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -97,14 +98,14 @@ function dependencyLabel(name: string, dependency: ConversionDependency): string
 const RoughConversionPanel: React.FC = () => {
   const queryClient = useQueryClient();
   const eventLists = useEventLists();
-  const [sourceType, setSourceType] = React.useState<'pasted' | 'event_list'>('pasted');
-  const [piText, setPiText] = React.useState('');
-  const [eventListName, setEventListName] = React.useState('');
-  const [overrides, setOverrides] = React.useState<OverrideValues>(EMPTY_OVERRIDES);
-  const [epochMjd, setEpochMjd] = React.useState('');
-  const [detectorText, setDetectorText] = React.useState('');
-  const [saveDerived, setSaveDerived] = React.useState(false);
-  const [saveAs, setSaveAs] = React.useState('');
+  const [sourceType, setSourceType] = useWorkspaceState<'pasted' | 'event_list'>('Utilities/MissionIO/RoughConversionPanel.tsx:sourceType:1', 'pasted');
+  const [piText, setPiText] = useWorkspaceState('Utilities/MissionIO/RoughConversionPanel.tsx:piText:2', '');
+  const [eventListName, setEventListName] = useWorkspaceState('Utilities/MissionIO/RoughConversionPanel.tsx:eventListName:3', '');
+  const [overrides, setOverrides] = useWorkspaceState<OverrideValues>('Utilities/MissionIO/RoughConversionPanel.tsx:overrides:4', EMPTY_OVERRIDES);
+  const [epochMjd, setEpochMjd] = useWorkspaceState('Utilities/MissionIO/RoughConversionPanel.tsx:epochMjd:5', '');
+  const [detectorText, setDetectorText] = useWorkspaceState('Utilities/MissionIO/RoughConversionPanel.tsx:detectorText:6', '');
+  const [saveDerived, setSaveDerived] = useWorkspaceState('Utilities/MissionIO/RoughConversionPanel.tsx:saveDerived:7', false);
+  const [saveAs, setSaveAs] = useWorkspaceState('Utilities/MissionIO/RoughConversionPanel.tsx:saveAs:8', '');
   const {
     result: runnerResult,
     running,
@@ -453,8 +454,7 @@ const RoughConversionPanel: React.FC = () => {
               <Chip color="success" label={`Saved as ${result.saved_event_list}`} />
             ) : null}
           </Stack>
-          <PlotlyChart
-            data={plotData}
+          <PlotlyChart workspaceKey='Utilities/MissionIO/RoughConversionPanel.tsx:chart:1'             data={plotData}
             layout={{
               title: { text: 'Approximate PI channel to energy relation' },
               xaxis: { title: { text: 'PI channel' } },

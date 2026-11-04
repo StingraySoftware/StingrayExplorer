@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useEffect } from 'react';
 import type { Data } from 'plotly.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -39,6 +40,7 @@ import PlotlyChart from '@/components/plots/PlotlyChart';
 import { EVENT_LISTS_QUERY_KEY, useEventLists } from '@/hooks/useEventLists';
 import { dataApi, EventListFullPreview, EventListInfo } from '@/api/dataApi';
 import { useUIStore } from '@/store/uiStore';
+import { useBackendContext } from '@/context/BackendContext';
 
 const mono = { fontFamily: '"JetBrains Mono", monospace' };
 
@@ -62,16 +64,25 @@ const InfoRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label, v
 );
 
 const EventListPage: React.FC = () => {
-  const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState(0);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [selected, setSelected] = useWorkspaceState<string | null>('QuickLook/EventList/index.tsx:selected:1', null);
+  const [tab, setTab] = useWorkspaceState('QuickLook/EventList/index.tsx:tab:2', 0);
+  const [deleteTarget, setDeleteTarget] = React.useState<string | null>(null);
   const addNotification = useUIStore((s) => s.addNotification);
   const queryClient = useQueryClient();
+  const { generation, isReady } = useBackendContext();
+  const backendAvailable = generation === null || isReady;
+  const previousGeneration = React.useRef(generation);
+  useEffect(() => {
+    if (previousGeneration.current === generation) return;
+    previousGeneration.current = generation;
+    setSelected(null);
+    setDeleteTarget(null);
+  }, [generation, setSelected]);
   const { data: eventLists, isLoading, isError, error, refetch, isFetching } = useEventLists();
 
   const infoQuery = useQuery({
     queryKey: eventListInfoKey(selected ?? ''),
-    enabled: selected !== null,
+    enabled: selected !== null && backendAvailable,
     queryFn: async (): Promise<EventListInfo> => {
       const res = await dataApi.getEventListInfo(selected as string);
       if (!res.success || !res.data) throw new Error(res.error || res.message);
@@ -81,7 +92,7 @@ const EventListPage: React.FC = () => {
 
   const previewQuery = useQuery({
     queryKey: eventListPreviewKey(selected ?? ''),
-    enabled: selected !== null && tab === 1,
+    enabled: selected !== null && tab === 1 && backendAvailable,
     queryFn: async (): Promise<EventListFullPreview> => {
       const res = await dataApi.getEventListFullPreview(selected as string);
       if (!res.success || !res.data) throw new Error(res.error || res.message);
@@ -90,7 +101,7 @@ const EventListPage: React.FC = () => {
   });
 
   const handleDelete = async (): Promise<void> => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !backendAvailable) return;
     const res = await dataApi.deleteEventList(deleteTarget);
     if (res.success) {
       addNotification({ type: 'success', title: 'Event List', message: `Deleted '${deleteTarget}'` });
@@ -292,8 +303,7 @@ const EventListPage: React.FC = () => {
                         <Typography variant="subtitle2" gutterBottom>
                           Arrival time distribution (preview sample)
                         </Typography>
-                        <PlotlyChart
-                          data={[
+                        <PlotlyChart workspaceKey='QuickLook/EventList/index.tsx:chart:1'                           data={[
                             {
                               x: preview.times_preview,
                               type: 'histogram',
@@ -313,8 +323,7 @@ const EventListPage: React.FC = () => {
                           <Typography variant="subtitle2" gutterBottom>
                             Energy distribution (preview sample)
                           </Typography>
-                          <PlotlyChart
-                            data={[
+                          <PlotlyChart workspaceKey='QuickLook/EventList/index.tsx:chart:2'                             data={[
                               {
                                 x: preview.energy_preview,
                                 type: 'histogram',

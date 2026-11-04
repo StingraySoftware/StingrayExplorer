@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useCallback } from 'react';
 import { Alert, Grid, Stack } from '@mui/material';
 import EventListSelector from '@/components/analysis/EventListSelector';
 import { ProvenancePanel, UtilityWarnings } from '@/components/utilities/UtilityResult';
@@ -19,13 +20,13 @@ interface InspectionPanelProps {
 }
 
 const InspectionPanel: React.FC<InspectionPanelProps> = ({ onInspectedRowsChange }) => {
-  const [eventListName, setEventListName] = useState('');
+  const [eventListName, setEventListName] = useWorkspaceState('Utilities/GTI/InspectionPanel.tsx:eventListName:1', '');
   const runner = useAnalysisRunner<GtiInspectionData>('Inspect GTIs');
   const onEventListChange = useCallback((name: string) => {
     runner.reset();
     onInspectedRowsChange(null);
     setEventListName(name);
-  }, [onInspectedRowsChange, runner]);
+  }, [onInspectedRowsChange, runner, setEventListName]);
 
   const runInspection = (): void => {
     if (eventListName === '') return;

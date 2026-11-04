@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import {} from 'react';
 import { Alert, Card, Tab, Tabs } from '@mui/material';
 import PageTemplate from '@/components/common/PageTemplate';
 import { FAMILY_CONFIGS } from './familyConfigs';
@@ -15,7 +16,7 @@ const TAB_LABELS = [
 ];
 
 export default function StatisticalFunctionsPage() {
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useWorkspaceState('Utilities/StatisticalFunctions/index.tsx:tab:1', 0);
 
   return (
     <PageTemplate

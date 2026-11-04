@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Button, Card, CardContent, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { Data } from 'plotly.js';
@@ -33,14 +34,14 @@ interface MaskSavePanelProps {
 const MaskSavePanel: React.FC<MaskSavePanelProps> = ({ inspectedRows, rows, onRowsChange }) => {
   const queryClient = useQueryClient();
   const { data: eventLists } = useEventLists();
-  const [eventListName, setEventListName] = useState('');
-  const [destinationName, setDestinationName] = useState('');
+  const [eventListName, setEventListName] = useWorkspaceState('Utilities/GTI/MaskSavePanel.tsx:eventListName:1', '');
+  const [destinationName, setDestinationName] = useWorkspaceState('Utilities/GTI/MaskSavePanel:destinationName', '');
   const [previewedSignature, setPreviewedSignature] = useState<string | null>(null);
   const parsed = useMemo(() => parseStrictGtis(rows, 'Mask GTIs'), [rows]);
   const signature = `${eventListName}\u0000${rows}`;
   const previewRunner = useAnalysisRunner<GtiMaskPreviewData>('Preview GTI mask');
   const saveRunner = useAnalysisRunner<GtiMaskSaveData>('Save filtered EventList');
-  const onEventListChange = useCallback((name: string) => setEventListName(name), []);
+  const onEventListChange = useCallback((name: string) => setEventListName(name), [setEventListName]);
   const destinationValidationError =
     destinationName === '' ? null : validateDerivedName(destinationName);
   const duplicateName =
@@ -248,8 +249,7 @@ const MaskSavePanel: React.FC<MaskSavePanelProps> = ({ inspectedRows, rows, onRo
                 <Typography variant="subtitle2" sx={{ px: 1, pt: 0.5 }}>
                   Bounded event-mask plot preview
                 </Typography>
-                <PlotlyChart
-                  height={300}
+                <PlotlyChart workspaceKey='Utilities/GTI/MaskSavePanel.tsx:chart:1'                   height={300}
                   data={[
                     {
                       type: 'scattergl',

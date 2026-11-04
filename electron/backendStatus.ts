@@ -12,6 +12,7 @@ type BackendStatusListener = (status: BackendStatus) => void;
 export class BackendStatusStore {
   private status: BackendStatus = {
     revision: 0,
+    generation: 0,
     phase: 'stopped',
     port: null,
     error: null,
@@ -25,11 +26,17 @@ export class BackendStatusStore {
 
   publish(transition: BackendStatusTransition): BackendStatus {
     const revision = this.status.revision + 1;
+    const generation = transition.phase === 'starting' && this.status.phase !== 'starting'
+      ? this.status.generation + 1
+      : transition.phase === 'ready' && this.status.generation === 0
+        ? 1
+        : this.status.generation;
 
     switch (transition.phase) {
       case 'ready':
         this.status = {
           revision,
+          generation,
           phase: 'ready',
           port: transition.port,
           error: null,
@@ -38,6 +45,7 @@ export class BackendStatusStore {
       case 'error':
         this.status = {
           revision,
+          generation,
           phase: 'error',
           port: null,
           error: transition.error,
@@ -47,6 +55,7 @@ export class BackendStatusStore {
       case 'stopped':
         this.status = {
           revision,
+          generation,
           phase: transition.phase,
           port: null,
           error: null,
@@ -57,5 +66,22 @@ export class BackendStatusStore {
     const snapshot = this.getSnapshot();
     this.notify(snapshot);
     return snapshot;
+  }
+}
+
+/** Coalesce overlapping launch requests before changing the managed process. */
+export class BackendOperationGate {
+  private pending: Promise<void> | null = null;
+
+  run(operation: () => Promise<void>): Promise<void> {
+    if (this.pending) return this.pending;
+
+    // Schedule the operation after installing the gate. Even a synchronously
+    // issued second IPC request then observes the same in-flight launch.
+    const completion = Promise.resolve().then(operation).finally(() => {
+      if (this.pending === completion) this.pending = null;
+    });
+    this.pending = completion;
+    return completion;
   }
 }

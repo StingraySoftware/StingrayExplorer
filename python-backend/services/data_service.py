@@ -44,6 +44,7 @@ from models.event_formats import (
 )
 
 from .base_service import BaseService
+from .scientific_compatibility import event_read_options
 from .remote_source import (
     GENERAL_HTTPS_POLICY,
     RemoteSourceCancelled,
@@ -282,7 +283,7 @@ def _scientific_reader_source(
 
     with tempfile.TemporaryDirectory(prefix="stingray-input-") as directory:
         snapshot = Path(directory) / "events.evt"
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
         if hasattr(os, "O_CLOEXEC"):
             flags |= os.O_CLOEXEC
         descriptor = os.open(snapshot, flags, 0o600)
@@ -1000,10 +1001,13 @@ class DataService(BaseService):
                         event_list = EventList.read(
                             reader_source,
                             fmt=fmt,
-                            rmf_file=rmf_stream,
-                            additional_columns=additional_columns,
-                            high_precision=high_precision,
-                            skip_checks=skip_checks,
+                            **event_read_options(
+                                fmt,
+                                rmf_file=rmf_stream,
+                                additional_columns=additional_columns,
+                                high_precision=high_precision,
+                                skip_checks=skip_checks,
+                            ),
                         )
 
                 # Collect warning messages
@@ -1525,13 +1529,17 @@ class DataService(BaseService):
     def list_event_lists(self) -> Dict[str, Any]:
         """List all loaded EventLists."""
         try:
-            event_data = self.state.get_event_data()
-
             summaries = []
-            for name, event_list in event_data:
+            for name in self.state.list_event_names():
+                captured = self.state.copy_event_data_with_identity(name)
+                if captured is None:
+                    # A concurrent delete can remove a name after discovery.
+                    continue
+                event_list, dataset_id = captured
                 summaries.append(
                     {
                         "name": name,
+                        "dataset_id": dataset_id,
                         "n_events": len(event_list.time),
                         "time_range": [
                             _to_python_float(event_list.time.min()),

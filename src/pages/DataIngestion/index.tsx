@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
@@ -212,16 +213,16 @@ const DataIngestionPage: React.FC = () => {
   // Form state - Local File (batch mode)
   const [selectedFiles, setSelectedFiles] = useState<GrantedFileSelection[]>([]);
   const [fileNames, setFileNames] = useState<Record<string, string>>({});
-  const [fileFormat, setFileFormat] = useState<EventInputFormat>('ogip');
+  const [fileFormat, setFileFormat] = useWorkspaceState<EventInputFormat>('DataIngestion/index.tsx:fileFormat:1', 'ogip');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Batch file settings mode
-  const [useSameSettings, setUseSameSettings] = useState<boolean>(true);
-  const [perFileConfigs, setPerFileConfigs] = useState<Record<string, PerFileUiConfig>>({});
+  const [useSameSettings, setUseSameSettings] = useWorkspaceState<boolean>('DataIngestion/index.tsx:useSameSettings:2', true);
+  const [perFileConfigs, setPerFileConfigs] = useWorkspaceState<Record<string, PerFileUiConfig>>('DataIngestion:perFileConfigs', {});
   const [perFileRmfSelections, setPerFileRmfSelections] = useState<
     Record<string, GrantedFileSelection | undefined>
   >({});
-  const [expandedFileSettings, setExpandedFileSettings] = useState<Record<string, boolean>>({});
+  const [expandedFileSettings, setExpandedFileSettings] = useWorkspaceState<Record<string, boolean>>('DataIngestion/index.tsx:expandedFileSettings:3', {});
 
   // Batch size info
   const [batchSizeInfo, setBatchSizeInfo] = useState<BatchSizeResult | null>(null);
@@ -237,37 +238,37 @@ const DataIngestionPage: React.FC = () => {
   // Note: batchResult removed - job queue handles results in sidebar
 
   // Advanced options state
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState<boolean>(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useWorkspaceState<boolean>('DataIngestion/index.tsx:showAdvancedOptions:4', false);
   const [rmfSelection, setRmfSelection] = useState<GrantedFileSelection | null>(null);
-  const [additionalColumns, setAdditionalColumns] = useState<string>('');
+  const [additionalColumns, setAdditionalColumns] = useWorkspaceState<string>('DataIngestion/index.tsx:additionalColumns:5', '');
   const [fileSizeInfo, setFileSizeInfo] = useState<FileSizeInfo | null>(null);
   const [isCheckingFileSize, setIsCheckingFileSize] = useState<boolean>(false);
 
   // Notes/Comments for the data
-  const [eventNotes, setEventNotes] = useState<string>('');
+  const [eventNotes, setEventNotes] = useWorkspaceState<string>('DataIngestion/index.tsx:eventNotes:8', '');
 
 
   // Advanced loading options
-  const [highPrecision, setHighPrecision] = useState<boolean>(false);
-  const [skipChecks, setSkipChecks] = useState<boolean>(false);
+  const [highPrecision, setHighPrecision] = useWorkspaceState<boolean>('DataIngestion/index.tsx:highPrecision:9', false);
+  const [skipChecks, setSkipChecks] = useWorkspaceState<boolean>('DataIngestion/index.tsx:skipChecks:10', false);
 
   // True lazy loading options
-  const [useTrueLazyLoading, setUseTrueLazyLoading] = useState<boolean>(false);
-  const [trueLazyMode, setTrueLazyMode] = useState<'time_range' | 'event_count'>('time_range');
-  const [timeRangeStart, setTimeRangeStart] = useState<number>(0);
-  const [timeRangeEnd, setTimeRangeEnd] = useState<number>(100);
-  const [eventCountStart, setEventCountStart] = useState<number>(0);
-  const [eventCount, setEventCount] = useState<number>(10000);
+  const [useTrueLazyLoading, setUseTrueLazyLoading] = useWorkspaceState<boolean>('DataIngestion:useTrueLazyLoading', false);
+  const [trueLazyMode, setTrueLazyMode] = useWorkspaceState<'time_range' | 'event_count'>('DataIngestion/index.tsx:trueLazyMode:11', 'time_range');
+  const [timeRangeStart, setTimeRangeStart] = useWorkspaceState<number>('DataIngestion/index.tsx:timeRangeStart:12', 0);
+  const [timeRangeEnd, setTimeRangeEnd] = useWorkspaceState<number>('DataIngestion/index.tsx:timeRangeEnd:13', 100);
+  const [eventCountStart, setEventCountStart] = useWorkspaceState<number>('DataIngestion/index.tsx:eventCountStart:14', 0);
+  const [eventCount, setEventCount] = useWorkspaceState<number>('DataIngestion/index.tsx:eventCount:15', 10000);
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState<boolean>(false);
 
   // Tab state for data input method
-  const [dataInputTab, setDataInputTab] = useState<number>(0);
+  const [dataInputTab, setDataInputTab] = useWorkspaceState<number>('DataIngestion/index.tsx:dataInputTab:16', 0);
 
   // Form state - URL Loading
   const [urlInput, setUrlInput] = useState<string>('');
-  const [urlEventListName, setUrlEventListName] = useState<string>('');
-  const [urlFormat, setUrlFormat] = useState<EventInputFormat>('ogip');
+  const [urlEventListName, setUrlEventListName] = useWorkspaceState<string>('DataIngestion/index.tsx:urlEventListName:17', '');
+  const [urlFormat, setUrlFormat] = useWorkspaceState<EventInputFormat>('DataIngestion/index.tsx:urlFormat:18', 'ogip');
   const [isLoadingUrl, setIsLoadingUrl] = useState<boolean>(false);
   // Note: urlDownloadProgress removed - job queue handles progress in sidebar
 
@@ -291,12 +292,12 @@ const DataIngestionPage: React.FC = () => {
   const [fullPreviewOpen, setFullPreviewOpen] = useState<boolean>(false);
   const [fullPreviewLoading, setFullPreviewLoading] = useState<boolean>(false);
   const [fullPreviewData, setFullPreviewData] = useState<EventListFullPreview | null>(null);
-  const [previewTabValue, setPreviewTabValue] = useState<number>(0);
+  const [previewTabValue, setPreviewTabValue] = useWorkspaceState<number>('DataIngestion/index.tsx:previewTabValue:20', 0);
 
   // Save format dialog state
   const [saveFormatDialogOpen, setSaveFormatDialogOpen] = useState<boolean>(false);
-  const [saveEventListName, setSaveEventListName] = useState<string>('');
-  const [selectedSaveFormat, setSelectedSaveFormat] = useState<LegacySaveFormat>('hdf5');
+  const [saveEventListName, setSaveEventListName] = useWorkspaceState<string>('DataIngestion/index.tsx:saveEventListName:21', '');
+  const [selectedSaveFormat, setSelectedSaveFormat] = useWorkspaceState<LegacySaveFormat>('DataIngestion/index.tsx:selectedSaveFormat:22', 'hdf5');
   const [availableSaveFormats, setAvailableSaveFormats] = useState<LegacySaveFormat[]>([]);
   const [hdf5UnavailableReason, setHdf5UnavailableReason] = useState<string | null>(null);
   const [saveFormatsLoadingName, setSaveFormatsLoadingName] = useState<string | null>(null);

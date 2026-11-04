@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import {} from 'react';
 import { Box, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { GaussianPanel } from './GaussianPanel';
 import { TrialCorrectionPanel } from './TrialCorrectionPanel';
@@ -6,7 +7,7 @@ import { TrialCorrectionPanel } from './TrialCorrectionPanel';
 type ProbabilityTool = 'gaussian' | 'trials';
 
 export function ProbabilityWorkbench() {
-  const [tool, setTool] = useState<ProbabilityTool>('gaussian');
+  const [tool, setTool] = useWorkspaceState<ProbabilityTool>('Utilities/StatisticalFunctions/ProbabilityWorkbench.tsx:tool:1', 'gaussian');
 
   return (
     <Stack spacing={2}>

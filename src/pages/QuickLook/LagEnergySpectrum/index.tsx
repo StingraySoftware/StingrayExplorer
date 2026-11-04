@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   Box,
@@ -19,24 +20,34 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, LagSpectrumData } from '@/api/varenergyApi';
 import { parsePositiveNumber } from '@/utils/numbers';
 
 const LagEnergySpectrumPage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
-  const [binTime, setBinTime] = useState('0.01');
-  const [segmentSize, setSegmentSize] = useState('8');
-  const [freqMin, setFreqMin] = useState('0.1');
-  const [freqMax, setFreqMax] = useState('1');
-  const [energyMin, setEnergyMin] = useState('0.5');
-  const [energyMax, setEnergyMax] = useState('10');
-  const [nBands, setNBands] = useState('5');
-  const [logBands, setLogBands] = useState(false);
-  const [refMin, setRefMin] = useState('');
-  const [refMax, setRefMax] = useState('');
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:eventList:1', '');
+  const [binTime, setBinTime] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:binTime:2', '0.01');
+  const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:segmentSize:3', '8');
+  const [freqMin, setFreqMin] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:freqMin:4', '0.1');
+  const [freqMax, setFreqMax] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:freqMax:5', '1');
+  const [energyMin, setEnergyMin] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:energyMin:6', '0.5');
+  const [energyMax, setEnergyMax] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:energyMax:7', '10');
+  const [nBands, setNBands] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:nBands:8', '5');
+  const [logBands, setLogBands] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:logBands:9', false);
+  const [refMin, setRefMin] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:refMin:10', '');
+  const [refMax, setRefMax] = useWorkspaceState('QuickLook/LagEnergySpectrum/index.tsx:refMax:11', '');
 
-  const { result, running, error, run } = useAnalysisRunner<LagSpectrumData>('Lag-Energy Spectrum');
+  const {
+    result,
+    running,
+    error,
+    run,
+    resultInputs,
+    resultIdentity,
+    resultStatus,
+    backendAvailable,
+  } = useAnalysisRunner<LagSpectrumData>('Lag-Energy Spectrum');
 
   const binTimeNum = parsePositiveNumber(binTime);
   const segNum = parsePositiveNumber(segmentSize);
@@ -67,7 +78,26 @@ const LagEnergySpectrumPage: React.FC = () => {
       refMaxNum !== null &&
       !refBandInverted);
 
+  const useRefBand =
+    refMinFilled && refMaxFilled && refMinNum !== null && refMaxNum !== null;
+
+  const currentInputs = {
+    operation: 'lag_energy_spectrum',
+    event_list_name: eventList,
+    bin_time: binTimeNum,
+    segment_size: segNum,
+    freq_min: freqMinNum,
+    freq_max: freqMaxNum,
+    energy_min: energyMinNum,
+    energy_max: energyMaxNum,
+    n_bands: nBandsNum,
+    log_bands: logBands,
+    ref_min: useRefBand ? refMinNum : null,
+    ref_max: useRefBand ? refMaxNum : null,
+  };
+
   const canRun =
+    backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
     segNum !== null &&
@@ -82,6 +112,7 @@ const LagEnergySpectrumPage: React.FC = () => {
     !running;
 
   const handleRun = (): void => {
+    if (!canRun) return;
     if (
       binTimeNum === null ||
       segNum === null ||
@@ -93,22 +124,22 @@ const LagEnergySpectrumPage: React.FC = () => {
     ) {
       return;
     }
-    const useRefBand =
-      refMinFilled && refMaxFilled && refMinNum !== null && refMaxNum !== null;
-    void run(() =>
-      varenergyApi.lagSpectrum({
-        event_list_name: eventList,
-        bin_time: binTimeNum,
-        segment_size: segNum,
-        freq_min: freqMinNum,
-        freq_max: freqMaxNum,
-        energy_min: energyMinNum,
-        energy_max: energyMaxNum,
-        n_bands: nBandsNum,
-        log_bands: logBands,
-        ref_min: useRefBand ? refMinNum : null,
-        ref_max: useRefBand ? refMaxNum : null,
-      })
+    const parameters = {
+      event_list_name: eventList,
+      bin_time: binTimeNum,
+      segment_size: segNum,
+      freq_min: freqMinNum,
+      freq_max: freqMaxNum,
+      energy_min: energyMinNum,
+      energy_max: energyMaxNum,
+      n_bands: nBandsNum,
+      log_bands: logBands,
+      ref_min: useRefBand ? refMinNum : null,
+      ref_max: useRefBand ? refMaxNum : null,
+    };
+    void run(
+      () => varenergyApi.lagSpectrum(parameters),
+      { operation: 'lag_energy_spectrum', ...parameters }
     );
   };
 
@@ -322,6 +353,12 @@ const LagEnergySpectrumPage: React.FC = () => {
                   </>
                 )}
               </Box>
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {error && (
                 <Alert severity="error" sx={{ mb: 1 }}>
                   {error}
@@ -348,8 +385,7 @@ const LagEnergySpectrumPage: React.FC = () => {
                     </Typography>
                   </Box>
                 ) : (
-                  <PlotlyChart
-                    data={traces}
+                  <PlotlyChart workspaceKey='QuickLook/LagEnergySpectrum/index.tsx:chart:1'                     data={traces}
                     layout={{
                       xaxis: { title: { text: 'Energy (keV)' } },
                       yaxis: { title: { text: 'Time lag (s)' }, type: 'linear' },

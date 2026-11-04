@@ -5,6 +5,7 @@ import { PythonManager, LogLevel, LogSource, LogMessage } from './pythonManager'
 import { setupIpcHandlers } from './ipcHandlers';
 import { createAppMenu } from './menu';
 import {
+  BackendOperationGate,
   BackendStatusStore,
   type BackendStatusTransition,
 } from './backendStatus';
@@ -17,6 +18,7 @@ import {
 let mainWindow: BrowserWindow | null = null;
 let pythonManager: PythonManager | null = null;
 let rendererReady = false;
+const backendOperationGate = new BackendOperationGate();
 const logHistory: LogMessage[] = [];  // Persistent history for replay
 const MAX_LOG_HISTORY = 100;
 
@@ -217,7 +219,7 @@ async function createWindow(): Promise<void> {
   });
 }
 
-async function initializeApp(): Promise<void> {
+async function initializeBackend(): Promise<void> {
   try {
     // Start Python backend
     const manager = new PythonManager();
@@ -259,29 +261,35 @@ async function initializeApp(): Promise<void> {
   }
 }
 
+function initializeApp(): Promise<void> {
+  return backendOperationGate.run(initializeBackend);
+}
+
 /**
  * Restart the Python backend, emitting the same renderer events as initial
  * startup so the backend status in the UI never goes stale. Errors are
  * reported via python:error rather than rethrown — the renderer's restart
  * button awaits the IPC call without a catch.
  */
-async function restartBackend(): Promise<void> {
-  if (!pythonManager) {
-    await initializeApp();
-    return;
-  }
+function restartBackend(): Promise<void> {
+  return backendOperationGate.run(async () => {
+    if (!pythonManager) {
+      await initializeBackend();
+      return;
+    }
 
-  publishBackendStatus({ phase: 'starting' });
-  sendLog('info', 'Restarting Python backend...');
+    publishBackendStatus({ phase: 'starting' });
+    sendLog('info', 'Restarting Python backend...');
 
-  try {
-    await pythonManager.restart();
-    publishBackendStatus({ phase: 'ready', port: pythonManager.getPort() });
-    sendLog('info', `Python backend restarted successfully on port ${pythonManager.getPort()}`);
-  } catch (error) {
-    sendLog('error', `Failed to restart Python backend: ${error}`);
-    publishBackendStatus({ phase: 'error', error: getSafeBackendError(error) });
-  }
+    try {
+      await pythonManager.restart();
+      publishBackendStatus({ phase: 'ready', port: pythonManager.getPort() });
+      sendLog('info', `Python backend restarted successfully on port ${pythonManager.getPort()}`);
+    } catch (error) {
+      sendLog('error', `Failed to restart Python backend: ${error}`);
+      publishBackendStatus({ phase: 'error', error: getSafeBackendError(error) });
+    }
+  });
 }
 
 // Handle renderer ready signal

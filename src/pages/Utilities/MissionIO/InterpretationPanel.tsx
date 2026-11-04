@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -45,7 +46,7 @@ const InterpretationPanel: React.FC = () => {
     staleTime: 60_000,
   });
   const [fitsFile, setFitsFile] = React.useState<GrantedFileSelection | null>(null);
-  const [overrides, setOverrides] = React.useState<OverrideValues>(EMPTY_OVERRIDES);
+  const [overrides, setOverrides] = useWorkspaceState<OverrideValues>('Utilities/MissionIO/InterpretationPanel.tsx:overrides:1', EMPTY_OVERRIDES);
   const {
     result: runnerResult,
     running,

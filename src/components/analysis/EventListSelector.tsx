@@ -15,6 +15,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { Link as RouterLink } from 'react-router-dom';
 import { useEventLists } from '@/hooks/useEventLists';
 import type { EventListSummary } from '@/api/dataApi';
+import { useBackendContext } from '@/context/BackendContext';
+import { captureBackendEpoch } from '@/api/backendEpoch';
 
 interface EventListSelectorProps {
   label: string;
@@ -42,8 +44,46 @@ const EventListSelector: React.FC<EventListSelectorProps> = ({
   disabled = false,
 }) => {
   const { data, isLoading, isError, error, refetch, isFetching } = useEventLists();
+  const { generation, isReady } = useBackendContext();
+  const backendAvailable = generation === null || isReady;
+  const epoch = captureBackendEpoch().version;
+  const selectedGeneration = React.useRef(generation);
+  const selectedEpoch = React.useRef(epoch);
+  const selectedDataset = React.useRef<{ name: string; id: string | null } | null>(null);
   const labelId = `event-list-selector-${React.useId()}`;
   const capabilityLabel = requiredCapability === 'pi' ? 'PI/channel' : 'energy';
+
+  React.useEffect(() => {
+    const changed = selectedGeneration.current !== generation || selectedEpoch.current !== epoch;
+    selectedGeneration.current = generation;
+    selectedEpoch.current = epoch;
+    if (generation !== null && (changed || !isReady)) {
+      selectedDataset.current = null;
+      if (value !== '') onChange('');
+    }
+  }, [generation, isReady, value, onChange, epoch]);
+
+  // A loaded name can be reused within one backend lifetime. Pin the catalog
+  // identity of a selection and require a new deliberate selection when that
+  // identity changes. Legacy catalogs without IDs retain name-based behavior.
+  React.useEffect(() => {
+    if (value === '') {
+      selectedDataset.current = null;
+      return;
+    }
+    if (!backendAvailable || isLoading || isFetching || data === undefined) return;
+    const selected = data.find((eventList) => eventList.name === value);
+    if (!selected) return; // The missing-name/capability effect clears this.
+    const id = typeof selected.dataset_id === 'string' ? selected.dataset_id : null;
+    const previous = selectedDataset.current;
+    if (previous === null || previous.name !== value || previous.id === null) {
+      selectedDataset.current = { name: value, id };
+      return;
+    }
+    if (previous.id !== id) {
+      onChange('');
+    }
+  }, [value, data, backendAvailable, isLoading, isFetching, onChange]);
 
   // Auto-clear a selection that no longer exists in the list (deleted
   // elsewhere or backend restart) so consumers never submit stale names.
@@ -68,13 +108,17 @@ const EventListSelector: React.FC<EventListSelectorProps> = ({
           size="small"
           aria-label="Refresh event lists"
           onClick={() => refetch()}
-          disabled={disabled || isFetching}
+          disabled={disabled || isFetching || !backendAvailable}
         >
           {isFetching ? <CircularProgress size={16} /> : <RefreshIcon fontSize="small" />}
         </IconButton>
       </span>
     </Tooltip>
   );
+
+  if (!backendAvailable) {
+    return <Alert severity="info">Waiting for the backend before selecting event data.</Alert>;
+  }
 
   // Only take over the UI with an error when there is no usable (stale) data;
   // a failed background refetch keeps the populated dropdown rendered.
@@ -123,7 +167,14 @@ const EventListSelector: React.FC<EventListSelectorProps> = ({
           labelId={labelId}
           value={value}
           label={label}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(event) => {
+            const name = event.target.value;
+            selectedDataset.current = {
+              name,
+              id: data?.find((eventList) => eventList.name === name)?.dataset_id ?? null,
+            };
+            onChange(name);
+          }}
         >
           {(data ?? []).map((ev) => (
             <MenuItem

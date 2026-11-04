@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 /**
  * HEASARC Browser Panel
  *
@@ -79,25 +80,25 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
   const [loadingCatalogs, setLoadingCatalogs] = useState<boolean>(true);
 
   // Search form state
-  const [searchMode, setSearchMode] = useState<SearchMode>('name');
-  const [selectedMission, setSelectedMission] = useState<string>('NICER');
-  const [sourceName, setSourceName] = useState<string>('');
-  const [ra, setRa] = useState<string>('');
-  const [dec, setDec] = useState<string>('');
-  const [searchRadius, setSearchRadius] = useState<number>(0.5);
-  const [obsidInput, setObsidInput] = useState<string>('');
+  const [searchMode, setSearchMode] = useWorkspaceState<SearchMode>('DataIngestion/HeasarcBrowserPanel.tsx:searchMode:1', 'name');
+  const [selectedMission, setSelectedMission] = useWorkspaceState<string>('DataIngestion/HeasarcBrowserPanel.tsx:selectedMission:2', 'NICER');
+  const [sourceName, setSourceName] = useWorkspaceState<string>('DataIngestion/HeasarcBrowserPanel.tsx:sourceName:3', '');
+  const [ra, setRa] = useWorkspaceState<string>('DataIngestion/HeasarcBrowserPanel.tsx:ra:4', '');
+  const [dec, setDec] = useWorkspaceState<string>('DataIngestion/HeasarcBrowserPanel.tsx:dec:5', '');
+  const [searchRadius, setSearchRadius] = useWorkspaceState<number>('DataIngestion/HeasarcBrowserPanel.tsx:searchRadius:6', 0.5);
+  const [obsidInput, setObsidInput] = useWorkspaceState<string>('DataIngestion/HeasarcBrowserPanel.tsx:obsidInput:7', '');
   const [maxResults, setMaxResults] = useState<number>(100);
 
   // Filter state
-  const [showFilters, setShowFilters] = useState<boolean>(false);
-  const [minExposure, setMinExposure] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const [showFilters, setShowFilters] = useWorkspaceState<boolean>('DataIngestion/HeasarcBrowserPanel.tsx:showFilters:8', false);
+  const [minExposure, setMinExposure] = useWorkspaceState<string>('DataIngestion/HeasarcBrowserPanel.tsx:minExposure:9', '');
+  const [startDate, setStartDate] = useWorkspaceState<string>('DataIngestion/HeasarcBrowserPanel.tsx:startDate:10', '');
+  const [endDate, setEndDate] = useWorkspaceState<string>('DataIngestion/HeasarcBrowserPanel.tsx:endDate:11', '');
 
   // Search results state
-  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [isSearching, setIsSearching] = useWorkspaceState<boolean>('DataIngestion/HeasarcBrowserPanel.tsx:isSearching:12', false);
   const [searchResults, setSearchResults] = useState<HeasarcObservation[]>([]);
-  const [searchMessage, setSearchMessage] = useState<string>('');
+  const [searchMessage, setSearchMessage] = useWorkspaceState<string>('DataIngestion/HeasarcBrowserPanel.tsx:searchMessage:13', '');
 
   // File browser dialog state
   const [fileBrowser, setFileBrowser] = useState<FileBrowserState>({
@@ -109,7 +110,7 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
   });
 
   // Sort state for Date/Time column
-  const [dateSortOrder, setDateSortOrder] = useState<SortOrder>('none');
+  const [dateSortOrder, setDateSortOrder] = useWorkspaceState<SortOrder>('DataIngestion/HeasarcBrowserPanel.tsx:dateSortOrder:14', 'none');
 
   // Mission-specific display flags
   const isNicer = selectedMission === 'NICER';

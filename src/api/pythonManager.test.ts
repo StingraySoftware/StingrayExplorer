@@ -24,6 +24,7 @@ vi.mock('http', () => ({
 import {
   DEFAULT_BACKEND_PORT,
   parseBackendPortAnnouncement,
+  pixiPythonExecutable,
   PythonManager,
 } from '../../electron/pythonManager';
 
@@ -63,6 +64,13 @@ afterEach(() => {
 });
 
 describe('PythonManager backend announcement protocol', () => {
+  it.each([
+    ['win32', 'C:\\Science workspace', 'C:\\Science workspace\\.pixi\\envs\\default\\python.exe'],
+    ['linux', '/science workspace', '/science workspace/.pixi/envs/default/bin/python'],
+    ['darwin', '/science workspace', '/science workspace/.pixi/envs/default/bin/python'],
+  ] as const)('locates the native Pixi interpreter on %s', (platform, root, expected) => {
+    expect(pixiPythonExecutable(root, platform)).toBe(expected);
+  });
   it.each([
     ['BACKEND_PORT:1', 1],
     ['BACKEND_PORT:8765', 8765],

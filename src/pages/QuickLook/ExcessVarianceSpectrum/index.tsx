@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   Box,
@@ -23,6 +24,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, ExcessVarianceData } from '@/api/varenergyApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -41,17 +43,26 @@ function parsePositiveInteger(value: string): number | null {
 }
 
 const ExcessVarianceSpectrumPage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/ExcessVarianceSpectrum/index.tsx:eventList:1', '');
   // The backend report flags small bin_time as the most common cause of an
   // all-NaN excess variance; 0.1 s is the recommended, pre-validated default.
-  const [binTime, setBinTime] = useState('0.1');
-  const [energyMin, setEnergyMin] = useState('0.5');
-  const [energyMax, setEnergyMax] = useState('10');
-  const [nBands, setNBands] = useState('5');
-  const [logBands, setLogBands] = useState(false);
-  const [normalization, setNormalization] = useState<'fvar' | 'none'>('fvar');
+  const [binTime, setBinTime] = useWorkspaceState('QuickLook/ExcessVarianceSpectrum/index.tsx:binTime:2', '0.1');
+  const [energyMin, setEnergyMin] = useWorkspaceState('QuickLook/ExcessVarianceSpectrum/index.tsx:energyMin:3', '0.5');
+  const [energyMax, setEnergyMax] = useWorkspaceState('QuickLook/ExcessVarianceSpectrum/index.tsx:energyMax:4', '10');
+  const [nBands, setNBands] = useWorkspaceState('QuickLook/ExcessVarianceSpectrum/index.tsx:nBands:5', '5');
+  const [logBands, setLogBands] = useWorkspaceState('QuickLook/ExcessVarianceSpectrum/index.tsx:logBands:6', false);
+  const [normalization, setNormalization] = useWorkspaceState<'fvar' | 'none'>('QuickLook/ExcessVarianceSpectrum/index.tsx:normalization:7', 'fvar');
 
-  const { result, running, error, run } = useAnalysisRunner<ExcessVarianceData>(
+  const {
+    result,
+    running,
+    error,
+    run,
+    resultInputs,
+    resultIdentity,
+    resultStatus,
+    backendAvailable,
+  } = useAnalysisRunner<ExcessVarianceData>(
     'Excess Variance Spectrum'
   );
 
@@ -69,7 +80,19 @@ const ExcessVarianceSpectrumPage: React.FC = () => {
 
   const nBandsInvalid = nBands !== '' && (nBandsNum === null || nBandsNum < 2);
 
+  const currentInputs = {
+    operation: 'excess_variance_spectrum',
+    event_list_name: eventList,
+    bin_time: binTimeNum,
+    energy_min: energyMinNum,
+    energy_max: energyMaxNum,
+    n_bands: nBandsNum,
+    log_bands: logBands,
+    normalization,
+  };
+
   const canRun =
+    backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
     energyRangeValid &&
@@ -84,17 +107,20 @@ const ExcessVarianceSpectrumPage: React.FC = () => {
   };
 
   const handleRun = (): void => {
+    if (!canRun) return;
     if (binTimeNum === null || !energyRangeValid || nBandsNum === null || nBandsNum < 2) return;
-    void run(() =>
-      varenergyApi.excessVariance({
-        event_list_name: eventList,
-        bin_time: binTimeNum,
-        energy_min: energyMinNum as number,
-        energy_max: energyMaxNum as number,
-        n_bands: nBandsNum,
-        log_bands: logBands,
-        normalization,
-      })
+    const parameters = {
+      event_list_name: eventList,
+      bin_time: binTimeNum,
+      energy_min: energyMinNum as number,
+      energy_max: energyMaxNum as number,
+      n_bands: nBandsNum,
+      log_bands: logBands,
+      normalization,
+    };
+    void run(
+      () => varenergyApi.excessVariance(parameters),
+      { operation: 'excess_variance_spectrum', ...parameters }
     );
   };
 
@@ -116,7 +142,7 @@ const ExcessVarianceSpectrumPage: React.FC = () => {
       ]
     : [];
 
-  const yAxisTitle = normalization === 'fvar' ? 'F_var' : 'Excess variance';
+  const yAxisTitle = result?.normalization === 'fvar' ? 'F_var' : 'Excess variance';
 
   return (
     <PageTemplate
@@ -226,6 +252,12 @@ const ExcessVarianceSpectrumPage: React.FC = () => {
                   </>
                 )}
               </Box>
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {error && (
                 <Alert severity="error" sx={{ mb: 1 }}>
                   {error}
@@ -243,8 +275,7 @@ const ExcessVarianceSpectrumPage: React.FC = () => {
                 </Alert>
               )}
               {result ? (
-                <PlotlyChart
-                  data={traces}
+                <PlotlyChart workspaceKey='QuickLook/ExcessVarianceSpectrum/index.tsx:chart:1'                   data={traces}
                   layout={{
                     xaxis: { title: { text: 'Energy (keV)' } },
                     yaxis: { title: { text: yAxisTitle } },

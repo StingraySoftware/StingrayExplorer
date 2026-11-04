@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   Box,
@@ -21,6 +22,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { correlationApi, CorrelationData } from '@/api/correlationApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -29,27 +31,30 @@ const MODE_OPTIONS = ['same', 'full'];
 const NORM_OPTIONS = ['none', 'variance'];
 
 const CrossCorrelationPage: React.FC = () => {
-  const [eventList1, setEventList1] = useState('');
-  const [eventList2, setEventList2] = useState('');
-  const [dt, setDt] = useState('0.1');
-  const [mode, setMode] = useState('same');
-  const [norm, setNorm] = useState('none');
-  const { result, running, error, run } = useAnalysisRunner<CorrelationData>('Cross Correlation');
+  const [eventList1, setEventList1] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:eventList1:1', '');
+  const [eventList2, setEventList2] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:eventList2:2', '');
+  const [dt, setDt] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:dt:3', '0.1');
+  const [mode, setMode] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:mode:4', 'same');
+  const [norm, setNorm] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:norm:5', 'none');
+  const {
+    result, running, error, run, resultInputs, resultIdentity, resultStatus, backendAvailable,
+  } = useAnalysisRunner<CorrelationData>('Cross Correlation');
 
   const dtNum = parsePositiveNumber(dt);
-  const canRun = eventList1 !== '' && eventList2 !== '' && dtNum !== null && !running;
+  const canRun = eventList1 !== '' && eventList2 !== '' && dtNum !== null && !running && backendAvailable;
+  const requestParams = {
+    event_list_1_name: eventList1,
+    event_list_2_name: eventList2,
+    dt: dtNum,
+    mode,
+    norm,
+  };
 
+  const currentInputs = { operation: 'cross_correlation', ...requestParams };
   const handleRun = (): void => {
-    if (!dtNum) return;
-    void run(() =>
-      correlationApi.crossCorrelation({
-        event_list_1_name: eventList1,
-        event_list_2_name: eventList2,
-        dt: dtNum,
-        mode,
-        norm,
-      })
-    );
+    if (!canRun || dtNum === null) return;
+    const params = { ...requestParams, dt: dtNum };
+    void run(() => correlationApi.crossCorrelation(params), { operation: 'cross_correlation', ...params });
   };
 
   const traces: Data[] = result
@@ -81,6 +86,10 @@ const CrossCorrelationPage: React.FC = () => {
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list 1" value={eventList1} onChange={setEventList1} />
                 <EventListSelector label="Event list 2" value={eventList2} onChange={setEventList2} />
+                <Typography variant="caption" color="text.secondary">
+                  Requires compatible timing references and one continuous common good-time interval.
+                  For observations with gaps, use GTI Utilities to select a continuous interval first.
+                </Typography>
                 <TextField
                   label="Time bin dt (s)"
                   size="small"
@@ -155,6 +164,12 @@ const CrossCorrelationPage: React.FC = () => {
                   {error}
                 </Alert>
               )}
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {result && result.warnings.length > 0 && (
                 <Alert severity="warning" sx={{ mb: 1 }}>
                   <Stack spacing={0.5}>
@@ -168,8 +183,7 @@ const CrossCorrelationPage: React.FC = () => {
               )}
               {result ? (
                 <>
-                  <PlotlyChart
-                    data={traces}
+                  <PlotlyChart workspaceKey='QuickLook/CrossCorrelation/index.tsx:chart:1'                     data={traces}
                     layout={{
                       xaxis: { title: { text: 'Time lag (s)' } },
                       yaxis: { title: { text: 'Correlation' } },

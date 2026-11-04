@@ -42,6 +42,7 @@ class RebinLightcurveRequest(BaseModel):
     rebin_factor: float
     output_name: str
     max_points: Optional[int] = Field(default=DEFAULT_MAX_PLOT_POINTS, ge=0)
+    expected_result_id: Optional[str] = None
 
 
 # Routes
@@ -88,6 +89,7 @@ async def rebin_lightcurve(
         rebin_factor=request.rebin_factor,
         output_name=request.output_name,
         max_points=request.max_points,
+        expected_result_id=request.expected_result_id,
     )
 
 

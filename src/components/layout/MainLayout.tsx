@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useWorkspaceState, onWorkspaceRestored, recordWorkspacePath } from '@/api/workspaceSession';
+import React, { useEffect, useCallback } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Box, Toolbar } from '@mui/material';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -21,17 +22,21 @@ const LOG_PANEL_HEADER_HEIGHT = 40;
  * (Footer functionality has been consolidated into RightToolbar)
  */
 const MainLayout: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
-  const [submenuOpen, setSubmenuOpen] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useWorkspaceState<boolean>('$sidebarOpen', true);
+  const [submenuOpen, setSubmenuOpen] = useWorkspaceState<boolean>('$submenuOpen', false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => { recordWorkspacePath(location.pathname); }, [location.pathname]);
+  useEffect(() => onWorkspaceRestored((path) => { if (path) navigate(path); }), [navigate]);
   const { rightToolbarCollapsed, toggleRightToolbar } = useUIStore();
 
   const handleToggleSidebar = useCallback((): void => {
     setSidebarOpen((prev) => !prev);
-  }, []);
+  }, [setSidebarOpen]);
 
   const handleSubmenuStateChange = useCallback((isOpen: boolean): void => {
     setSubmenuOpen(isOpen);
-  }, []);
+  }, [setSubmenuOpen]);
 
   // Calculate main content offset based on sidebar state
   const leftOffset = sidebarOpen

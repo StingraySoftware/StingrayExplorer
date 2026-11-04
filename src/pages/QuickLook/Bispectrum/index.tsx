@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useMemo } from 'react';
 import {
   Alert,
   Box,
@@ -25,6 +26,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { timingApi, BispectrumData } from '@/api/timingApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -34,34 +36,37 @@ const WINDOW_OPTIONS = ['uniform', 'parzen', 'hamming', 'hanning', 'triangular',
 const MAXLAG_CAP = 500;
 
 const BispectrumPage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
-  const [dt, setDt] = useState('0.1');
-  const [maxlag, setMaxlag] = useState('25');
-  const [scale, setScale] = useState('unbiased');
-  const [windowFn, setWindowFn] = useState('uniform');
-  const [outputName, setOutputName] = useState('');
-  const [tab, setTab] = useState(0);
-  const [logZ, setLogZ] = useState(true);
-  const { result, running, error, run } = useAnalysisRunner<BispectrumData>('Bispectrum');
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:eventList:1', '');
+  const [dt, setDt] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:dt:2', '0.1');
+  const [maxlag, setMaxlag] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:maxlag:3', '25');
+  const [scale, setScale] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:scale:4', 'unbiased');
+  const [windowFn, setWindowFn] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:windowFn:5', 'uniform');
+  const [outputName, setOutputName] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:outputName:6', '');
+  const [tab, setTab] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:tab:7', 0);
+  const [logZ, setLogZ] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:logZ:8', true);
+  const {
+    result, running, error, run, resultInputs, resultIdentity, resultStatus, backendAvailable,
+  } = useAnalysisRunner<BispectrumData>('Bispectrum');
 
   const dtNum = parsePositiveNumber(dt);
   const maxlagNum = parsePositiveNumber(maxlag);
   const maxlagInt = maxlagNum === null ? null : Math.round(maxlagNum);
   const maxlagValid = maxlagInt !== null && maxlagInt >= 1 && maxlagInt <= MAXLAG_CAP;
-  const canRun = eventList !== '' && dtNum !== null && maxlagValid && !running;
+  const canRun = eventList !== '' && dtNum !== null && maxlagValid && !running && backendAvailable;
+  const requestParams = {
+    event_list_name: eventList,
+    dt: dtNum,
+    maxlag: maxlagInt,
+    scale,
+    window: windowFn,
+    output_name: outputName.trim() || undefined,
+  };
+  const currentInputs = { operation: 'bispectrum', ...requestParams };
 
   const handleRun = (): void => {
-    if (!dtNum || !maxlagInt || !maxlagValid) return;
-    void run(() =>
-      timingApi.createBispectrum({
-        event_list_name: eventList,
-        dt: dtNum,
-        maxlag: maxlagInt,
-        scale,
-        window: windowFn,
-        output_name: outputName.trim() || undefined,
-      })
-    );
+    if (!canRun || dtNum === null || maxlagInt === null) return;
+    const params = { ...requestParams, dt: dtNum, maxlag: maxlagInt };
+    void run(() => timingApi.createBispectrum(params), { operation: 'bispectrum', ...params });
   };
 
   const heatmapData = useMemo<Data[]>(() => {
@@ -199,9 +204,14 @@ const BispectrumPage: React.FC = () => {
                   {error}
                 </Alert>
               )}
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {result ? (
-                <PlotlyChart
-                  data={heatmapData}
+                <PlotlyChart workspaceKey='QuickLook/Bispectrum/index.tsx:chart:1'                   data={heatmapData}
                   layout={{
                     xaxis: { title: { text: 'Frequency f1 (Hz)' } },
                     yaxis: { title: { text: 'Frequency f2 (Hz)' } },

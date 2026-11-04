@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useEffect, useRef } from 'react';
 import {
   Box,
   Collapse,
@@ -223,8 +224,8 @@ const LogPanel: React.FC<LogPanelProps> = ({ leftOffset = 0, rightOffset = 0 }) 
 
   const logs = useLogStore(selectFilteredLogs);
   const logsEndRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [rawView, setRawView] = useState(false);
+  const [autoScroll, setAutoScroll] = useWorkspaceState('$logAutoScroll', true);
+  const [rawView, setRawView] = useWorkspaceState('$logRawView', false);
   const { isReady: backendReady } = useBackendContext();
 
   // Listen for logs from Electron main process

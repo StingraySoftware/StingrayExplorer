@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import threading
 import time
 from contextlib import asynccontextmanager, contextmanager
@@ -959,6 +960,14 @@ async def test_control_character_filename_is_rejected_before_remote_io(
     tmp_path, state_manager, monkeypatch
 ):
     destination = tmp_path / "unsafe\nname.evt"
+    if os.name == "nt":
+        # NTFS rejects ambiguous names during native selection itself. Also
+        # exercise the download boundary with a valid grant for a safe sibling.
+        with pytest.raises(grant_module.FileGrantEligibilityError):
+            write_grant(destination)
+        grant = write_grant(tmp_path / "safe.evt")
+    else:
+        grant = write_grant(destination)
     monkeypatch.setattr(
         archive_module,
         "RemoteSourceClient",
@@ -969,7 +978,7 @@ async def test_control_character_filename_is_rejected_before_remote_io(
         ArchiveService(state_manager),
         url=APPROVED_URL,
         destination_path=str(destination),
-        destination_grant=write_grant(destination),
+        destination_grant=grant,
     )
 
     assert events == [

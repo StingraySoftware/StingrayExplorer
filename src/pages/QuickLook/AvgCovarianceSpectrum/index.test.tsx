@@ -10,6 +10,7 @@ vi.mock('@/api/dataApi', () => ({
 }));
 
 const avgCovarianceSpectrum = vi.fn();
+const plotProps = vi.fn();
 vi.mock('@/api/varenergyApi', () => ({
   varenergyApi: {
     avgCovarianceSpectrum: (...a: unknown[]) => avgCovarianceSpectrum(...a),
@@ -17,13 +18,17 @@ vi.mock('@/api/varenergyApi', () => ({
 }));
 
 vi.mock('@/components/plots/PlotlyChart', () => ({
-  default: () => <div data-testid="chart" />,
+  default: (props: unknown) => {
+    plotProps(props);
+    return <div data-testid="chart" />;
+  },
 }));
 
 import AvgCovarianceSpectrumPage from './index';
 
 describe('AvgCovarianceSpectrumPage', () => {
   beforeEach(() => {
+    plotProps.mockClear();
     useUIStore.setState({ notifications: [], unreadNotificationCount: 0 });
     listEventLists.mockResolvedValue({
       success: true,
@@ -95,6 +100,39 @@ describe('AvgCovarianceSpectrumPage', () => {
     renderWithProviders(<AvgCovarianceSpectrumPage />);
     const button = await screen.findByRole('button', { name: /Compute/ });
     expect(button).toBeDisabled();
+  });
+
+  it('keeps the original normalization and spectrum after edited controls and a failed rerun', async () => {
+    renderWithProviders(<AvgCovarianceSpectrumPage />);
+    await userEvent.click(await screen.findByLabelText('Event list'));
+    await userEvent.click(await screen.findByText(/obs1/));
+    await userEvent.click(screen.getByRole('button', { name: /Compute/ }));
+    await screen.findByTestId('chart');
+
+    await userEvent.click(screen.getByLabelText('Normalization'));
+    await userEvent.click(screen.getByRole('option', { name: 'frac' }));
+    expect(screen.getByText('Inputs have changed since this result.')).toBeInTheDocument();
+    expect(screen.getByText('norm: abs')).toBeInTheDocument();
+    const chart = (): { layout: { yaxis: { title: { text: string } } } } =>
+      plotProps.mock.calls.at(-1)?.[0];
+    expect(chart().layout.yaxis.title.text).toBe('Covariance (absolute)');
+
+    avgCovarianceSpectrum.mockResolvedValueOnce({
+      success: false,
+      data: null,
+      error: 'The edited calculation failed.',
+      message: '',
+    });
+    await userEvent.click(screen.getByRole('button', { name: /Compute/ }));
+    expect(await screen.findByText('The edited calculation failed.')).toBeInTheDocument();
+    expect(
+      screen.getByText('The latest request failed. Showing the previous successful result and its original inputs.')
+    ).toBeInTheDocument();
+    expect(chart().layout.yaxis.title.text).toBe('Covariance (absolute)');
+    expect(screen.getByText('norm: abs')).toBeInTheDocument();
+    expect(avgCovarianceSpectrum).toHaveBeenLastCalledWith(
+      expect.objectContaining({ norm: 'frac' })
+    );
   });
 
   it('disables Compute when the reference band is only half-filled', async () => {

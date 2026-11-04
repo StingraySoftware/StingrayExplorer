@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import { type FormEvent } from 'react';
 import {
   Alert,
   Card,
@@ -20,9 +21,9 @@ import { ResultFrame, SubmitButton } from './WorkbenchComponents';
 import { count, finiteNumber } from './validation';
 
 export function TrialCorrectionPanel() {
-  const [direction, setDirection] = useState<TrialDirection>('single-to-multi');
-  const [rawProbability, setRawProbability] = useState('0.001');
-  const [rawTrials, setRawTrials] = useState('100');
+  const [direction, setDirection] = useWorkspaceState<TrialDirection>('Utilities/StatisticalFunctions/TrialCorrectionPanel.tsx:direction:1', 'single-to-multi');
+  const [rawProbability, setRawProbability] = useWorkspaceState('Utilities/StatisticalFunctions/TrialCorrectionPanel.tsx:rawProbability:2', '0.001');
+  const [rawTrials, setRawTrials] = useWorkspaceState('Utilities/StatisticalFunctions/TrialCorrectionPanel.tsx:rawTrials:3', '100');
   const runner = useAnalysisRunner<TrialCorrectionResult>('Independent Trial Correction');
 
   const parsedProbability = finiteNumber(rawProbability, 'Probability');

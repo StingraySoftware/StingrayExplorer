@@ -67,6 +67,7 @@ class RebinSpectrumRequest(BaseModel):
     rebin_factor: float
     log: bool = False
     output_name: Optional[str] = None
+    expected_result_id: Optional[str] = None
 
 
 # Routes
@@ -162,6 +163,7 @@ async def rebin_spectrum(
         rebin_factor=request.rebin_factor,
         log=request.log,
         output_name=request.output_name,
+        expected_result_id=request.expected_result_id,
     )
 
 

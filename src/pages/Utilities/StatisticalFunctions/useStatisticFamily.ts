@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import { type FormEvent } from 'react';
 import type { StatisticDetectionResult, StatisticEvaluationResult } from '@/api/statisticsApi';
 import { statisticsApi } from '@/api/statisticsApi';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
@@ -8,15 +9,15 @@ import { count, finiteNumber, probability } from './validation';
 export type FamilyOperation = 'evaluate' | 'detection';
 
 export function useStatisticFamily(config: FamilyConfig) {
-  const [operation, setOperation] = useState<FamilyOperation>('evaluate');
-  const [rawStatistic, setRawStatistic] = useState(config.statisticDefault);
-  const [rawFalseAlarm, setRawFalseAlarm] = useState('0.01');
-  const [rawTrials, setRawTrials] = useState('1');
-  const [rawSummed, setRawSummed] = useState('1');
-  const [rawRebin, setRawRebin] = useState('1');
-  const [rawHarmonics, setRawHarmonics] = useState('2');
-  const [rawPhaseBins, setRawPhaseBins] = useState(config.key === 'pdm' ? '10' : '16');
-  const [rawSamples, setRawSamples] = useState('100');
+  const [operation, setOperation] = useWorkspaceState<FamilyOperation>('Utilities/StatisticalFunctions/useStatisticFamily.ts:operation:1' + config.key, 'evaluate');
+  const [rawStatistic, setRawStatistic] = useWorkspaceState('Utilities/StatisticalFunctions/useStatisticFamily.ts:rawStatistic:2' + config.key, config.statisticDefault);
+  const [rawFalseAlarm, setRawFalseAlarm] = useWorkspaceState('Utilities/StatisticalFunctions/useStatisticFamily.ts:rawFalseAlarm:3' + config.key, '0.01');
+  const [rawTrials, setRawTrials] = useWorkspaceState('Utilities/StatisticalFunctions/useStatisticFamily.ts:rawTrials:4' + config.key, '1');
+  const [rawSummed, setRawSummed] = useWorkspaceState('Utilities/StatisticalFunctions/useStatisticFamily.ts:rawSummed:5' + config.key, '1');
+  const [rawRebin, setRawRebin] = useWorkspaceState('Utilities/StatisticalFunctions/useStatisticFamily.ts:rawRebin:6' + config.key, '1');
+  const [rawHarmonics, setRawHarmonics] = useWorkspaceState('Utilities/StatisticalFunctions/useStatisticFamily.ts:rawHarmonics:7' + config.key, '2');
+  const [rawPhaseBins, setRawPhaseBins] = useWorkspaceState('Utilities/StatisticalFunctions/useStatisticFamily.ts:rawPhaseBins:8' + config.key, config.key === 'pdm' ? '10' : '16');
+  const [rawSamples, setRawSamples] = useWorkspaceState('Utilities/StatisticalFunctions/useStatisticFamily.ts:rawSamples:9' + config.key, '100');
   const evaluation = useAnalysisRunner<StatisticEvaluationResult>(`${config.title} Evaluation`);
   const detection = useAnalysisRunner<StatisticDetectionResult>(
     `${config.title} Detection Level`

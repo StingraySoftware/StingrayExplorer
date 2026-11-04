@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -65,9 +66,9 @@ const MissionDatabasePanel: React.FC = () => {
     queryFn: loadCapabilities,
     staleTime: 60_000,
   });
-  const [mission, setMission] = React.useState('');
-  const [instrument, setInstrument] = React.useState('');
-  const [mode, setMode] = React.useState('');
+  const [mission, setMission] = useWorkspaceState('Utilities/MissionIO/MissionDatabasePanel.tsx:mission:1', '');
+  const [instrument, setInstrument] = useWorkspaceState('Utilities/MissionIO/MissionDatabasePanel.tsx:instrument:2', '');
+  const [mode, setMode] = useWorkspaceState('Utilities/MissionIO/MissionDatabasePanel.tsx:mode:3', '');
   const { result, running, error, warnings, run } = useAnalysisRunner<MissionInfoData>(
     'Mission mapping lookup'
   );

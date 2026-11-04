@@ -15,6 +15,7 @@ import { useUIStore, NotificationType } from '@/store/uiStore';
 import { useBackendContext } from '@/context/BackendContext';
 import { jobApi } from '@/api/jobApi';
 import { EVENT_LISTS_QUERY_KEY } from '@/hooks/useEventLists';
+import { captureBackendEpoch, isBackendEpochCurrent } from '@/api/backendEpoch';
 import type { Job, JobStreamEvent } from '@/types/job';
 
 /** Reconnection delay in milliseconds */
@@ -98,13 +99,13 @@ export function handleBatchWarnings(
  * maintain the connection throughout the app lifecycle.
  */
 export function useJobStream(): void {
-  const { isReady: backendReady, port } = useBackendContext();
+  const { isReady: backendReady, port, generation } = useBackendContext();
   const {
     setConnected,
     handleEvent,
     incrementReconnectAttempts,
     resetReconnectAttempts,
-    reconnectAttempts,
+    setJobs,
   } = useJobStore();
   const addNotification = useUIStore((state) => state.addNotification);
   const queryClient = useQueryClient();
@@ -120,6 +121,7 @@ export function useJobStream(): void {
 
   // Track which jobs we've already notified to avoid duplicates on reconnection
   const notifiedJobsRef = useRef<Set<string>>(new Set());
+  const connectionSequenceRef = useRef(0);
 
   /**
    * Handle job completion/failure notifications.
@@ -192,15 +194,23 @@ export function useJobStream(): void {
     }
 
     // Create new abort controller
-    abortControllerRef.current = new AbortController();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const sequence = ++connectionSequenceRef.current;
+    const epoch = captureBackendEpoch();
+    const isCurrentConnection = (): boolean =>
+      sequence === connectionSequenceRef.current &&
+      shouldConnectRef.current &&
+      !controller.signal.aborted &&
+      isBackendEpochCurrent(epoch);
 
     console.log('[JobStream] Connecting to job stream...');
 
     try {
       // Process events from the stream
-      for await (const event of jobApi.streamJobUpdates(abortControllerRef.current.signal)) {
+      for await (const event of jobApi.streamJobUpdates(controller.signal)) {
         // Check if we should stop
-        if (abortControllerRef.current?.signal.aborted) {
+        if (!isCurrentConnection()) {
           console.log('[JobStream] Connection aborted');
           break;
         }
@@ -221,22 +231,27 @@ export function useJobStream(): void {
         }
       }
 
+      if (!isCurrentConnection()) return;
       // Stream ended normally
       console.log('[JobStream] Stream ended');
       setConnected(false, null);
     } catch (error) {
+      if (!isCurrentConnection()) return;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('[JobStream] Connection error:', errorMessage);
       setConnected(false, errorMessage);
     }
 
     // Schedule reconnection if we should still be connected
-    if (shouldConnectRef.current && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+    const reconnectAttempts = useJobStore.getState().reconnectAttempts;
+    if (isCurrentConnection() && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
       incrementReconnectAttempts();
       const delay = RECONNECT_DELAY * Math.min(reconnectAttempts + 1, 3); // Exponential backoff up to 3x
       console.log(`[JobStream] Reconnecting in ${delay}ms (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
-      reconnectTimeoutRef.current = setTimeout(connect, delay);
-    } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (isCurrentConnection()) void connect();
+      }, delay);
+    } else if (isCurrentConnection() && reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       console.error('[JobStream] Max reconnection attempts reached, giving up');
       setConnected(false, 'Max reconnection attempts reached');
     }
@@ -248,11 +263,11 @@ export function useJobStream(): void {
     handleJobNotification,
     incrementReconnectAttempts,
     resetReconnectAttempts,
-    reconnectAttempts,
   ]);
 
   const disconnect = useCallback(() => {
     shouldConnectRef.current = false;
+    connectionSequenceRef.current += 1;
 
     // Cancel pending reconnection
     if (reconnectTimeoutRef.current) {
@@ -272,6 +287,9 @@ export function useJobStream(): void {
 
   // Connect when backend becomes ready
   useEffect(() => {
+    setJobs([]);
+    notifiedJobsRef.current.clear();
+    resetReconnectAttempts();
     if (backendReady && port) {
       shouldConnectRef.current = true;
       connect();
@@ -280,10 +298,8 @@ export function useJobStream(): void {
     return () => {
       disconnect();
     };
-  }, [backendReady, port, connect, disconnect]);
+  }, [backendReady, port, generation, connect, disconnect, setJobs, resetReconnectAttempts]);
 
-  // Reconnect when reconnectAttempts changes (for reconnection loop)
-  // This effect is intentionally left with an empty dep array to avoid loops
 }
 
 export default useJobStream;

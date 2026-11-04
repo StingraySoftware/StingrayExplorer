@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   Box,
@@ -23,6 +24,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, CovarianceSpectrumData } from '@/api/varenergyApi';
 import { parsePositiveNumber } from '@/utils/numbers';
@@ -30,20 +32,29 @@ import { parsePositiveNumber } from '@/utils/numbers';
 type CovarianceNorm = 'abs' | 'frac';
 
 const CovarianceSpectrumPage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
-  const [binTime, setBinTime] = useState('0.1');
-  const [freqMin, setFreqMin] = useState('0.1');
-  const [freqMax, setFreqMax] = useState('1');
-  const [energyMin, setEnergyMin] = useState('0.5');
-  const [energyMax, setEnergyMax] = useState('10');
-  const [nBands, setNBands] = useState('5');
-  const [logBands, setLogBands] = useState(false);
-  const [refMin, setRefMin] = useState('');
-  const [refMax, setRefMax] = useState('');
-  const [norm, setNorm] = useState<CovarianceNorm>('abs');
-  const [logEnergy, setLogEnergy] = useState(false);
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:eventList:1', '');
+  const [binTime, setBinTime] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:binTime:2', '0.1');
+  const [freqMin, setFreqMin] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:freqMin:3', '0.1');
+  const [freqMax, setFreqMax] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:freqMax:4', '1');
+  const [energyMin, setEnergyMin] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:energyMin:5', '0.5');
+  const [energyMax, setEnergyMax] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:energyMax:6', '10');
+  const [nBands, setNBands] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:nBands:7', '5');
+  const [logBands, setLogBands] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:logBands:8', false);
+  const [refMin, setRefMin] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:refMin:9', '');
+  const [refMax, setRefMax] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:refMax:10', '');
+  const [norm, setNorm] = useWorkspaceState<CovarianceNorm>('QuickLook/CovarianceSpectrum/index.tsx:norm:11', 'abs');
+  const [logEnergy, setLogEnergy] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:logEnergy:12', false);
 
-  const { result, running, error, run } = useAnalysisRunner<CovarianceSpectrumData>(
+  const {
+    result,
+    running,
+    error,
+    run,
+    resultInputs,
+    resultIdentity,
+    resultStatus,
+    backendAvailable,
+  } = useAnalysisRunner<CovarianceSpectrumData>(
     'Covariance Spectrum'
   );
 
@@ -81,7 +92,23 @@ const CovarianceSpectrumPage: React.FC = () => {
   const refInverted = refMinNum !== null && refMaxNum !== null && refMaxNum <= refMinNum;
   const refValid = !refMinInvalid && !refMaxInvalid && !refPartial && !refInverted;
 
+  const currentInputs = {
+    operation: 'covariance_spectrum',
+    event_list_name: eventList,
+    bin_time: binTimeNum,
+    freq_min: freqMinNum,
+    freq_max: freqMaxNum,
+    energy_min: energyMinNum,
+    energy_max: energyMaxNum,
+    n_bands: nBandsNum,
+    log_bands: logBands,
+    ref_min: refMinNum,
+    ref_max: refMaxNum,
+    norm,
+  };
+
   const canRun =
+    backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
     freqValid &&
@@ -110,6 +137,7 @@ const CovarianceSpectrumPage: React.FC = () => {
   };
 
   const handleRun = (): void => {
+    if (!canRun) return;
     if (
       binTimeNum === null ||
       freqMinNum === null ||
@@ -120,20 +148,22 @@ const CovarianceSpectrumPage: React.FC = () => {
     ) {
       return;
     }
-    void run(() =>
-      varenergyApi.covarianceSpectrum({
-        event_list_name: eventList,
-        bin_time: binTimeNum,
-        freq_min: freqMinNum,
-        freq_max: freqMaxNum,
-        energy_min: energyMinNum,
-        energy_max: energyMaxNum,
-        n_bands: nBandsNum,
-        log_bands: logBands,
-        ref_min: refMinNum,
-        ref_max: refMaxNum,
-        norm,
-      })
+    const parameters = {
+      event_list_name: eventList,
+      bin_time: binTimeNum,
+      freq_min: freqMinNum,
+      freq_max: freqMaxNum,
+      energy_min: energyMinNum,
+      energy_max: energyMaxNum,
+      n_bands: nBandsNum,
+      log_bands: logBands,
+      ref_min: refMinNum,
+      ref_max: refMaxNum,
+      norm,
+    };
+    void run(
+      () => varenergyApi.covarianceSpectrum(parameters),
+      { operation: 'covariance_spectrum', ...parameters }
     );
   };
 
@@ -334,6 +364,12 @@ const CovarianceSpectrumPage: React.FC = () => {
                   label="log energy"
                 />
               </Box>
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {error && (
                 <Alert severity="error" sx={{ mb: 1 }}>
                   {error}
@@ -361,8 +397,7 @@ const CovarianceSpectrumPage: React.FC = () => {
                     </Typography>
                   </Box>
                 ) : (
-                  <PlotlyChart
-                    data={traces}
+                  <PlotlyChart workspaceKey='QuickLook/CovarianceSpectrum/index.tsx:chart:1'                     data={traces}
                     layout={{
                       xaxis: { title: { text: 'Energy (keV)' }, type: logEnergy ? 'log' : 'linear' },
                       yaxis: { title: { text: yAxisLabel }, type: 'linear', zeroline: true },

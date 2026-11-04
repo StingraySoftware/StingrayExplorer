@@ -1,4 +1,5 @@
-import React, { useState, createContext, useContext, useMemo } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { createContext, useContext, useMemo } from 'react';
 import { RouterProvider, createHashRouter } from 'react-router-dom';
 import { ThemeProvider as MuiThemeProvider, createTheme, Theme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -16,6 +17,7 @@ declare module '@mui/material/styles' {
 
 // Layout
 import MainLayout from '@/components/layout/MainLayout';
+import BackendWorkspaceBoundary from '@/components/analysis/BackendWorkspaceBoundary';
 
 // Pages
 import HomePage from '@/pages/Home';
@@ -624,13 +626,17 @@ const createLightTheme = (): Theme =>
   });
 
 // Router configuration
+const withBackendWorkspace = (page: React.ReactNode): React.ReactElement => (
+  <BackendWorkspaceBoundary>{page}</BackendWorkspaceBoundary>
+);
+
 const router = createHashRouter([
   {
     path: '/',
     element: <MainLayout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: 'data-ingestion', element: <DataIngestionPage /> },
+      { path: 'data-ingestion', element: withBackendWorkspace(<DataIngestionPage />) },
 
       // QuickLook routes
       { path: 'quicklook/event-list', element: <EventListPage /> },
@@ -655,11 +661,11 @@ const router = createHashRouter([
       { path: 'quicklook/excess-variance-spectrum', element: <ExcessVarianceSpectrumPage /> },
 
       // Utilities routes
-      { path: 'utilities/statistical-functions', element: <StatisticalFunctionsPage /> },
-      { path: 'utilities/gti', element: <GTIPage /> },
-      { path: 'utilities/io', element: <IOPage /> },
-      { path: 'utilities/mission-io', element: <MissionIOPage /> },
-      { path: 'utilities/misc', element: <MiscPage /> },
+      { path: 'utilities/statistical-functions', element: withBackendWorkspace(<StatisticalFunctionsPage />) },
+      { path: 'utilities/gti', element: withBackendWorkspace(<GTIPage />) },
+      { path: 'utilities/io', element: withBackendWorkspace(<IOPage />) },
+      { path: 'utilities/mission-io', element: withBackendWorkspace(<MissionIOPage />) },
+      { path: 'utilities/misc', element: withBackendWorkspace(<MiscPage />) },
 
       // Modeling routes
       { path: 'modeling/builder', element: <ModelBuilderPage /> },
@@ -691,7 +697,7 @@ const JobStreamInitializer: React.FC<{ children: React.ReactNode }> = ({ childre
 
 // Main App Component
 const App: React.FC = () => {
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
+  const [darkMode, setDarkMode] = useWorkspaceState<boolean>('$darkMode', () => {
     const saved = localStorage.getItem('darkMode');
     return saved !== null ? JSON.parse(saved) : true;
   });

@@ -14,6 +14,7 @@ describe('BackendStatusProvider', () => {
     const source: BackendStatusSource = {
       getBackendStatus: async () => ({
         revision: 6,
+        generation: 1,
         phase: 'ready',
         port: 50017,
         error: null,

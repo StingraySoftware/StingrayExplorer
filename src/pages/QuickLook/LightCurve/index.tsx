@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -27,25 +28,38 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { lightcurveApi, LightcurveData, LightcurveSummary } from '@/api/lightcurveApi';
 import { parsePositiveNumber } from '@/utils/numbers';
 import { useUIStore } from '@/store/uiStore';
+import { useBackendContext } from '@/context/BackendContext';
 
 const LIGHTCURVES_QUERY_KEY = ['lightcurves'] as const;
 
 const LightCurvePage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
-  const [dt, setDt] = useState('1.0');
-  const [outputName, setOutputName] = useState('');
-  const [existingSelection, setExistingSelection] = useState('');
-  const [rebinFactor, setRebinFactor] = useState('2');
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/LightCurve/index.tsx:eventList:1', '');
+  const [dt, setDt] = useWorkspaceState('QuickLook/LightCurve/index.tsx:dt:2', '1.0');
+  const [outputName, setOutputName] = useWorkspaceState('QuickLook/LightCurve/index.tsx:outputName:3', '');
+  const [existingSelection, setExistingSelection] = useWorkspaceState('QuickLook/LightCurve:existingSelection', '');
+  const [rebinFactor, setRebinFactor] = useWorkspaceState('QuickLook/LightCurve/index.tsx:rebinFactor:4', '2');
   const addNotification = useUIStore((s) => s.addNotification);
   const queryClient = useQueryClient();
-  const { result, running, error, run } = useAnalysisRunner<LightcurveData>('Light Curve');
+  const { generation } = useBackendContext();
+  const { result, running, error, run, resultInputs, resultIdentity, resultStatus, resultStale, backendAvailable } = useAnalysisRunner<LightcurveData>('Light Curve');
+
+  const selectionBackend = React.useRef(`${generation}:${backendAvailable}`);
+  useEffect(() => {
+    const key = `${generation}:${backendAvailable}`;
+    if (selectionBackend.current === key) return;
+    selectionBackend.current = key;
+    setExistingSelection('');
+  }, [generation, backendAvailable, setExistingSelection]);
 
   const existingQuery = useQuery({
     queryKey: LIGHTCURVES_QUERY_KEY,
+    enabled: backendAvailable,
+    refetchInterval: 5_000,
     queryFn: async (): Promise<LightcurveSummary[]> => {
       const res = await lightcurveApi.listLightcurves();
       if (!res.success) throw new Error(res.error || res.message);
@@ -70,37 +84,67 @@ const LightCurvePage: React.FC = () => {
     ) {
       setExistingSelection('');
     }
-  }, [existingQuery.data, existingQuery.isLoading, existingQuery.isFetching, existingSelection]);
+  }, [existingQuery.data, existingQuery.isLoading, existingQuery.isFetching, existingSelection, setExistingSelection]);
 
   const dtNum = parsePositiveNumber(dt);
-  const canRun = eventList !== '' && dtNum !== null && !running;
+  const canRun = eventList !== '' && dtNum !== null && !running && backendAvailable;
   const rebinNum = parsePositiveNumber(rebinFactor);
 
+  const creationInputs = {
+    operation: 'lightcurve_from_event_list',
+    event_list_name: eventList,
+    dt: dtNum,
+    output_name: outputName.trim() || `${eventList}_lc`,
+  };
+  const currentInputs = resultInputs?.operation === 'rebin_lightcurve'
+    ? { ...resultInputs, rebin_factor: rebinNum, creation_inputs: creationInputs }
+    : resultInputs?.operation === 'view_lightcurve'
+      ? { operation: 'view_lightcurve', name: existingSelection }
+      : creationInputs;
+  const matchingStoredResult = existingQuery.data?.some((curve) =>
+    curve.name === result?.name &&
+    (result?.result_id === undefined || curve.result_id === result.result_id)
+  ) ?? false;
+  const storedResultAvailable = backendAvailable && !resultStale && existingQuery.isSuccess && matchingStoredResult;
+  const backingResultMissing = result !== null && !resultStale &&
+    existingQuery.isSuccess && !existingQuery.isFetching && !matchingStoredResult;
+
   const handleGenerate = (): void => {
-    if (!dtNum || !eventList) return;
-    const name = outputName.trim() || `${eventList}_lc`;
-    void run(() =>
-      lightcurveApi.createFromEventList({ event_list_name: eventList, dt: dtNum, output_name: name })
-    );
+    if (!dtNum || !eventList || !backendAvailable) return;
+    const params = {
+      event_list_name: eventList, dt: dtNum,
+      output_name: outputName.trim() || `${eventList}_lc`,
+    };
+    void run(() => lightcurveApi.createFromEventList(params), {
+      operation: 'lightcurve_from_event_list', ...params,
+    });
   };
 
   const handleView = (): void => {
-    if (!existingSelection) return;
-    void run(() => lightcurveApi.getLightcurveData(existingSelection));
+    if (!existingSelection || !backendAvailable) return;
+    const name = existingSelection;
+    void run(() => lightcurveApi.getLightcurveData(name), {
+      operation: 'view_lightcurve', name,
+    });
   };
 
   const handleRebin = (): void => {
-    if (!result?.name || !rebinNum) return;
-    void run(() =>
-      lightcurveApi.rebin({
-        name: result.name,
-        rebin_factor: rebinNum,
-        output_name: `${result.name}_r${rebinNum}`,
-      })
-    );
+    if (!result?.name || !rebinNum || !storedResultAvailable) return;
+    const params = {
+      name: result.name,
+      rebin_factor: rebinNum,
+      output_name: `${result.name}_r${rebinNum}`,
+      expected_result_id: result.result_id,
+    };
+    const originalInputs = resultInputs?.operation === 'rebin_lightcurve'
+      ? resultInputs.creation_inputs : resultInputs;
+    void run(() => lightcurveApi.rebin(params), {
+      operation: 'rebin_lightcurve', ...params, creation_inputs: originalInputs,
+    });
   };
 
   const handleDelete = async (name: string): Promise<void> => {
+    if (!backendAvailable) return;
     const res = await lightcurveApi.deleteLightcurve(name);
     if (res.success) {
       addNotification({ type: 'success', title: 'Light Curve', message: `Deleted '${name}'` });
@@ -180,7 +224,7 @@ const LightCurvePage: React.FC = () => {
                         rebinFactor !== '' && rebinNum === null ? 'Must be a positive number' : ' '
                       }
                     />
-                    <Button variant="outlined" disabled={!rebinNum || running} onClick={handleRebin}>
+                    <Button variant="outlined" disabled={!rebinNum || running || !storedResultAvailable} onClick={handleRebin}>
                       Rebin
                     </Button>
                   </Stack>
@@ -210,7 +254,7 @@ const LightCurvePage: React.FC = () => {
                     size="small"
                     variant="outlined"
                     startIcon={<VisibilityIcon />}
-                    disabled={!existingSelection || running}
+                    disabled={!existingSelection || running || !backendAvailable}
                     onClick={handleView}
                   >
                     View
@@ -221,7 +265,7 @@ const LightCurvePage: React.FC = () => {
                         size="small"
                         color="error"
                         aria-label="Delete selected light curve"
-                        disabled={!existingSelection}
+                        disabled={!existingSelection || !backendAvailable}
                         onClick={() => {
                           void handleDelete(existingSelection);
                           setExistingSelection('');
@@ -265,9 +309,20 @@ const LightCurvePage: React.FC = () => {
                   {error}
                 </Alert>
               )}
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+                result={result}
+              />
+              {backingResultMissing ? (
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                  The stored light curve was deleted or replaced. This plot is a read-only snapshot.
+                </Alert>
+              ) : null}
               {result ? (
-                <PlotlyChart
-                  data={plotData}
+                <PlotlyChart workspaceKey='QuickLook/LightCurve/index.tsx:chart:1'                   data={plotData}
                   layout={{
                     xaxis: { title: { text: 'Time (s)' } },
                     yaxis: { title: { text: `Counts / ${result.dt} s bin` } },

@@ -1,3 +1,6 @@
+import { beforeEach } from 'vitest';
+import { restoreWorkspaceSession } from '@/api/workspaceSession';
+beforeEach(() => restoreWorkspaceSession());
 import '@testing-library/jest-dom/vitest';
 
 // MUI useMediaQuery requires matchMedia, absent in jsdom

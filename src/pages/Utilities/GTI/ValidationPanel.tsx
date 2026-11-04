@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React, { useMemo, useState } from 'react';
 import { Alert, Button, Card, CardContent, Grid, Stack, Typography } from '@mui/material';
 import { ProvenancePanel, UtilityWarnings } from '@/components/utilities/UtilityResult';
@@ -22,9 +23,9 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
   inspectedRows,
   onUseValidatedRows,
 }) => {
-  const [rows, setRows] = useState('');
+  const [rows, setRows] = useWorkspaceState('Utilities/GTI/ValidationPanel.tsx:rows:1', '');
   const [timeReference, setTimeReference] =
-    useState<GtiTimeReference>('absolute_mission_time');
+    useWorkspaceState<GtiTimeReference>('Utilities/GTI/ValidationPanel.tsx:timeReference:2', 'absolute_mission_time');
   const [validatedSignature, setValidatedSignature] = useState<string | null>(null);
   const parsed = useMemo(() => parseStrictGtis(rows), [rows]);
   const runner = useAnalysisRunner<GtiValidationData>('Validate GTIs');

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, { useEffect, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -51,8 +52,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onSubmenuStateChange }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { darkMode } = useContext(ThemeContext);
-  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
-  const [showSubmenu, setShowSubmenu] = useState<boolean>(true);
+  const [activeSubmenu, setActiveSubmenu] = useWorkspaceState<string | null>('$activeSubmenu', null);
+  const [showSubmenu, setShowSubmenu] = useWorkspaceState<boolean>('$showSubmenu', true);
 
   // Notify parent of submenu state changes
   useEffect(() => {

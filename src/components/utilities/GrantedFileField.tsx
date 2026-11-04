@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, Button, Stack, TextField } from '@mui/material';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import { captureBackendEpoch, isBackendEpochCurrent } from '@/api/backendEpoch';
 
 export interface GrantedFileSelection {
   path: string;
@@ -24,8 +25,24 @@ const GrantedFileField: React.FC<GrantedFileFieldProps> = ({
   disabled = false,
 }) => {
   const [dialogError, setDialogError] = React.useState<string | null>(null);
+  const requestSequence = React.useRef(0);
+  const mounted = React.useRef(true);
+  const selectionKey = JSON.stringify([label, value?.path, value?.grant, filters]);
+  const currentSelection = React.useRef({ selectionKey, disabled });
+  currentSelection.current = { selectionKey, disabled };
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; requestSequence.current += 1; };
+  }, []);
 
   const choose = async (): Promise<void> => {
+    const request = ++requestSequence.current;
+    const epoch = captureBackendEpoch();
+    const stillCurrent = (): boolean => mounted.current &&
+      requestSequence.current === request &&
+      currentSelection.current.selectionKey === selectionKey &&
+      !currentSelection.current.disabled && isBackendEpochCurrent(epoch);
+    if (!stillCurrent()) return;
     setDialogError(null);
     if (!window.electronAPI?.openGrantedFile) {
       setDialogError('The native file dialog is unavailable.');
@@ -33,9 +50,11 @@ const GrantedFileField: React.FC<GrantedFileFieldProps> = ({
     }
     try {
       const selected = await window.electronAPI.openGrantedFile({ title: label, filters });
+      if (!stillCurrent()) return;
       // Cancellation intentionally preserves the previous explicit selection.
       if (selected?.[0]) onChange(selected[0]);
     } catch (error) {
+      if (!stillCurrent()) return;
       const detail = error instanceof Error ? error.message : String(error);
       setDialogError(`Could not open the native file dialog: ${detail}`);
     }

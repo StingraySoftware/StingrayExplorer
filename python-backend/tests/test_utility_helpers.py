@@ -1,7 +1,7 @@
 """Shared Utility safety helpers and state semantics."""
 
-import hashlib
-import hmac
+from tests.file_grants import sign_grant, rename_pinned
+
 import json
 import os
 import time
@@ -34,19 +34,7 @@ from services import utility_helpers
 
 
 def _grant(secret: str, path, access: str, expires: int | None = None) -> str:
-    expires = int(time.time()) + 60 if expires is None else expires
-    resolved = path.resolve()
-    identity_path = resolved if access == "read" else resolved.parent
-    selected_stat = identity_path.stat()
-    prefix = (
-        f"{FILE_GRANT_VERSION}.{expires}.{selected_stat.st_dev}.{selected_stat.st_ino}"
-    )
-    payload = (
-        f"{FILE_GRANT_VERSION}\0{access}\0{expires}\0{resolved}\0"
-        f"{selected_stat.st_dev}\0{selected_stat.st_ino}"
-    ).encode()
-    digest = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
-    return f"{prefix}.{digest}"
+    return sign_grant(secret, path, access, expires=expires)
 
 
 def test_file_grant_is_bound_to_exact_path_and_access(tmp_path, monkeypatch):
@@ -81,9 +69,7 @@ def test_file_grant_rejects_expired_or_missing_secret(tmp_path, monkeypatch):
         verify_file_grant(str(selected), expired, access="read", must_exist=True)
 
 
-def test_python_issuer_creates_canonical_v2_grants_with_fixed_ttl(
-    tmp_path, monkeypatch
-):
+def test_python_issuer_creates_native_grants_with_fixed_ttl(tmp_path, monkeypatch):
     secret = "test-only-file-grant-secret-32-bytes"
     monkeypatch.setenv(FILE_GRANT_SECRET_ENV, secret)
     monkeypatch.setattr(utility_helpers.time, "time", lambda: 1_900_000_000)
@@ -94,7 +80,8 @@ def test_python_issuer_creates_canonical_v2_grants_with_fixed_ttl(
 
     assert issued.path == selected.resolve()
     assert issued.expires_at == 1_900_000_000 + FILE_GRANT_TTL_SECONDS
-    assert issued.grant.startswith(f"{FILE_GRANT_VERSION}.{issued.expires_at}.")
+    version = "v3" if os.name == "nt" else FILE_GRANT_VERSION
+    assert issued.grant.startswith(f"{version}.{issued.expires_at}.")
     assert (
         verify_file_grant(
             str(issued.path), issued.grant, access="read", must_exist=True
@@ -150,11 +137,18 @@ def test_read_grant_pins_identity_and_open_descriptor(tmp_path, monkeypatch):
     token = _grant(secret, selected, "read")
     replacement.write_bytes(b"second replacement")
     with open_verified_read_grant(str(selected), token) as granted:
-        os.replace(replacement, selected)
+        if os.name == "nt":
+            rename_pinned(selected, tmp_path / "blocked-original.fits")
+        else:
+            os.replace(replacement, selected)
         assert granted.stream.read() == b"second original"
         assert granted.size_bytes == len(b"second original")
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX os.open injection; Windows uses retained NTFS handles",
+)
 def test_read_grant_rejects_swap_between_path_check_and_descriptor_open(
     tmp_path, monkeypatch
 ):
@@ -199,6 +193,10 @@ def test_write_grant_is_bound_to_selected_parent_directory(tmp_path, monkeypatch
         verify_file_grant(str(destination), token, access="write", must_exist=False)
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX os.open injection; Windows uses retained NTFS handles",
+)
 def test_write_grant_rejects_swap_between_path_check_and_parent_open(
     tmp_path, monkeypatch
 ):

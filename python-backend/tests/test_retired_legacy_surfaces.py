@@ -11,7 +11,7 @@ SESSION_SECRET = "retired-surface-test-session-secret" * 2
 
 def test_duplicate_raw_path_export_api_is_absent_from_the_application():
     app = create_app(session_secret=SESSION_SECRET)
-    route_paths = {route.path for route in app.routes}
+    route_paths = set(app.openapi()["paths"])
 
     assert not {path for path in route_paths if path.startswith("/api/export")}
     assert "/api/utilities/io/export" in route_paths

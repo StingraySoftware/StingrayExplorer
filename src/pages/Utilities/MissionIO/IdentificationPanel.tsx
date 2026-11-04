@@ -1,3 +1,4 @@
+import { useWorkspaceState } from '@/api/workspaceSession';
 import React from 'react';
 import {
   Alert,
@@ -41,10 +42,10 @@ import {
 const EMPTY_OVERRIDES: OverrideValues = { mission: '', instrument: '', mode: '' };
 
 const IdentificationPanel: React.FC = () => {
-  const [sourceType, setSourceType] = React.useState<'event_list' | 'fits'>('event_list');
-  const [eventListName, setEventListName] = React.useState('');
+  const [sourceType, setSourceType] = useWorkspaceState<'event_list' | 'fits'>('Utilities/MissionIO/IdentificationPanel.tsx:sourceType:1', 'event_list');
+  const [eventListName, setEventListName] = useWorkspaceState('Utilities/MissionIO/IdentificationPanel.tsx:eventListName:2', '');
   const [fitsFile, setFitsFile] = React.useState<GrantedFileSelection | null>(null);
-  const [overrides, setOverrides] = React.useState<OverrideValues>(EMPTY_OVERRIDES);
+  const [overrides, setOverrides] = useWorkspaceState<OverrideValues>('Utilities/MissionIO/IdentificationPanel.tsx:overrides:3', EMPTY_OVERRIDES);
   const {
     result: runnerResult,
     running,

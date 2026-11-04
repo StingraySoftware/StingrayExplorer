@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import React, {} from 'react';
 import {
   Alert,
   Box,
@@ -21,31 +22,35 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { correlationApi, CorrelationData } from '@/api/correlationApi';
 import { parsePositiveNumber } from '@/utils/numbers';
 
 const AutoCorrelationPage: React.FC = () => {
-  const [eventList, setEventList] = useState('');
-  const [dt, setDt] = useState('0.1');
-  const [mode, setMode] = useState<'same' | 'full'>('same');
-  const [norm, setNorm] = useState<'none' | 'variance'>('none');
+  const [eventList, setEventList] = useWorkspaceState('QuickLook/AutoCorrelation/index.tsx:eventList:1', '');
+  const [dt, setDt] = useWorkspaceState('QuickLook/AutoCorrelation/index.tsx:dt:2', '0.1');
+  const [mode, setMode] = useWorkspaceState<'same' | 'full'>('QuickLook/AutoCorrelation/index.tsx:mode:3', 'same');
+  const [norm, setNorm] = useWorkspaceState<'none' | 'variance'>('QuickLook/AutoCorrelation/index.tsx:norm:4', 'none');
 
-  const { result, running, error, run } = useAnalysisRunner<CorrelationData>('Auto Correlation');
+  const {
+    result, running, error, run, resultInputs, resultIdentity, resultStatus, backendAvailable,
+  } = useAnalysisRunner<CorrelationData>('Auto Correlation');
 
   const dtNum = parsePositiveNumber(dt);
-  const canRun = eventList !== '' && dtNum !== null && !running;
+  const canRun = eventList !== '' && dtNum !== null && !running && backendAvailable;
+  const requestParams = {
+    event_list_name: eventList,
+    dt: dtNum,
+    mode,
+    norm,
+  };
 
+  const currentInputs = { operation: 'auto_correlation', ...requestParams };
   const handleRun = (): void => {
-    if (!dtNum) return;
-    void run(() =>
-      correlationApi.autoCorrelation({
-        event_list_name: eventList,
-        dt: dtNum,
-        mode,
-        norm,
-      })
-    );
+    if (!canRun || dtNum === null) return;
+    const params = { ...requestParams, dt: dtNum };
+    void run(() => correlationApi.autoCorrelation(params), { operation: 'auto_correlation', ...params });
   };
 
   const traces: Data[] = result
@@ -74,6 +79,10 @@ const AutoCorrelationPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <Typography variant="caption" color="text.secondary">
+                  Requires one continuous good-time interval. For an observation with gaps, use GTI
+                  Utilities to select a continuous interval first.
+                </Typography>
                 <TextField
                   label="Time bin dt (s)"
                   size="small"
@@ -146,6 +155,12 @@ const AutoCorrelationPage: React.FC = () => {
                   {error}
                 </Alert>
               )}
+              <AnalysisResultIdentity
+                inputs={resultInputs}
+                identity={resultIdentity}
+                status={resultStatus}
+                currentInputs={currentInputs}
+              />
               {result && result.warnings.length > 0 && (
                 <Alert severity="warning" sx={{ mb: 1 }}>
                   <Stack spacing={0.5}>
@@ -158,12 +173,11 @@ const AutoCorrelationPage: React.FC = () => {
                 </Alert>
               )}
               {result ? (
-                <PlotlyChart
-                  data={traces}
+                <PlotlyChart workspaceKey='QuickLook/AutoCorrelation/index.tsx:chart:1'                   data={traces}
                   layout={{
                     xaxis: { title: { text: 'Time lag (s)' } },
                     yaxis: {
-                      title: { text: norm === 'variance' ? 'Correlation (normalized)' : 'Correlation (counts²)' },
+                      title: { text: result.norm === 'variance' ? 'Correlation (normalized)' : 'Correlation (counts²)' },
                     },
                     shapes: [
                       {
