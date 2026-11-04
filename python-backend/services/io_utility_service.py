@@ -30,6 +30,7 @@ from astropy.utils.data_info import serialize_context_as
 from astropy.utils.masked import Masked
 from stingray.io import high_precision_keyword_read, pi_to_energy, read_rmf
 
+from .derived_events import make_lineage, parent_record
 from .analysis_helpers import collect_warnings
 from .base_service import BaseService
 from .secure_publication import open_secure_publication
@@ -3016,6 +3017,17 @@ class IOUtilityService(BaseService):
                 energy_unit=unit,
             )
             source.rmf_conversion_provenance = provenance
+            source.event_lineage = make_lineage(
+                "rmf_pi_to_energy",
+                [
+                    parent_record(
+                        event_list_name,
+                        source,
+                        self.state.get_event_identity(event_list_name),
+                    )
+                ],
+                {"energy_unit": unit},
+            )
 
             saved = False
             if save_as is not None:

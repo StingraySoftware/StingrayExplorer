@@ -396,6 +396,7 @@ class StateManager:
                 "dt",
                 "gti_selection",
                 "event_selection",
+                "event_lineage",
                 "rmf_conversion_provenance",
                 "mission_io_provenance_json",
             ):

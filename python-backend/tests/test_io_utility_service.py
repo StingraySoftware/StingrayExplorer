@@ -1355,6 +1355,11 @@ def test_event_list_conversion_preview_and_save_are_immutable(
     assert derived.rmf_conversion_provenance["parameters"]["rmf_path"] == str(
         rmf_path.resolve()
     )
+    lineage = derived.event_lineage
+    assert lineage["operation"] == "rmf_pi_to_energy"
+    assert [parent["name"] for parent in lineage["parents"]] == ["events"]
+    assert lineage["parents"][0]["dataset_id"] == io_state.get_event_identity("events")
+    assert "rmf_path" not in json.dumps(lineage)
 
     np.testing.assert_array_equal(original.time, before["time"])
     np.testing.assert_array_equal(original.pi, before["pi"])

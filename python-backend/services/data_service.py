@@ -27,6 +27,8 @@ from typing import (
     Optional,
 )
 
+from copy import deepcopy
+
 import numpy as np
 import psutil
 from astropy.io import fits
@@ -1597,6 +1599,9 @@ class DataService(BaseService):
                         ],
                         "has_energy": event_list.energy is not None,
                         "has_pi": event_list.pi is not None,
+                        "has_detector_id": getattr(event_list, "detector_id", None)
+                        is not None,
+                        "lineage": deepcopy(getattr(event_list, "event_lineage", None)),
                         "gti_count": len(event_list.gti)
                         if event_list.gti is not None
                         else 0,

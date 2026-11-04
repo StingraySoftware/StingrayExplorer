@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from models.event_formats import InputEventFormat
 from models.event_selection import EventSelection
 from services.data_service import DataService
+from services.derived_events import GTI_STRATEGIES, DerivedEventService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -363,6 +364,96 @@ async def preview_event_selection(
     """Count the events and energy/PI coverage a selection keeps."""
     return await asyncio.to_thread(
         service.preview_event_selection, request.event_list_name, request.selection
+    )
+
+
+def get_derived_event_service(request: Request) -> DerivedEventService:
+    """Get DerivedEventService instance from app state."""
+    return DerivedEventService(
+        state_manager=request.app.state.state_manager,
+        performance_monitor=request.app.state.performance_monitor,
+    )
+
+
+class _DerivedRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    output_name: str = Field(min_length=1, max_length=64)
+
+
+class DeriveFilteredRequest(_DerivedRequest):
+    event_list_name: str = Field(min_length=1)
+    selection: EventSelection
+
+
+class DeriveJoinedRequest(_DerivedRequest):
+    event_list_names: List[str] = Field(min_length=2)
+    gti_strategy: Literal[GTI_STRATEGIES] = "infer"
+
+
+class DeriveSortedRequest(_DerivedRequest):
+    event_list_name: str = Field(min_length=1)
+
+
+class DeriveDeadtimeRequest(_DerivedRequest):
+    event_list_name: str = Field(min_length=1)
+    dead_time: float = Field(gt=0)
+    paralyzable: bool = False
+    dt_sigma: Optional[float] = Field(default=None, ge=0)
+
+
+@router.post("/derived/filter")
+async def derive_filtered(
+    request: DeriveFilteredRequest,
+    service: DerivedEventService = Depends(get_derived_event_service),
+):
+    """Store the photons a selection keeps as a new EventList."""
+    return await asyncio.to_thread(
+        service.derive_filtered,
+        request.event_list_name,
+        request.selection,
+        request.output_name,
+    )
+
+
+@router.post("/derived/join")
+async def derive_joined(
+    request: DeriveJoinedRequest,
+    service: DerivedEventService = Depends(get_derived_event_service),
+):
+    """Join EventLists, e.g. two detectors, into one new EventList."""
+    return await asyncio.to_thread(
+        service.derive_joined,
+        request.event_list_names,
+        request.output_name,
+        request.gti_strategy,
+    )
+
+
+@router.post("/derived/sort")
+async def derive_sorted(
+    request: DeriveSortedRequest,
+    service: DerivedEventService = Depends(get_derived_event_service),
+):
+    """Store a time-ordered copy of an EventList."""
+    return await asyncio.to_thread(
+        service.derive_sorted, request.event_list_name, request.output_name
+    )
+
+
+@router.post("/derived/deadtime")
+async def derive_deadtime(
+    request: DeriveDeadtimeRequest,
+    service: DerivedEventService = Depends(get_derived_event_service),
+):
+    """Store a copy with simulated detector dead time applied."""
+    return await asyncio.to_thread(
+        service.derive_deadtime,
+        request.event_list_name,
+        request.dead_time,
+        request.output_name,
+        request.paralyzable,
+        request.dt_sigma,
     )
 
 

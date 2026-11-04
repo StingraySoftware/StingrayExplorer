@@ -44,6 +44,8 @@ def test_summary_dataset_identity_is_stable_and_preserves_existing_fields():
             "time_range": [1.0, 3.0],
             "has_energy": True,
             "has_pi": True,
+            "has_detector_id": False,
+            "lineage": None,
             "gti_count": 1,
         }
     ]

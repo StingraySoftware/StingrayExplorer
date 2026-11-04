@@ -86,10 +86,20 @@ EXEMPT = {
         "calibrates the stored PI column; selections apply to its result"
     ),
     "/api/utilities/mission-io/identify": "reads the stored mission metadata",
+    "/api/data/derived/join": "joins whole EventLists; filter each one first",
+    "/api/data/derived/sort": "sorts a whole EventList; filter it first",
+    "/api/data/derived/deadtime": "applies dead time to a whole EventList",
 }
 # Counts a selection for the renderer's live preview; publishes nothing.
 PREVIEW = "/api/data/selection-preview"
-EVENT_LIST_FIELDS = {"event_list_name", "event_list_1_name", "event_list_2_name"}
+# Stores the selected photons as a new, derived EventList.
+FILTER = "/api/data/derived/filter"
+EVENT_LIST_FIELDS = {
+    "event_list_name",
+    "event_list_1_name",
+    "event_list_2_name",
+    "event_list_names",
+}
 ENERGY_CUT = {"energy_range": [2.0, 5.0]}
 TIME_CUT = {"time_intervals": [[0.0, 32.0]]}
 
@@ -203,7 +213,7 @@ def _request_fields(app):
 
 
 def test_every_event_list_route_is_covered_or_exempt(selection_app):
-    covered = set(SINGLE) | set(PAIR) | set(ENERGY_RESOLVED) | {PREVIEW}
+    covered = set(SINGLE) | set(PAIR) | set(ENERGY_RESOLVED) | {PREVIEW, FILTER}
     fields = _request_fields(selection_app)
     readers = {path for path, names in fields.items() if names & EVENT_LIST_FIELDS}
     for path in covered:

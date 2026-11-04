@@ -91,6 +91,8 @@ def input_snapshot(name, events, dataset_id):
         snapshot["gti_selection"] = _public_lineage(events.gti_selection)
     if getattr(events, "event_selection", None) is not None:
         snapshot["selection"] = _public_lineage(events.event_selection)
+    if getattr(events, "event_lineage", None) is not None:
+        snapshot["lineage"] = _public_lineage(events.event_lineage)
     calibration = getattr(events, "rmf_conversion_provenance", None)
     if calibration is not None:
         snapshot["rmf_conversion_provenance"] = _public_lineage(calibration)

@@ -26,6 +26,7 @@ _PRESERVED_FIELDS = (
     "dt",
     "header",
     "gti_selection",
+    "event_lineage",
     "rmf_conversion_provenance",
     "mission_io_provenance_json",
 )
