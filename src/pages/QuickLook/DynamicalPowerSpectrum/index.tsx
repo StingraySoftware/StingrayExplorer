@@ -24,6 +24,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { spectrumApi, DynamicalPowerSpectrumData } from '@/api/spectrumApi';
@@ -33,6 +35,8 @@ const NORM_OPTIONS = ['leahy', 'frac', 'abs', 'none'];
 
 const DynamicalPowerSpectrumPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/DynamicalPowerSpectrum/index.tsx:selection');
   const [dt, setDt] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:dt:2', '0.0625');
   const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:segmentSize:3', '8');
   const [norm, setNorm] = useWorkspaceState('QuickLook/DynamicalPowerSpectrum/index.tsx:norm:4', 'leahy');
@@ -44,11 +48,12 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
 
   const dtNum = parsePositiveNumber(dt);
   const segNum = parsePositiveNumber(segmentSize);
-  const canRun = eventList !== '' && dtNum !== null && segNum !== null && !running && backendAvailable;
+  const canRun = selectionError === null && eventList !== '' && dtNum !== null && segNum !== null && !running && backendAvailable;
 
   const currentInputs = {
     operation: 'dynamical_power_spectrum',
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     dt: dtNum,
     segment_size: segNum,
     norm,
@@ -58,6 +63,7 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
     if (!dtNum || !segNum || !backendAvailable) return;
     const params = {
       event_list_name: eventList,
+      ...(selection ? { selection } : {}),
       dt: dtNum,
       segment_size: segNum,
       norm,
@@ -116,6 +122,11 @@ const DynamicalPowerSpectrumPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"

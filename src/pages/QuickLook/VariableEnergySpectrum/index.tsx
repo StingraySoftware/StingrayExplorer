@@ -21,6 +21,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, VariableEnergySpectrumData } from '@/api/varenergyApi';
@@ -37,6 +39,8 @@ const VariableEnergySpectrumPage: React.FC = () => {
   const theme = useTheme();
 
   const [eventList, setEventList] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/VariableEnergySpectrum/index.tsx:selection', { spectral: false });
   const [binTime, setBinTime] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:binTime:2', '0.1');
   const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:segmentSize:3', '8');
   const [freqMin, setFreqMin] = useWorkspaceState('QuickLook/VariableEnergySpectrum/index.tsx:freqMin:4', '0.1');
@@ -101,6 +105,7 @@ const VariableEnergySpectrumPage: React.FC = () => {
   const currentInputs = {
     operation: 'variable_energy_spectrum',
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     bin_time: binTimeNum,
     segment_size: segNum,
     freq_min: freqMinNum,
@@ -113,7 +118,7 @@ const VariableEnergySpectrumPage: React.FC = () => {
     ref_max: refMaxNum ?? null,
   };
 
-  const canRun =
+  const canRun = selectionError === null &&
     backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
@@ -143,6 +148,7 @@ const VariableEnergySpectrumPage: React.FC = () => {
     }
     const parameters = {
       event_list_name: eventList,
+      ...(selection ? { selection } : {}),
       bin_time: binTimeNum,
       segment_size: segNum,
       freq_min: freqMinNum,
@@ -220,6 +226,12 @@ const VariableEnergySpectrumPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                  spectral={false}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"

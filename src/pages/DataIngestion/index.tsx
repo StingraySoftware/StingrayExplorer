@@ -82,6 +82,7 @@ import {
 import { ioApi, type UtilityExportFormat } from '@/api/ioApi';
 import { jobApi } from '@/api/jobApi';
 import type { BatchFileConfig } from '@/types/job';
+import DerivedEventListsPanel, { describeLineage } from '@/components/analysis/DerivedEventListsPanel';
 import type { GrantedFileSelection } from '@/components/utilities/GrantedFileField';
 import HeasarcBrowserPanel from './HeasarcBrowserPanel';
 import { apiClient } from '@/api/client';
@@ -2312,6 +2313,11 @@ const DataIngestionPage: React.FC = () => {
                         {eventList.has_pi && (
                           <Chip label="PI" size="small" color="secondary" variant="outlined" />
                         )}
+                        {eventList.lineage && (
+                          <Tooltip title={describeLineage(eventList.lineage)}>
+                            <Chip label="Derived" size="small" variant="outlined" />
+                          </Tooltip>
+                        )}
                         {eventList.gti_warnings && eventList.gti_warnings.length > 0 && (
                           <Tooltip title={eventList.gti_warnings.join('\n')}>
                             <Chip
@@ -2452,6 +2458,10 @@ const DataIngestionPage: React.FC = () => {
           </List>
         )}
       </Paper>
+
+      {loadedEventLists.length > 0 && (
+        <DerivedEventListsPanel eventLists={loadedEventLists} onCreated={fetchEventLists} />
+      )}
 
       {/* Event List Details Dialog */}
       <Dialog

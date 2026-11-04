@@ -22,6 +22,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { correlationApi, CorrelationData } from '@/api/correlationApi';
@@ -29,6 +31,8 @@ import { parsePositiveNumber } from '@/utils/numbers';
 
 const AutoCorrelationPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/AutoCorrelation/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/AutoCorrelation/index.tsx:selection');
   const [dt, setDt] = useWorkspaceState('QuickLook/AutoCorrelation/index.tsx:dt:2', '0.1');
   const [mode, setMode] = useWorkspaceState<'same' | 'full'>('QuickLook/AutoCorrelation/index.tsx:mode:3', 'same');
   const [norm, setNorm] = useWorkspaceState<'none' | 'variance'>('QuickLook/AutoCorrelation/index.tsx:norm:4', 'none');
@@ -38,9 +42,10 @@ const AutoCorrelationPage: React.FC = () => {
   } = useAnalysisRunner<CorrelationData>('Auto Correlation');
 
   const dtNum = parsePositiveNumber(dt);
-  const canRun = eventList !== '' && dtNum !== null && !running && backendAvailable;
+  const canRun = selectionError === null && eventList !== '' && dtNum !== null && !running && backendAvailable;
   const requestParams = {
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     dt: dtNum,
     mode,
     norm,
@@ -84,6 +89,11 @@ const AutoCorrelationPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                />
                 <Typography variant="caption" sx={{
                   color: "text.secondary"
                 }}>

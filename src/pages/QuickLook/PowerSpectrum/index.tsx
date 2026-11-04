@@ -26,6 +26,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { spectrumApi, PowerSpectrumData } from '@/api/spectrumApi';
@@ -35,6 +37,8 @@ const NORM_OPTIONS = ['leahy', 'frac', 'abs', 'none'];
 
 const PowerSpectrumPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/PowerSpectrum/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/PowerSpectrum/index.tsx:selection');
   const [dt, setDt] = useWorkspaceState('QuickLook/PowerSpectrum/index.tsx:dt:2', '0.0625');
   const [norm, setNorm] = useWorkspaceState('QuickLook/PowerSpectrum/index.tsx:norm:3', 'leahy');
   const [outputName, setOutputName] = useWorkspaceState('QuickLook/PowerSpectrum/index.tsx:outputName:4', '');
@@ -78,11 +82,12 @@ const PowerSpectrumPage: React.FC = () => {
 
   const dtNum = parsePositiveNumber(dt);
   const rebinNum = parsePositiveNumber(rebinFactor);
-  const canRun = eventList !== '' && dtNum !== null && !running && backendAvailable;
+  const canRun = selectionError === null && eventList !== '' && dtNum !== null && !running && backendAvailable;
   const rebinValid = logRebin ? rebinNum !== null : rebinNum !== null && rebinNum > 1;
 
   const createParams = {
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     dt: dtNum,
     norm,
     output_name: outputName.trim() || undefined,
@@ -147,6 +152,11 @@ const PowerSpectrumPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"

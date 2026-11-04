@@ -4,6 +4,7 @@
  */
 
 import { apiClient, ApiResponse } from './client';
+import type { EventSelection } from './selectionApi';
 
 // Types
 
@@ -86,6 +87,7 @@ export const varenergyApi = {
    */
   async rmsSpectrum(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     bin_time: number;
     segment_size: number;
     freq_min: number;
@@ -98,6 +100,7 @@ export const varenergyApi = {
   }): Promise<ApiResponse<RmsSpectrumData>> {
     return apiClient.post('/api/varenergy/rms-spectrum', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       bin_time: params.bin_time,
       segment_size: params.segment_size,
       freq_min: params.freq_min,
@@ -116,6 +119,7 @@ export const varenergyApi = {
    */
   async lagSpectrum(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     bin_time: number;
     segment_size: number;
     freq_min: number;
@@ -129,6 +133,7 @@ export const varenergyApi = {
   }): Promise<ApiResponse<LagSpectrumData>> {
     return apiClient.post('/api/varenergy/lag-spectrum', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       bin_time: params.bin_time,
       segment_size: params.segment_size,
       freq_min: params.freq_min,
@@ -148,6 +153,7 @@ export const varenergyApi = {
    */
   async excessVariance(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     bin_time: number;
     energy_min: number;
     energy_max: number;
@@ -157,6 +163,7 @@ export const varenergyApi = {
   }): Promise<ApiResponse<ExcessVarianceData>> {
     return apiClient.post('/api/varenergy/excess-variance', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       bin_time: params.bin_time,
       energy_min: params.energy_min,
       energy_max: params.energy_max,
@@ -173,6 +180,7 @@ export const varenergyApi = {
    */
   async variableEnergySpectrum(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     bin_time: number;
     segment_size: number;
     freq_min: number;
@@ -186,6 +194,7 @@ export const varenergyApi = {
   }): Promise<ApiResponse<VariableEnergySpectrumData>> {
     return apiClient.post('/api/varenergy/variable-energy-spectrum', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       bin_time: params.bin_time,
       segment_size: params.segment_size,
       freq_min: params.freq_min,
@@ -206,6 +215,7 @@ export const varenergyApi = {
    */
   async covarianceSpectrum(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     bin_time: number;
     freq_min: number;
     freq_max: number;
@@ -219,6 +229,7 @@ export const varenergyApi = {
   }): Promise<ApiResponse<CovarianceSpectrumData>> {
     return apiClient.post('/api/varenergy/covariance-spectrum', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       bin_time: params.bin_time,
       freq_min: params.freq_min,
       freq_max: params.freq_max,
@@ -238,6 +249,7 @@ export const varenergyApi = {
    */
   async avgCovarianceSpectrum(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     bin_time: number;
     segment_size: number;
     freq_min: number;
@@ -252,6 +264,7 @@ export const varenergyApi = {
   }): Promise<ApiResponse<CovarianceSpectrumData>> {
     return apiClient.post('/api/varenergy/avg-covariance-spectrum', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       bin_time: params.bin_time,
       segment_size: params.segment_size,
       freq_min: params.freq_min,

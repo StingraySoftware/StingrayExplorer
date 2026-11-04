@@ -4,6 +4,7 @@
  */
 
 import { apiClient, ApiResponse } from './client';
+import type { EventSelection } from './selectionApi';
 
 // Types
 
@@ -51,6 +52,7 @@ export const deadtimeApi = {
    */
   async pdsCorrection(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     dt: number;
     segment_size: number;
     dead_time: number;
@@ -59,6 +61,7 @@ export const deadtimeApi = {
   }): Promise<ApiResponse<PdsCorrectionData>> {
     return apiClient.post('/api/deadtime/pds-correction', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       dt: params.dt,
       segment_size: params.segment_size,
       dead_time: params.dead_time,
@@ -74,6 +77,8 @@ export const deadtimeApi = {
   async fadCorrection(params: {
     event_list_1_name: string;
     event_list_2_name: string;
+    selection_1?: EventSelection | null;
+    selection_2?: EventSelection | null;
     dt: number;
     segment_size: number;
     norm?: string;
@@ -82,6 +87,8 @@ export const deadtimeApi = {
     return apiClient.post('/api/deadtime/fad-correction', {
       event_list_1_name: params.event_list_1_name,
       event_list_2_name: params.event_list_2_name,
+      selection_1: params.selection_1 ?? undefined,
+      selection_2: params.selection_2 ?? undefined,
       dt: params.dt,
       segment_size: params.segment_size,
       norm: params.norm ?? 'frac',

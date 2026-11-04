@@ -46,6 +46,7 @@ def test_summary_dataset_identity_is_stable_and_preserves_existing_fields():
             "has_pi": True,
             "has_detector_id": False,
             "lineage": None,
+            "mission": None,
             "gti_count": 1,
         }
     ]

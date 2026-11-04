@@ -3,6 +3,7 @@
  */
 
 import { apiClient, ApiResponse } from './client';
+import type { EventLineage } from './selectionApi';
 
 // Types
 
@@ -58,6 +59,11 @@ export interface EventListSummary {
   time_range: [number, number];
   has_energy?: boolean;
   has_pi?: boolean;
+  has_detector_id?: boolean;
+  /** Present when this EventList was derived from others (filter, join, ...). */
+  lineage?: EventLineage | null;
+  /** MISSION keyword, used to offer that mission's energy-band presets. */
+  mission?: string | null;
   gti_count?: number;
   gti_warnings?: string[] | null;
   stingray_warnings?: string[] | null;

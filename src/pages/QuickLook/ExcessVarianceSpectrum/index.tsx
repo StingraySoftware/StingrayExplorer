@@ -24,6 +24,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, ExcessVarianceData } from '@/api/varenergyApi';
@@ -44,6 +46,8 @@ function parsePositiveInteger(value: string): number | null {
 
 const ExcessVarianceSpectrumPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/ExcessVarianceSpectrum/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/ExcessVarianceSpectrum/index.tsx:selection', { spectral: false });
   // The backend report flags small bin_time as the most common cause of an
   // all-NaN excess variance; 0.1 s is the recommended, pre-validated default.
   const [binTime, setBinTime] = useWorkspaceState('QuickLook/ExcessVarianceSpectrum/index.tsx:binTime:2', '0.1');
@@ -83,6 +87,7 @@ const ExcessVarianceSpectrumPage: React.FC = () => {
   const currentInputs = {
     operation: 'excess_variance_spectrum',
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     bin_time: binTimeNum,
     energy_min: energyMinNum,
     energy_max: energyMaxNum,
@@ -91,7 +96,7 @@ const ExcessVarianceSpectrumPage: React.FC = () => {
     normalization,
   };
 
-  const canRun =
+  const canRun = selectionError === null &&
     backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
@@ -111,6 +116,7 @@ const ExcessVarianceSpectrumPage: React.FC = () => {
     if (binTimeNum === null || !energyRangeValid || nBandsNum === null || nBandsNum < 2) return;
     const parameters = {
       event_list_name: eventList,
+      ...(selection ? { selection } : {}),
       bin_time: binTimeNum,
       energy_min: energyMinNum as number,
       energy_max: energyMaxNum as number,
@@ -163,6 +169,12 @@ const ExcessVarianceSpectrumPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                  spectral={false}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"

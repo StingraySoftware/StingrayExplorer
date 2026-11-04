@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DataIngestionPage, {
   detectFormatFromExtension,
@@ -8,6 +8,7 @@ import DataIngestionPage, {
   saveLastLoadedFiles,
   validateRemoteSourceUrl,
 } from './index';
+import { renderWithProviders } from '@/test/testUtils';
 
 const mocks = vi.hoisted(() => ({
   addNotification: vi.fn(),
@@ -144,7 +145,7 @@ describe('Data Ingestion granted selections', () => {
   });
 
   it('refreshes loaded event lists when a load job completes', async () => {
-    render(<DataIngestionPage />);
+    renderWithProviders(<DataIngestionPage />);
     await waitFor(() => expect(mocks.listEventLists).toHaveBeenCalledTimes(1));
 
     const previous = { jobs: {} };
@@ -215,7 +216,7 @@ describe('Data Ingestion granted selections', () => {
       value: { openGrantedFile, fileExists },
     });
 
-    render(<DataIngestionPage />);
+    renderWithProviders(<DataIngestionPage />);
 
     expect(
       await screen.findByText(/Previous path hints \(fresh native selection required\)/)
@@ -278,7 +279,7 @@ describe('Data Ingestion granted selections', () => {
       error: null,
     });
 
-    render(<DataIngestionPage />);
+    renderWithProviders(<DataIngestionPage />);
     await userEvent.click(screen.getByRole('button', { name: 'Browse Files' }));
 
     await waitFor(() =>
@@ -358,7 +359,7 @@ describe('Data Ingestion granted selections', () => {
       value: { saveGrantedFile },
     });
 
-    render(<DataIngestionPage />);
+    renderWithProviders(<DataIngestionPage />);
 
     expect(await screen.findByText('events')).toBeInTheDocument();
     await userEvent.click(
@@ -400,7 +401,7 @@ describe('Data Ingestion granted selections', () => {
       .mockImplementationOnce(() => firstRequest.promise)
       .mockImplementationOnce(() => secondRequest.promise);
 
-    render(<DataIngestionPage />);
+    renderWithProviders(<DataIngestionPage />);
 
     expect(await screen.findByText('first-events')).toBeInTheDocument();
     const exportButtons = screen.getAllByRole('button', {

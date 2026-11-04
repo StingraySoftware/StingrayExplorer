@@ -3,6 +3,7 @@
  */
 
 import { apiClient, ApiResponse } from './client';
+import type { EventSelection } from './selectionApi';
 
 // Types
 export interface LightcurveData {
@@ -41,6 +42,7 @@ export const lightcurveApi = {
    */
   async createFromEventList(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     dt: number;
     output_name: string;
     gti?: number[][];
@@ -48,6 +50,7 @@ export const lightcurveApi = {
   }): Promise<ApiResponse<LightcurveData>> {
     return apiClient.post('/api/lightcurve/from-event-list', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       dt: params.dt,
       output_name: params.output_name,
       gti: params.gti,

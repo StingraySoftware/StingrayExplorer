@@ -3,6 +3,7 @@
  */
 
 import { apiClient, ApiResponse } from './client';
+import type { EventSelection } from './selectionApi';
 
 // Types
 export interface PowerSpectrumData {
@@ -56,12 +57,14 @@ export const spectrumApi = {
    */
   async createPowerSpectrum(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     dt: number;
     norm?: string;
     output_name?: string;
   }): Promise<ApiResponse<PowerSpectrumData>> {
     return apiClient.post('/api/spectrum/power-spectrum', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       dt: params.dt,
       norm: params.norm || 'leahy',
       output_name: params.output_name,
@@ -73,6 +76,7 @@ export const spectrumApi = {
    */
   async createAveragedPowerSpectrum(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     dt: number;
     segment_size: number;
     norm?: string;
@@ -80,6 +84,7 @@ export const spectrumApi = {
   }): Promise<ApiResponse<PowerSpectrumData>> {
     return apiClient.post('/api/spectrum/averaged-power-spectrum', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       dt: params.dt,
       segment_size: params.segment_size,
       norm: params.norm || 'leahy',
@@ -93,6 +98,8 @@ export const spectrumApi = {
   async createCrossSpectrum(params: {
     event_list_1_name: string;
     event_list_2_name: string;
+    selection_1?: EventSelection | null;
+    selection_2?: EventSelection | null;
     dt: number;
     norm?: string;
     output_name?: string;
@@ -100,6 +107,8 @@ export const spectrumApi = {
     return apiClient.post('/api/spectrum/cross-spectrum', {
       event_list_1_name: params.event_list_1_name,
       event_list_2_name: params.event_list_2_name,
+      selection_1: params.selection_1 ?? undefined,
+      selection_2: params.selection_2 ?? undefined,
       dt: params.dt,
       norm: params.norm || 'leahy',
       output_name: params.output_name,
@@ -112,6 +121,8 @@ export const spectrumApi = {
   async createAveragedCrossSpectrum(params: {
     event_list_1_name: string;
     event_list_2_name: string;
+    selection_1?: EventSelection | null;
+    selection_2?: EventSelection | null;
     dt: number;
     segment_size: number;
     norm?: string;
@@ -120,6 +131,8 @@ export const spectrumApi = {
     return apiClient.post('/api/spectrum/averaged-cross-spectrum', {
       event_list_1_name: params.event_list_1_name,
       event_list_2_name: params.event_list_2_name,
+      selection_1: params.selection_1 ?? undefined,
+      selection_2: params.selection_2 ?? undefined,
       dt: params.dt,
       segment_size: params.segment_size,
       norm: params.norm || 'leahy',
@@ -132,6 +145,7 @@ export const spectrumApi = {
    */
   async createDynamicalPowerSpectrum(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     dt: number;
     segment_size: number;
     norm?: string;
@@ -139,6 +153,7 @@ export const spectrumApi = {
   }): Promise<ApiResponse<DynamicalPowerSpectrumData>> {
     return apiClient.post('/api/spectrum/dynamical-power-spectrum', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       dt: params.dt,
       segment_size: params.segment_size,
       norm: params.norm || 'leahy',

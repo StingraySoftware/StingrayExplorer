@@ -26,6 +26,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { timingApi, BispectrumData } from '@/api/timingApi';
@@ -37,6 +39,8 @@ const MAXLAG_CAP = 500;
 
 const BispectrumPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/Bispectrum/index.tsx:selection');
   const [dt, setDt] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:dt:2', '0.1');
   const [maxlag, setMaxlag] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:maxlag:3', '25');
   const [scale, setScale] = useWorkspaceState('QuickLook/Bispectrum/index.tsx:scale:4', 'unbiased');
@@ -52,9 +56,10 @@ const BispectrumPage: React.FC = () => {
   const maxlagNum = parsePositiveNumber(maxlag);
   const maxlagInt = maxlagNum === null ? null : Math.round(maxlagNum);
   const maxlagValid = maxlagInt !== null && maxlagInt >= 1 && maxlagInt <= MAXLAG_CAP;
-  const canRun = eventList !== '' && dtNum !== null && maxlagValid && !running && backendAvailable;
+  const canRun = selectionError === null && eventList !== '' && dtNum !== null && maxlagValid && !running && backendAvailable;
   const requestParams = {
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     dt: dtNum,
     maxlag: maxlagInt,
     scale,
@@ -118,6 +123,11 @@ const BispectrumPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"

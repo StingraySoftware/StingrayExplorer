@@ -24,6 +24,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, RmsSpectrumData } from '@/api/varenergyApi';
@@ -33,6 +35,8 @@ type RmsNorm = 'frac' | 'abs';
 
 const RmsEnergySpectrumPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/RmsEnergySpectrum/index.tsx:selection', { spectral: false });
   const [binTime, setBinTime] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:binTime:2', '0.1');
   const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:segmentSize:3', '8');
   const [freqMin, setFreqMin] = useWorkspaceState('QuickLook/RmsEnergySpectrum/index.tsx:freqMin:4', '0.1');
@@ -71,6 +75,7 @@ const RmsEnergySpectrumPage: React.FC = () => {
   const currentInputs = {
     operation: 'rms_energy_spectrum',
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     bin_time: binTimeNum,
     segment_size: segNum,
     freq_min: freqMinNum,
@@ -82,7 +87,7 @@ const RmsEnergySpectrumPage: React.FC = () => {
     norm,
   };
 
-  const canRun =
+  const canRun = selectionError === null &&
     backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
@@ -111,6 +116,7 @@ const RmsEnergySpectrumPage: React.FC = () => {
     }
     const parameters = {
       event_list_name: eventList,
+      ...(selection ? { selection } : {}),
       bin_time: binTimeNum,
       segment_size: segNum,
       freq_min: freqMinNum,
@@ -169,6 +175,12 @@ const RmsEnergySpectrumPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                  spectral={false}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"

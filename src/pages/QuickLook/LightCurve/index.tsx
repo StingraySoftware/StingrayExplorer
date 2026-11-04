@@ -28,6 +28,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { lightcurveApi, LightcurveData, LightcurveSummary } from '@/api/lightcurveApi';
@@ -39,6 +41,8 @@ const LIGHTCURVES_QUERY_KEY = ['lightcurves'] as const;
 
 const LightCurvePage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/LightCurve/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/LightCurve/index.tsx:selection');
   const [dt, setDt] = useWorkspaceState('QuickLook/LightCurve/index.tsx:dt:2', '1.0');
   const [outputName, setOutputName] = useWorkspaceState('QuickLook/LightCurve/index.tsx:outputName:3', '');
   const [existingSelection, setExistingSelection] = useWorkspaceState('QuickLook/LightCurve:existingSelection', '');
@@ -87,12 +91,13 @@ const LightCurvePage: React.FC = () => {
   }, [existingQuery.data, existingQuery.isLoading, existingQuery.isFetching, existingSelection, setExistingSelection]);
 
   const dtNum = parsePositiveNumber(dt);
-  const canRun = eventList !== '' && dtNum !== null && !running && backendAvailable;
+  const canRun = selectionError === null && eventList !== '' && dtNum !== null && !running && backendAvailable;
   const rebinNum = parsePositiveNumber(rebinFactor);
 
   const creationInputs = {
     operation: 'lightcurve_from_event_list',
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     dt: dtNum,
     output_name: outputName.trim() || `${eventList}_lc`,
   };
@@ -113,6 +118,7 @@ const LightCurvePage: React.FC = () => {
     if (!dtNum || !eventList || !backendAvailable) return;
     const params = {
       event_list_name: eventList, dt: dtNum,
+      ...(selection ? { selection } : {}),
       output_name: outputName.trim() || `${eventList}_lc`,
     };
     void run(() => lightcurveApi.createFromEventList(params), {
@@ -189,6 +195,11 @@ const LightCurvePage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Generate from event list</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"

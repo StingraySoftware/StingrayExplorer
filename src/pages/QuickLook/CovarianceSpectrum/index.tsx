@@ -24,6 +24,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { varenergyApi, CovarianceSpectrumData } from '@/api/varenergyApi';
@@ -33,6 +35,8 @@ type CovarianceNorm = 'abs' | 'frac';
 
 const CovarianceSpectrumPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/CovarianceSpectrum/index.tsx:selection', { spectral: false });
   const [binTime, setBinTime] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:binTime:2', '0.1');
   const [freqMin, setFreqMin] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:freqMin:3', '0.1');
   const [freqMax, setFreqMax] = useWorkspaceState('QuickLook/CovarianceSpectrum/index.tsx:freqMax:4', '1');
@@ -95,6 +99,7 @@ const CovarianceSpectrumPage: React.FC = () => {
   const currentInputs = {
     operation: 'covariance_spectrum',
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     bin_time: binTimeNum,
     freq_min: freqMinNum,
     freq_max: freqMaxNum,
@@ -107,7 +112,7 @@ const CovarianceSpectrumPage: React.FC = () => {
     norm,
   };
 
-  const canRun =
+  const canRun = selectionError === null &&
     backendAvailable &&
     eventList !== '' &&
     binTimeNum !== null &&
@@ -150,6 +155,7 @@ const CovarianceSpectrumPage: React.FC = () => {
     }
     const parameters = {
       event_list_name: eventList,
+      ...(selection ? { selection } : {}),
       bin_time: binTimeNum,
       freq_min: freqMinNum,
       freq_max: freqMaxNum,
@@ -203,6 +209,12 @@ const CovarianceSpectrumPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                  spectral={false}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"

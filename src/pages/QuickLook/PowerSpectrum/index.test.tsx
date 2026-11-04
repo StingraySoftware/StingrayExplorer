@@ -13,6 +13,9 @@ vi.mock('@/api/dataApi', () => ({ dataApi: { listEventLists: async () => ({
   success: true, data: [{ name: 'obs1', n_events: 1000 }, { name: 'obs2', n_events: 2000 }],
 }) } }));
 vi.mock('@/api/spectrumApi', () => ({ spectrumApi: { createPowerSpectrum, rebinSpectrum, listSpectra } }));
+vi.mock('@/api/selectionApi', () => ({ selectionApi: { previewSelection: async () => ({
+  success: false, message: 'preview unavailable in this test', error: null,
+}) } }));
 vi.mock('@/components/plots/PlotlyChart', () => ({ default: (props: unknown) => {
   chartProps(props); return <div data-testid="spectrum-chart" />;
 } }));
@@ -168,4 +171,21 @@ it('reopens the selected input, unsent edits and axes without relabelling the sa
   expect(screen.getByText('Inputs have changed since this result.')).toBeInTheDocument();
   restoreAnalyses({});
   publishBackendEpoch(null, true);
+});
+
+it('sends the chosen energy band with the power spectrum request', async () => {
+  createPowerSpectrum.mockResolvedValue({ success: true, data: original, message: 'computed', error: null });
+  listSpectra.mockResolvedValue({ success: true, data: [] });
+  renderPage();
+  await userEvent.click(await screen.findByLabelText('Event list'));
+  await userEvent.click(await screen.findByRole('option', { name: /obs1/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Energy' }));
+  await userEvent.type(screen.getByLabelText('From (keV)'), '2');
+  const compute = screen.getByRole('button', { name: 'Compute' });
+  expect(compute).toBeDisabled();
+  await userEvent.type(screen.getByLabelText('To (keV)'), '10');
+  await userEvent.click(compute);
+  await waitFor(() => expect(createPowerSpectrum).toHaveBeenCalledWith(
+    expect.objectContaining({ event_list_name: 'obs1', selection: { energy_range: [2, 10] } })
+  ));
 });

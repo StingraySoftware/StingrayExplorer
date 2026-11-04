@@ -19,7 +19,8 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
-import EventListSelector from '@/components/analysis/EventListSelector';
+import PairedEventInputs from '@/components/analysis/PairedEventInputs';
+import { usePairedSelection } from '@/hooks/usePairedSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { UtilityWarnings } from '@/components/utilities/UtilityResult';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
@@ -29,6 +30,8 @@ import { parsePositiveNumber } from '@/utils/numbers';
 const TimeLagsPage: React.FC = () => {
   const [eventList1, setEventList1] = useWorkspaceState('QuickLook/TimeLags/index.tsx:eventList1:1', '');
   const [eventList2, setEventList2] = useWorkspaceState('QuickLook/TimeLags/index.tsx:eventList2:2', '');
+  const pair = usePairedSelection('QuickLook/TimeLags/index.tsx');
+  const effectiveEventList2 = pair.twoBand ? eventList1 : eventList2;
   const [dt, setDt] = useWorkspaceState('QuickLook/TimeLags/index.tsx:dt:3', '0.0625');
   const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/TimeLags/index.tsx:segmentSize:4', '16');
   const [freqMin, setFreqMin] = useWorkspaceState('QuickLook/TimeLags/index.tsx:freqMin:5', '');
@@ -49,9 +52,9 @@ const TimeLagsPage: React.FC = () => {
   const freqRangeInverted = fMin !== null && fMax !== null && fMax <= fMin;
   const freqRangeValid =
     !freqMinInvalid && !freqMaxInvalid && !freqRangePartial && !freqRangeInverted;
-  const canRun =
+  const canRun = pair.error === null &&
     eventList1 !== '' &&
-    eventList2 !== '' &&
+    effectiveEventList2 !== '' &&
     dtNum !== null &&
     segNum !== null &&
     freqRangeValid &&
@@ -59,7 +62,8 @@ const TimeLagsPage: React.FC = () => {
     backendAvailable;
   const requestParams = {
     event_list_1_name: eventList1,
-    event_list_2_name: eventList2,
+    event_list_2_name: effectiveEventList2,
+    ...pair.requestSelections,
     dt: dtNum,
     segment_size: segNum,
     freq_range: freqMin === '' && freqMax === '' ? undefined : [fMin, fMax],
@@ -115,8 +119,13 @@ const TimeLagsPage: React.FC = () => {
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
-                <EventListSelector label="Event list 1" value={eventList1} onChange={setEventList1} />
-                <EventListSelector label="Event list 2" value={eventList2} onChange={setEventList2} />
+                <PairedEventInputs
+                  pair={pair}
+                  eventList1={eventList1}
+                  onEventList1={setEventList1}
+                  eventList2={eventList2}
+                  onEventList2={setEventList2}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"

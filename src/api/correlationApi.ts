@@ -3,6 +3,7 @@
  */
 
 import { apiClient, ApiResponse } from './client';
+import type { EventSelection } from './selectionApi';
 
 // Types
 
@@ -38,12 +39,14 @@ export const correlationApi = {
    */
   async autoCorrelation(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     dt: number;
     mode?: string;
     norm?: string;
   }): Promise<ApiResponse<CorrelationData>> {
     return apiClient.post('/api/correlation/auto-correlation', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       dt: params.dt,
       mode: params.mode ?? 'same',
       norm: params.norm ?? 'none',
@@ -56,6 +59,8 @@ export const correlationApi = {
   async crossCorrelation(params: {
     event_list_1_name: string;
     event_list_2_name: string;
+    selection_1?: EventSelection | null;
+    selection_2?: EventSelection | null;
     dt: number;
     mode?: string;
     norm?: string;
@@ -63,6 +68,8 @@ export const correlationApi = {
     return apiClient.post('/api/correlation/cross-correlation', {
       event_list_1_name: params.event_list_1_name,
       event_list_2_name: params.event_list_2_name,
+      selection_1: params.selection_1 ?? undefined,
+      selection_2: params.selection_2 ?? undefined,
       dt: params.dt,
       mode: params.mode ?? 'same',
       norm: params.norm ?? 'none',

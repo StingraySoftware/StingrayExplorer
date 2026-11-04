@@ -29,6 +29,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { deadtimeApi, PdsCorrectionData, FadCorrectionData } from '@/api/deadtimeApi';
@@ -71,6 +73,7 @@ const DeadTimeCorrectionsPage: React.FC = () => {
 
   // Panel (b) — model (Zhang+95) PDS correction
   const [pdsEventList, setPdsEventList] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsEventList:4', '');
+  const pdsSelection = useEventSelection('QuickLook/DeadTimeCorrections/index.tsx:pdsSelection');
   const [pdsDt, setPdsDt] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsDt:5', '0.001');
   const [pdsSegmentSize, setPdsSegmentSize] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsSegmentSize:6', '20');
   const [pdsDeadTime, setPdsDeadTime] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:pdsDeadTime:7', '0.0025');
@@ -81,6 +84,8 @@ const DeadTimeCorrectionsPage: React.FC = () => {
   // Panel (c) — FAD correction
   const [fadEventList1, setFadEventList1] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadEventList1:11', '');
   const [fadEventList2, setFadEventList2] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadEventList2:12', '');
+  const fadSelection1 = useEventSelection('QuickLook/DeadTimeCorrections/index.tsx:fadSelection1');
+  const fadSelection2 = useEventSelection('QuickLook/DeadTimeCorrections/index.tsx:fadSelection2');
   const [fadDt, setFadDt] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadDt:13', '0.001');
   const [fadSegmentSize, setFadSegmentSize] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadSegmentSize:14', '8');
   const [fadNorm, setFadNorm] = useWorkspaceState('QuickLook/DeadTimeCorrections/index.tsx:fadNorm:15', 'frac');
@@ -140,6 +145,7 @@ const DeadTimeCorrectionsPage: React.FC = () => {
   const pdsLimitKNum = parsePositiveNumber(pdsLimitK);
   const pdsLimitKValid = pdsLimitKNum !== null && Number.isInteger(pdsLimitKNum);
   const canRunPds =
+    pdsSelection.error === null &&
     pdsEventList !== '' &&
     pdsDtNum !== null &&
     pdsSegmentNum !== null &&
@@ -152,6 +158,7 @@ const DeadTimeCorrectionsPage: React.FC = () => {
   const pdsCurrentInputs = {
     operation: 'pds_correction',
     event_list_name: pdsEventList,
+    ...(pdsSelection.selection ? { selection: pdsSelection.selection } : {}),
     dt: pdsDtNum,
     segment_size: pdsSegmentNum,
     dead_time: pdsDeadTimeNum,
@@ -172,6 +179,7 @@ const DeadTimeCorrectionsPage: React.FC = () => {
     }
     const params = {
       event_list_name: pdsEventList,
+      ...(pdsSelection.selection ? { selection: pdsSelection.selection } : {}),
       dt: pdsDtNum,
       segment_size: pdsSegmentNum,
       dead_time: pdsDeadTimeNum,
@@ -216,6 +224,8 @@ const DeadTimeCorrectionsPage: React.FC = () => {
   const fadSmoothingInvalid = fadSmoothingLength !== '' && fadSmoothingNum === null;
   const fadListsIdentical = fadEventList1 !== '' && fadEventList1 === fadEventList2;
   const canRunFad =
+    fadSelection1.error === null &&
+    fadSelection2.error === null &&
     fadEventList1 !== '' &&
     fadEventList2 !== '' &&
     !fadListsIdentical &&
@@ -229,6 +239,8 @@ const DeadTimeCorrectionsPage: React.FC = () => {
     operation: 'fad_correction',
     event_list_1_name: fadEventList1,
     event_list_2_name: fadEventList2,
+    ...(fadSelection1.selection ? { selection_1: fadSelection1.selection } : {}),
+    ...(fadSelection2.selection ? { selection_2: fadSelection2.selection } : {}),
     dt: fadDtNum,
     segment_size: fadSegmentNum,
     norm: fadNorm,
@@ -241,6 +253,8 @@ const DeadTimeCorrectionsPage: React.FC = () => {
     const params = {
       event_list_1_name: fadEventList1,
       event_list_2_name: fadEventList2,
+      ...(fadSelection1.selection ? { selection_1: fadSelection1.selection } : {}),
+      ...(fadSelection2.selection ? { selection_2: fadSelection2.selection } : {}),
       dt: fadDtNum,
       segment_size: fadSegmentNum,
       norm: fadNorm,
@@ -320,6 +334,11 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                     value={pdsEventList}
                     onChange={setPdsEventList}
                   />
+                  <EventSelectionField
+                    eventListName={pdsEventList}
+                    value={pdsSelection.draft}
+                    onChange={pdsSelection.setDraft}
+                  />
                   <TextField
                     label="PDS dt (s)"
                     size="small"
@@ -397,15 +416,29 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                     value={fadEventList1}
                     onChange={setFadEventList1}
                   />
+                  <EventSelectionField
+                    label="Detector 1 photons"
+                    eventListName={fadEventList1}
+                    value={fadSelection1.draft}
+                    onChange={fadSelection1.setDraft}
+                  />
                   <EventListSelector
                     label="Detector 2 event list"
                     value={fadEventList2}
                     onChange={setFadEventList2}
                   />
+                  <EventSelectionField
+                    label="Detector 2 photons"
+                    eventListName={fadEventList2}
+                    value={fadSelection2.draft}
+                    onChange={fadSelection2.setDraft}
+                  />
                   {fadListsIdentical && (
                     <Alert severity="warning">
                       FAD needs two independent detectors observing the same source
-                      simultaneously; the same list twice is not a valid input.
+                      simultaneously; the same list twice is not a valid input, even
+                      with different energy bands, because one detector's bands share
+                      its dead time.
                     </Alert>
                   )}
                   <TextField

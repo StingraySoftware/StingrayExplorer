@@ -3,6 +3,7 @@
  */
 
 import { apiClient, ApiResponse } from './client';
+import type { EventSelection } from './selectionApi';
 
 // Types
 export interface BispectrumData {
@@ -74,6 +75,7 @@ export const timingApi = {
    */
   async createBispectrum(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     dt: number;
     maxlag?: number;
     scale?: string;
@@ -82,6 +84,7 @@ export const timingApi = {
   }): Promise<ApiResponse<BispectrumData>> {
     return apiClient.post('/api/timing/bispectrum', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       dt: params.dt,
       maxlag: params.maxlag || 25,
       scale: params.scale || 'unbiased',
@@ -95,6 +98,7 @@ export const timingApi = {
    */
   async calculatePowerColors(params: {
     event_list_name: string;
+    selection?: EventSelection | null;
     dt: number;
     segment_size: number;
     freq_ranges: Record<string, [number, number]>;
@@ -102,6 +106,7 @@ export const timingApi = {
   }): Promise<ApiResponse<PowerColorsData>> {
     return apiClient.post('/api/timing/power-colors', {
       event_list_name: params.event_list_name,
+      selection: params.selection ?? undefined,
       dt: params.dt,
       segment_size: params.segment_size,
       freq_ranges: params.freq_ranges,
@@ -115,6 +120,8 @@ export const timingApi = {
   async calculateTimeLags(params: {
     event_list_1_name: string;
     event_list_2_name: string;
+    selection_1?: EventSelection | null;
+    selection_2?: EventSelection | null;
     dt: number;
     segment_size: number;
     freq_range?: [number, number];
@@ -123,6 +130,8 @@ export const timingApi = {
     return apiClient.post('/api/timing/time-lags', {
       event_list_1_name: params.event_list_1_name,
       event_list_2_name: params.event_list_2_name,
+      selection_1: params.selection_1 ?? undefined,
+      selection_2: params.selection_2 ?? undefined,
       dt: params.dt,
       segment_size: params.segment_size,
       freq_range: params.freq_range,
@@ -136,6 +145,8 @@ export const timingApi = {
   async calculateCoherence(params: {
     event_list_1_name: string;
     event_list_2_name: string;
+    selection_1?: EventSelection | null;
+    selection_2?: EventSelection | null;
     dt: number;
     segment_size: number;
     output_name?: string;
@@ -143,6 +154,8 @@ export const timingApi = {
     return apiClient.post('/api/timing/coherence', {
       event_list_1_name: params.event_list_1_name,
       event_list_2_name: params.event_list_2_name,
+      selection_1: params.selection_1 ?? undefined,
+      selection_2: params.selection_2 ?? undefined,
       dt: params.dt,
       segment_size: params.segment_size,
       output_name: params.output_name,

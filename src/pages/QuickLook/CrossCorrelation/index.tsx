@@ -21,7 +21,8 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
-import EventListSelector from '@/components/analysis/EventListSelector';
+import PairedEventInputs from '@/components/analysis/PairedEventInputs';
+import { usePairedSelection } from '@/hooks/usePairedSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { correlationApi, CorrelationData } from '@/api/correlationApi';
@@ -33,6 +34,8 @@ const NORM_OPTIONS = ['none', 'variance'];
 const CrossCorrelationPage: React.FC = () => {
   const [eventList1, setEventList1] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:eventList1:1', '');
   const [eventList2, setEventList2] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:eventList2:2', '');
+  const pair = usePairedSelection('QuickLook/CrossCorrelation/index.tsx');
+  const effectiveEventList2 = pair.twoBand ? eventList1 : eventList2;
   const [dt, setDt] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:dt:3', '0.1');
   const [mode, setMode] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:mode:4', 'same');
   const [norm, setNorm] = useWorkspaceState('QuickLook/CrossCorrelation/index.tsx:norm:5', 'none');
@@ -41,10 +44,11 @@ const CrossCorrelationPage: React.FC = () => {
   } = useAnalysisRunner<CorrelationData>('Cross Correlation');
 
   const dtNum = parsePositiveNumber(dt);
-  const canRun = eventList1 !== '' && eventList2 !== '' && dtNum !== null && !running && backendAvailable;
+  const canRun = pair.error === null && eventList1 !== '' && effectiveEventList2 !== '' && dtNum !== null && !running && backendAvailable;
   const requestParams = {
     event_list_1_name: eventList1,
-    event_list_2_name: eventList2,
+    event_list_2_name: effectiveEventList2,
+    ...pair.requestSelections,
     dt: dtNum,
     mode,
     norm,
@@ -89,8 +93,13 @@ const CrossCorrelationPage: React.FC = () => {
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
-                <EventListSelector label="Event list 1" value={eventList1} onChange={setEventList1} />
-                <EventListSelector label="Event list 2" value={eventList2} onChange={setEventList2} />
+                <PairedEventInputs
+                  pair={pair}
+                  eventList1={eventList1}
+                  onEventList1={setEventList1}
+                  eventList2={eventList2}
+                  onEventList2={setEventList2}
+                />
                 <Typography variant="caption" sx={{
                   color: "text.secondary"
                 }}>

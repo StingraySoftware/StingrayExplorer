@@ -26,6 +26,8 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import EventSelectionField from '@/components/analysis/EventSelectionField';
+import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
 import { spectrumApi, PowerSpectrumData } from '@/api/spectrumApi';
@@ -35,6 +37,8 @@ const NORM_OPTIONS = ['leahy', 'frac', 'abs', 'none'];
 
 const AvgPowerSpectrumPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:eventList:1', '');
+  const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
+    useEventSelection('QuickLook/AvgPowerSpectrum/index.tsx:selection');
   const [dt, setDt] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:dt:2', '0.0625');
   const [segmentSize, setSegmentSize] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:segmentSize:3', '16');
   const [norm, setNorm] = useWorkspaceState('QuickLook/AvgPowerSpectrum/index.tsx:norm:4', 'leahy');
@@ -80,11 +84,12 @@ const AvgPowerSpectrumPage: React.FC = () => {
   const dtNum = parsePositiveNumber(dt);
   const segNum = parsePositiveNumber(segmentSize);
   const rebinNum = parsePositiveNumber(rebinFactor);
-  const canRun = eventList !== '' && dtNum !== null && segNum !== null && !running && backendAvailable;
+  const canRun = selectionError === null && eventList !== '' && dtNum !== null && segNum !== null && !running && backendAvailable;
   const rebinValid = logRebin ? rebinNum !== null : rebinNum !== null && rebinNum > 1;
 
   const createParams = {
     event_list_name: eventList,
+    ...(selection ? { selection } : {}),
     dt: dtNum,
     segment_size: segNum,
     norm,
@@ -150,6 +155,11 @@ const AvgPowerSpectrumPage: React.FC = () => {
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                <EventSelectionField
+                  eventListName={eventList}
+                  value={selectionDraft}
+                  onChange={setSelectionDraft}
+                />
                 <TextField
                   label="Time bin dt (s)"
                   size="small"
