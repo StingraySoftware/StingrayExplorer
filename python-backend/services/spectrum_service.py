@@ -5,6 +5,7 @@ Handles power spectrum, cross spectrum, and dynamical power spectrum operations.
 """
 
 from typing import Any, Dict, Optional
+from copy import deepcopy
 
 import numpy as np
 from stingray import (
@@ -16,6 +17,22 @@ from stingray import (
 )
 
 from .base_service import BaseService
+from .scientific_compatibility import compatible_event_lightcurve
+from .analysis_helpers import (
+    analysis_event_copy,
+    collect_warnings,
+    common_gtis,
+    overlap_error as _overlap_error,
+    pair_binning_error,
+    segment_size_error as _segment_size_error,
+)
+from .spectrum_products import (
+    attach_spectrum_identity,
+    input_snapshot,
+    spectrum_identity,
+    spectrum_projection,
+)
+from .utility_helpers import validate_derived_name
 
 
 def _power_to_lists(power) -> tuple:
@@ -40,52 +57,96 @@ def _finite_list(arr) -> list:
     return [float(v) if np.isfinite(v) else None for v in values]
 
 
-def _segment_size_error(segment_size: float, dt: float) -> Optional[str]:
-    """Human-readable rejection for segment sizes that stingray fails on cryptically.
-
-    Needs at least 3 time bins per segment to produce a non-empty spectrum.
-    """
-    if segment_size / dt < 3:
-        return (
-            f"segment_size ({segment_size}s) must be at least 3x dt ({dt}s) "
-            "to produce a non-empty spectrum"
-        )
-    return None
-
-
-def _overlap_error(
-    events1, events2, segment_size: Optional[float] = None
-) -> Optional[str]:
-    """Readable rejection when two event lists share no time overlap.
-
-    Optional segment_size check: if provided and the overlap is shorter than
-    one segment, stingray will produce zero segments (cryptic error), so we
-    reject early with a human-readable message.
-    """
-    if len(events1.time) == 0 or len(events2.time) == 0:
-        return "one of the event lists contains no events"
-    start = max(float(events1.time[0]), float(events2.time[0]))
-    stop = min(float(events1.time[-1]), float(events2.time[-1]))
-    if stop <= start:
-        return (
-            "the two event lists have no overlapping time range "
-            f"({events1.time[0]:.1f}-{events1.time[-1]:.1f}s vs "
-            f"{events2.time[0]:.1f}-{events2.time[-1]:.1f}s)"
-        )
-    if segment_size is not None and (stop - start) < segment_size:
-        return (
-            f"the overlapping time range ({stop - start:.1f}s) is shorter than "
-            f"the segment size ({segment_size}s)"
-        )
-    return None
-
-
 class SpectrumService(BaseService):
     """
     Service for spectral analysis operations.
 
     Handles power spectrum, cross spectrum, and dynamical power spectrum.
     """
+
+    def _source(self, name):
+        captured = self.state.copy_event_data_with_identity(name)
+        if captured is None:
+            raise ValueError(f"EventList '{name}' not found")
+        event_list, dataset_id = captured
+        snapshot = input_snapshot(name, event_list, dataset_id)
+        return event_list, snapshot
+
+    def _complete(
+        self, spectrum, name, operation, inputs, parameters, warnings, *, parent=None
+    ):
+        """Freeze inputs/settings, validate the projection, then publish atomically."""
+        if name is not None:
+            problem = validate_derived_name(name)
+            if problem:
+                raise ValueError(problem)
+        parameters = deepcopy(parameters)
+        if "dt" in parameters:
+            parameters["requested_dt"] = parameters["dt"]
+        actual_dt = (
+            getattr(spectrum, "sample_time", None)
+            if hasattr(spectrum, "dyn_ps")
+            else getattr(spectrum, "dt", None)
+        )
+        if actual_dt is not None:
+            parameters["dt"] = float(actual_dt)
+        if "segment_size" in parameters:
+            parameters["requested_segment_size"] = parameters["segment_size"]
+        actual_segment = getattr(spectrum, "segment_size", None)
+        if actual_segment is not None:
+            parameters["segment_size"] = float(actual_segment)
+        parameters["norm"] = getattr(spectrum, "norm", parameters.get("norm"))
+        averaging = getattr(spectrum, "m", None)
+        if (
+            operation.startswith("averaged_")
+            and averaging is not None
+            and np.ndim(averaging) == 0
+        ):
+            parameters["n_segments"] = int(averaging)
+        elif parent is not None:
+            original = parent[0]["provenance"].get("original_parameters", {})
+            if "n_segments" in original:
+                parameters["n_segments"] = original["n_segments"]
+        if getattr(spectrum, "gti", None) is not None:
+            parameters["analysis_gti"] = (
+                np.asarray(spectrum.gti, dtype=np.longdouble).astype(str).tolist()
+            )
+        identity = attach_spectrum_identity(
+            spectrum,
+            operation=operation,
+            backend_session_id=self.state.session_id,
+            inputs=inputs,
+            parameters=parameters,
+            warnings=warnings,
+            parent=parent,
+        )
+        if getattr(spectrum, "dyn_ps", None) is not None:
+            data = {
+                "freq": np.asarray(spectrum.freq, dtype=float).tolist(),
+                "time": np.asarray(spectrum.time, dtype=float).tolist(),
+                "dyn_ps": [_finite_list(row) for row in spectrum.dyn_ps],
+                "shape": list(spectrum.dyn_ps.shape),
+                "metadata": {"units": {"freq": "Hz", "time": "s"}},
+                **identity,
+            }
+        else:
+            data = spectrum_projection(spectrum)
+        data["name"] = name
+        data["norm"] = getattr(spectrum, "norm", None)
+        for field in ("dt", "segment_size", "requested_segment_size"):
+            if field in parameters:
+                data[field] = parameters[field]
+        if "n_segments" in parameters:
+            data["n_segments"] = parameters["n_segments"]
+        if averaging is not None:
+            data["n_averaged"] = np.asarray(averaging).tolist()
+        if name is not None and not self.state.add_spectrum_data_if_absent(
+            name, spectrum
+        ):
+            raise ValueError(
+                f"Spectrum '{name}' already exists; choose a unique output name"
+            )
+        return data
 
     def create_power_spectrum(
         self,
@@ -115,30 +176,26 @@ class SpectrumService(BaseService):
                     error=None,
                 )
 
-            event_list = self.state.get_event_data(event_list_name)
-            lc = event_list.to_lc(dt=dt)
-            ps = Powerspectrum(lc, norm=norm)
-
-            # Save if name provided
-            if output_name:
-                self.state.add_spectrum_data(output_name, ps)
-
-            power_list, phase_list = _power_to_lists(ps.power)
-            ps_data = {
-                "name": output_name,
-                "freq": ps.freq.tolist(),
-                "power": power_list,
-                "power_phase": phase_list,
-                "norm": norm,
-                "n_freq": len(ps.freq),
-                "df": float(ps.df),
-                "freq_range": [float(ps.freq[0]), float(ps.freq[-1])],
-            }
+            event_list, source = self._source(event_list_name)
+            warnings = []
+            with collect_warnings(warnings):
+                lc = compatible_event_lightcurve(event_list, dt)
+                ps = Powerspectrum(lc, norm=norm)
+            ps_data = self._complete(
+                ps,
+                output_name,
+                "power_spectrum",
+                [source],
+                {"dt": dt, "norm": norm, "output_name": output_name},
+                warnings,
+            )
+            ps_data["freq_range"] = [float(ps.freq[0]), float(ps.freq[-1])]
 
             return self.create_result(
                 success=True,
                 data=ps_data,
                 message=f"Power spectrum created (dt={dt}s, norm={norm})",
+                warnings=warnings,
             )
 
         except Exception as e:
@@ -186,30 +243,30 @@ class SpectrumService(BaseService):
                     success=False, data=None, message=seg_error, error=None
                 )
 
-            event_list = self.state.get_event_data(event_list_name)
-            lc = event_list.to_lc(dt=dt)
-            ps = AveragedPowerspectrum.from_lightcurve(lc, segment_size, norm=norm)
-
-            if output_name:
-                self.state.add_spectrum_data(output_name, ps)
-
-            power_list, phase_list = _power_to_lists(ps.power)
-            ps_data = {
-                "name": output_name,
-                "freq": ps.freq.tolist(),
-                "power": power_list,
-                "power_phase": phase_list,
-                "norm": norm,
-                "n_freq": len(ps.freq),
-                "df": float(ps.df),
-                "segment_size": segment_size,
-                "n_segments": int(ps.m) if hasattr(ps, "m") else None,
-            }
+            event_list, source = self._source(event_list_name)
+            warnings = []
+            with collect_warnings(warnings):
+                lc = compatible_event_lightcurve(event_list, dt)
+                ps = AveragedPowerspectrum.from_lightcurve(lc, segment_size, norm=norm)
+            ps_data = self._complete(
+                ps,
+                output_name,
+                "averaged_power_spectrum",
+                [source],
+                {
+                    "dt": dt,
+                    "segment_size": segment_size,
+                    "norm": norm,
+                    "output_name": output_name,
+                },
+                warnings,
+            )
 
             return self.create_result(
                 success=True,
                 data=ps_data,
                 message=f"Averaged power spectrum created (segment={segment_size}s)",
+                warnings=warnings,
             )
 
         except Exception as e:
@@ -260,40 +317,43 @@ class SpectrumService(BaseService):
                     error=None,
                 )
 
-            event_list_1 = self.state.get_event_data(event_list_1_name)
-            event_list_2 = self.state.get_event_data(event_list_2_name)
+            event_list_1, source_1 = self._source(event_list_1_name)
+            event_list_2, source_2 = self._source(event_list_2_name)
 
             overlap_error = _overlap_error(event_list_1, event_list_2)
             if overlap_error:
                 return self.create_result(
                     success=False, data=None, message=overlap_error, error=None
                 )
+            binning_error = pair_binning_error(event_list_1, event_list_2, dt)
+            if binning_error:
+                return self.create_result(
+                    success=False, data=None, message=binning_error, error=None
+                )
 
-            cs = Crossspectrum.from_events(
-                events1=event_list_1,
-                events2=event_list_2,
-                dt=dt,
-                norm=norm,
+            warnings = []
+            with collect_warnings(warnings):
+                cs = Crossspectrum.from_events(
+                    events1=analysis_event_copy(event_list_1),
+                    events2=analysis_event_copy(event_list_2),
+                    dt=dt,
+                    norm=norm,
+                    gti=common_gtis(event_list_1, event_list_2),
+                )
+            cs_data = self._complete(
+                cs,
+                output_name,
+                "cross_spectrum",
+                [source_1, source_2],
+                {"dt": dt, "norm": norm, "output_name": output_name},
+                warnings,
             )
-
-            if output_name:
-                self.state.add_spectrum_data(output_name, cs)
-
-            power_list, phase_list = _power_to_lists(cs.power)
-            cs_data = {
-                "name": output_name,
-                "freq": cs.freq.tolist(),
-                "power": power_list,
-                "power_phase": phase_list,
-                "norm": norm,
-                "n_freq": len(cs.freq),
-                "df": float(cs.df),
-            }
 
             return self.create_result(
                 success=True,
                 data=cs_data,
                 message=f"Cross spectrum created (dt={dt}s)",
+                warnings=warnings,
             )
 
         except Exception as e:
@@ -352,8 +412,8 @@ class SpectrumService(BaseService):
                     success=False, data=None, message=seg_error, error=None
                 )
 
-            event_list_1 = self.state.get_event_data(event_list_1_name)
-            event_list_2 = self.state.get_event_data(event_list_2_name)
+            event_list_1, source_1 = self._source(event_list_1_name)
+            event_list_2, source_2 = self._source(event_list_2_name)
 
             overlap_error = _overlap_error(
                 event_list_1, event_list_2, segment_size=segment_size
@@ -362,37 +422,44 @@ class SpectrumService(BaseService):
                 return self.create_result(
                     success=False, data=None, message=overlap_error, error=None
                 )
+            binning_error = pair_binning_error(event_list_1, event_list_2, dt)
+            if binning_error:
+                return self.create_result(
+                    success=False, data=None, message=binning_error, error=None
+                )
 
-            lc1 = event_list_1.to_lc(dt=dt)
-            lc2 = event_list_2.to_lc(dt=dt)
-
-            cs = AveragedCrossspectrum.from_lightcurve(
-                lc1=lc1,
-                lc2=lc2,
-                segment_size=segment_size,
-                norm=norm,
+            # Bin both event lists on the common exposure grid. Converting them
+            # separately to light curves anchors their grids at different GTI
+            # starts and can manufacture a phase/lag for identical photons.
+            warnings = []
+            with collect_warnings(warnings):
+                cs = AveragedCrossspectrum.from_events(
+                    events1=analysis_event_copy(event_list_1),
+                    events2=analysis_event_copy(event_list_2),
+                    dt=dt,
+                    segment_size=segment_size,
+                    norm=norm,
+                    gti=common_gtis(event_list_1, event_list_2),
+                )
+            cs_data = self._complete(
+                cs,
+                output_name,
+                "averaged_cross_spectrum",
+                [source_1, source_2],
+                {
+                    "dt": dt,
+                    "segment_size": segment_size,
+                    "norm": norm,
+                    "output_name": output_name,
+                },
+                warnings,
             )
-
-            if output_name:
-                self.state.add_spectrum_data(output_name, cs)
-
-            power_list, phase_list = _power_to_lists(cs.power)
-            cs_data = {
-                "name": output_name,
-                "freq": cs.freq.tolist(),
-                "power": power_list,
-                "power_phase": phase_list,
-                "norm": norm,
-                "n_freq": len(cs.freq),
-                "df": float(cs.df),
-                "segment_size": segment_size,
-                "n_segments": int(cs.m) if hasattr(cs, "m") else None,
-            }
 
             return self.create_result(
                 success=True,
                 data=cs_data,
                 message=f"Averaged cross spectrum created (segment={segment_size}s)",
+                warnings=warnings,
             )
 
         except Exception as e:
@@ -442,27 +509,30 @@ class SpectrumService(BaseService):
                     success=False, data=None, message=seg_error, error=None
                 )
 
-            event_list = self.state.get_event_data(event_list_name)
-            lc = event_list.to_lc(dt=dt)
-            dps = DynamicalPowerspectrum(lc, segment_size=segment_size, norm=norm)
-
-            if output_name:
-                self.state.add_spectrum_data(output_name, dps)
-
-            dps_data = {
-                "name": output_name,
-                "freq": dps.freq.tolist(),
-                "time": dps.time.astype(float).tolist(),
-                "dyn_ps": [_finite_list(row) for row in dps.dyn_ps],
-                "norm": norm,
-                "segment_size": segment_size,
-                "shape": list(dps.dyn_ps.shape),
-            }
+            event_list, source = self._source(event_list_name)
+            warnings = []
+            with collect_warnings(warnings):
+                lc = compatible_event_lightcurve(event_list, dt)
+                dps = DynamicalPowerspectrum(lc, segment_size=segment_size, norm=norm)
+            dps_data = self._complete(
+                dps,
+                output_name,
+                "dynamical_power_spectrum",
+                [source],
+                {
+                    "dt": dt,
+                    "segment_size": segment_size,
+                    "norm": norm,
+                    "output_name": output_name,
+                },
+                warnings,
+            )
 
             return self.create_result(
                 success=True,
                 data=dps_data,
                 message=f"Dynamical power spectrum created (segment={segment_size}s)",
+                warnings=warnings,
             )
 
         except Exception as e:
@@ -481,6 +551,7 @@ class SpectrumService(BaseService):
         rebin_factor: float,
         log: bool = False,
         output_name: Optional[str] = None,
+        expected_result_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Rebin a spectrum.
@@ -503,31 +574,40 @@ class SpectrumService(BaseService):
                     error=None,
                 )
 
-            spectrum = self.state.get_spectrum_data(name)
+            spectrum = self.state.copy_spectrum_for_analysis(
+                name, expected_result_id=expected_result_id
+            )
+            if spectrum is None:
+                raise ValueError(f"Spectrum '{name}' not found")
+            parent_identity = spectrum_identity(spectrum)
 
-            if log:
-                rebinned = spectrum.rebin_log(rebin_factor)
-            else:
-                # stingray rebin()'s positional arg is df (Hz), not a factor; use f=
-                rebinned = spectrum.rebin(f=rebin_factor)
-
-            if output_name:
-                self.state.add_spectrum_data(output_name, rebinned)
-
-            power_list, phase_list = _power_to_lists(rebinned.power)
-            data = {
-                "name": output_name,
-                "freq": rebinned.freq.tolist(),
-                "power": power_list,
-                "power_phase": phase_list,
-                "norm": getattr(rebinned, "norm", None),
-                "n_freq": len(rebinned.freq),
-            }
+            warnings = []
+            with collect_warnings(warnings):
+                if log:
+                    rebinned = spectrum.rebin_log(rebin_factor)
+                else:
+                    # stingray rebin()'s positional arg is df (Hz), not a factor; use f=
+                    rebinned = spectrum.rebin(f=rebin_factor)
+            data = self._complete(
+                rebinned,
+                output_name,
+                "rebin_spectrum",
+                parent_identity["inputs"],
+                {
+                    "rebin_factor": rebin_factor,
+                    "log": log,
+                    "output_name": output_name,
+                    "norm": spectrum.norm,
+                },
+                warnings,
+                parent=(parent_identity, name),
+            )
 
             return self.create_result(
                 success=True,
                 data=data,
                 message=f"Spectrum rebinned ({'log' if log else 'linear'}, factor={rebin_factor})",
+                warnings=warnings,
             )
 
         except Exception as e:
@@ -548,6 +628,12 @@ class SpectrumService(BaseService):
                         "name": name,
                         "type": spec_type,
                         "n_freq": len(spec.freq) if hasattr(spec, "freq") else None,
+                        "result_id": getattr(spec, "result_identity", {}).get(
+                            "result_id"
+                        ),
+                        "backend_session_id": getattr(spec, "result_identity", {}).get(
+                            "backend_session_id"
+                        ),
                     }
                 )
 
