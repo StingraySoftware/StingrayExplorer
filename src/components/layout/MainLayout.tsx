@@ -1,6 +1,6 @@
 import { useWorkspaceState, onWorkspaceRestored, recordWorkspacePath } from '@/api/workspaceSession';
 import React, { useEffect, useCallback } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Box, Toolbar } from '@mui/material';
 import Sidebar from './Sidebar';
 import Header from './Header';

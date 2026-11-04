@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import HomeIcon from '@mui/icons-material/Home';
 
 const NotFoundPage: React.FC = () => {

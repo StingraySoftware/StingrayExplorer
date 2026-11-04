@@ -27,6 +27,7 @@ import {
   Code as RawIcon,
   FormatListBulleted as FormattedIcon,
 } from '@mui/icons-material';
+import { useShallow } from 'zustand/react/shallow';
 import { useLogStore, selectFilteredLogs, LogEntry } from '@/store/logStore';
 import { useBackendContext } from '@/context/BackendContext';
 import { logStreamClient } from '@/api/logApi';
@@ -222,7 +223,8 @@ const LogPanel: React.FC<LogPanelProps> = ({ leftOffset = 0, rightOffset = 0 }) 
     setSearchFilter,
   } = useLogStore();
 
-  const logs = useLogStore(selectFilteredLogs);
+  // The filter builds a new array; compare entries so unchanged logs keep a stable snapshot.
+  const logs = useLogStore(useShallow(selectFilteredLogs));
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useWorkspaceState('$logAutoScroll', true);
   const [rawView, setRawView] = useWorkspaceState('$logRawView', false);

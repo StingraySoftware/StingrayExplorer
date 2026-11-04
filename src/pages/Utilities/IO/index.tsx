@@ -27,7 +27,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import SearchIcon from '@mui/icons-material/Search';
 import { useQueryClient } from '@tanstack/react-query';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router';
 import PageTemplate from '@/components/common/PageTemplate';
 import EventListSelector from '@/components/analysis/EventListSelector';
 import GrantedFileField, {

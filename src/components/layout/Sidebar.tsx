@@ -1,6 +1,6 @@
 import { useWorkspaceState } from '@/api/workspaceSession';
 import React, { useEffect, useContext } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router';
 import {
   Box,
   List,

@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router';
 import { useEventLists } from '@/hooks/useEventLists';
 import type { EventListSummary } from '@/api/dataApi';
 import { useBackendContext } from '@/context/BackendContext';

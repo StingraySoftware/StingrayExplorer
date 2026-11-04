@@ -1,6 +1,6 @@
 import { useWorkspaceState } from '@/api/workspaceSession';
 import React, { createContext, useContext, useMemo } from 'react';
-import { RouterProvider, createHashRouter } from 'react-router-dom';
+import { RouterProvider, createHashRouter } from 'react-router';
 import { ThemeProvider as MuiThemeProvider, createTheme, Theme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

@@ -9,7 +9,7 @@ import {
   Chip,
   useTheme,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import BuildIcon from '@mui/icons-material/Build';
 import ModelTrainingIcon from '@mui/icons-material/ModelTraining';
