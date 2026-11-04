@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
-import hmac
+from tests.file_grants import sign_grant
+
 import io
 import os
 import time
@@ -29,7 +29,6 @@ from services.io_utility_service import (
     IOUtilityService,
 )
 from services.state_manager import StateManager
-from services.utility_helpers import FILE_GRANT_VERSION
 from stingray import EventList, Lightcurve
 
 TEST_SECRET = "hdf5-export-test-file-grant-secret"
@@ -42,19 +41,9 @@ def file_grant_secret(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def make_write_grant(path: Path, *, expires_delta: int = 300) -> str:
-    resolved = path.parent.resolve(strict=True) / path.name
-    expires = int(time.time()) + expires_delta
-    parent_stat = resolved.parent.stat()
-    prefix = f"{FILE_GRANT_VERSION}.{expires}.{parent_stat.st_dev}.{parent_stat.st_ino}"
-    digest = hmac.new(
-        TEST_SECRET.encode(),
-        (
-            f"{FILE_GRANT_VERSION}\0write\0{expires}\0{resolved}\0"
-            f"{parent_stat.st_dev}\0{parent_stat.st_ino}"
-        ).encode(),
-        hashlib.sha256,
-    ).hexdigest()
-    return f"{prefix}.{digest}"
+    return sign_grant(
+        TEST_SECRET, path, "write", expires=int(time.time()) + expires_delta
+    )
 
 
 def installed_h5py() -> Any:
@@ -244,7 +233,16 @@ def test_repository_representative_scientific_file_round_trip(
     source_path = Path(__file__).parents[2] / "files" / "data" / relative_path
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        source = object_class.read(str(source_path), fmt="hea")
+        # This tests export fidelity, using an independently validated fixture.
+        # Old Stingray Lightcurve readers pass native extended floats to a
+        # Numba sorting kernel that cannot accept them on Linux. Validate the
+        # ordering in NumPy without downcasting the source timing precision.
+        options = {"skip_checks": True} if object_class is Lightcurve else {}
+        source = object_class.read(str(source_path), fmt="hea", **options)
+    assert np.all(np.isfinite(source.time))
+    assert np.all(np.diff(source.time) >= 0)
+    if object_class is Lightcurve:
+        assert source.time.shape == source.counts.shape
     table = io_module._table_for_object(
         source,
         object_type,

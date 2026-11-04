@@ -33,6 +33,7 @@ from stingray.io import high_precision_keyword_read, pi_to_energy, read_rmf
 from .analysis_helpers import collect_warnings
 from .base_service import BaseService
 from .secure_publication import open_secure_publication
+from .spectrum_products import spectrum_table
 from .state_manager import _enforce_precopy_caps
 from .utility_helpers import (
     MAX_ARRAY_INPUT,
@@ -66,7 +67,7 @@ EXPORT_EXTENSIONS = {
     "fits": ".fits",
     "hdf5": ".hdf5",
 }
-EXPORT_OBJECT_TYPES = {"event_list", "lightcurve", "analysis_result"}
+EXPORT_OBJECT_TYPES = {"event_list", "lightcurve", "analysis_result", "spectrum"}
 
 HDF5_SCHEMA = "stingray-explorer.hdf5.v1"
 HDF5_GROUP_PATH = "stingray_explorer"
@@ -1434,6 +1435,12 @@ def _object_row_count(obj: Any, object_type: str) -> int:
         values = getattr(obj, "time", None)
     elif object_type == "lightcurve":
         values = getattr(obj, "time", None)
+    elif object_type == "spectrum":
+        if getattr(obj, "dyn_ps", None) is not None:
+            raise ValueError(
+                "Dynamical spectra require a two-dimensional export; only one-dimensional power and cross spectra are currently supported"
+            )
+        values = getattr(obj, "freq", None)
     else:
         row_count = _analysis_result_row_count(obj)
         if row_count > MAX_EXPORT_ROWS:
@@ -1448,7 +1455,10 @@ def _object_row_count(obj: Any, object_type: str) -> int:
         )
         return row_count
     if values is None:
-        raise ValueError(f"Loaded {object_type.replace('_', ' ')} has no time array")
+        axis_name = "frequency" if object_type == "spectrum" else "time"
+        raise ValueError(
+            f"Loaded {object_type.replace('_', ' ')} has no {axis_name} array"
+        )
     _enforce_precopy_caps(
         obj,
         f"Loaded {object_type.replace('_', ' ')}",
@@ -1459,8 +1469,9 @@ def _object_row_count(obj: Any, object_type: str) -> int:
     )
     array = np.asarray(values)
     if array.ndim != 1:
+        axis_name = "frequency" if object_type == "spectrum" else "time"
         raise ValueError(
-            f"Loaded {object_type.replace('_', ' ')} time must be one-dimensional"
+            f"Loaded {object_type.replace('_', ' ')} {axis_name} must be one-dimensional"
         )
     row_count = len(array)
     return row_count
@@ -1472,6 +1483,10 @@ def _table_for_object(
     *,
     preserve_timing_precision: bool = False,
 ) -> Table:
+    if object_type == "spectrum":
+        # The maintained projection uses real-valued scientific columns for
+        # complex products and carries the original frozen result identity.
+        return spectrum_table(obj)
     if object_type == "analysis_result":
         table = _analysis_table(obj)
         explicit_gti = None
@@ -1482,6 +1497,12 @@ def _table_for_object(
             obj, preserve_dtype=preserve_timing_precision
         )
         table = obj.to_astropy_table()
+        if isinstance(getattr(obj, "header", None), fits.Header):
+            # Preserve every FITS card, including repeated COMMENT/HISTORY,
+            # instead of older Stingray's lossy dict/header commentary proxies.
+            table.meta["header"] = obj.header.tostring(
+                sep="\n", endcard=False, padding=False
+            )
         # Stingray declares its scientific scalar fields through meta_attrs(),
         # but Lightcurve.to_astropy_table() currently omits several of them.
         # Add every declared value that the public serializer left out so the
@@ -1539,6 +1560,16 @@ def _table_for_object(
                 table.meta[attribute] = copy.deepcopy(value)
     if not table.colnames:
         raise ValueError("Loaded object has no exportable columns")
+    identity = getattr(obj, "result_identity", None)
+    if isinstance(identity, dict):
+        table.meta["result_identity"] = copy.deepcopy(identity)
+    if isinstance(table.meta.get("header"), dict):
+        from astropy.io.fits.header import _HeaderCommentaryCards
+
+        table.meta["header"] = {
+            key: list(value) if isinstance(value, _HeaderCommentaryCards) else value
+            for key, value in table.meta["header"].items()
+        }
     _reject_complex_columns(table)
     _apply_known_units(table, object_type, obj, explicit_gti)
     return table
@@ -2415,6 +2446,12 @@ def _restore_hdf5_columns(table: Table, manifest: list[dict[str, Any]]) -> Table
         actual_unit = (
             str(column.unit) if getattr(column, "unit", None) is not None else None
         )
+        if declared_unit == "" and actual_unit is None:
+            # Astropy omits an explicit unscaled dimensionless unit from its
+            # HDF5 YAML. The verified manifest distinguishes it from an absent
+            # unit, just as it restores masked columns and logical dtypes.
+            column.unit = u.dimensionless_unscaled
+            actual_unit = ""
         if actual_unit != declared_unit:
             raise ValueError(f"HDF5 column '{name}' unit manifest changed")
 
@@ -2671,6 +2708,86 @@ def _verify_hdf5_table(expected: Table, actual: Table) -> list[str]:
         dict(expected.meta), dict(actual.meta), "table metadata"
     )
     return list(HDF5_VERIFICATION_CHECKS)
+
+
+def _spectrum_numeric_equal(expected: np.ndarray, actual: np.ndarray) -> bool:
+    """Avoid NumPy's lossy promotion when comparing mixed numeric kinds."""
+    if expected.shape != actual.shape:
+        return False
+    if expected.dtype.kind == actual.dtype.kind:
+        return bool(np.array_equal(expected, actual))
+    # int64/float64 and signed/unsigned comparisons can promote both arrays to
+    # float64, declaring different integers above 2**53 equal. Python's scalar
+    # integer/float equality retains the integer's exact value.
+    return all(
+        left.item() == right.item()
+        for left, right in zip(expected.flat, actual.flat, strict=True)
+    )
+
+
+def _verify_spectrum_table(
+    expected: Table, actual: Table, export_format: str
+) -> list[str]:
+    """Verify a reopened scientific projection, allowing format dtype conventions.
+
+    FITS uses big-endian arrays and ASCII may infer integral numeric columns.
+    Compare scientific values and unavailable-value masks, rather than those
+    physical encodings. All metadata-capable formats must preserve the frozen
+    identity and original inputs exactly; CSV explicitly preserves values only.
+    """
+    if len(expected) != len(actual) or expected.colnames != actual.colnames:
+        raise ValueError(
+            "Spectrum semantic verification changed rows or ordered columns"
+        )
+    for name in expected.colnames:
+        expected_values = np.ma.asarray(expected[name])
+        actual_values = np.ma.asarray(actual[name])
+        expected_data = np.asarray(expected_values.data)
+        actual_data = np.asarray(actual_values.data)
+        if expected_data.dtype.kind not in "fiu" or actual_data.dtype.kind not in "fiu":
+            raise ValueError(
+                f"Spectrum column '{name}' was not reopened as numeric data"
+            )
+        expected_mask = np.ma.getmaskarray(expected_values) | ~np.isfinite(
+            expected_data
+        )
+        actual_mask = np.ma.getmaskarray(actual_values) | ~np.isfinite(actual_data)
+        if not np.array_equal(expected_mask, actual_mask):
+            raise ValueError(
+                f"Spectrum semantic verification changed column '{name}' null values"
+            )
+        if not _spectrum_numeric_equal(
+            expected_data[~expected_mask], actual_data[~actual_mask]
+        ):
+            raise ValueError(
+                f"Spectrum semantic verification changed column '{name}' values"
+            )
+        if export_format != "csv":
+            expected_unit = (
+                getattr(expected[name], "unit", None) or u.dimensionless_unscaled
+            )
+            actual_unit = (
+                getattr(actual[name], "unit", None) or u.dimensionless_unscaled
+            )
+            if expected_unit != actual_unit:
+                raise ValueError(
+                    f"Spectrum semantic verification changed column '{name}' units"
+                )
+    checks = [
+        "ordered_columns",
+        "numeric_values",
+        "nullable_values",
+        "complex_components",
+    ]
+    if export_format != "csv":
+        expected_meta = json_safe(dict(expected.meta), [], "metadata")
+        actual_meta = json_safe(dict(actual.meta), [], "metadata")
+        if expected_meta != actual_meta:
+            raise ValueError(
+                "Spectrum semantic verification changed frozen result identity or metadata"
+            )
+        checks.extend(["column_units", "result_identity_and_original_inputs"])
+    return checks
 
 
 class IOUtilityService(BaseService):
@@ -2966,6 +3083,18 @@ class IOUtilityService(BaseService):
             common["fits"]["notes"] += (
                 " A separate GTI extension is included when available."
             )
+        if object_type == "spectrum":
+            for format_name in ("ecsv", "json", "fits"):
+                common[format_name]["notes"] += (
+                    " Spectrum columns preserve real/imaginary cross power and "
+                    "frozen result identity with original inputs; reopened values, "
+                    "units, and metadata are verified before publication."
+                )
+            common["csv"]["notes"] += (
+                " Spectrum numeric columns are verified, including separate "
+                "complex components; use a metadata-capable format to retain "
+                "the original analysis inputs and result identity."
+            )
         return common
 
     def list_exportable_objects(self) -> dict[str, Any]:
@@ -2979,6 +3108,7 @@ class IOUtilityService(BaseService):
                 ("event_list", self.state.get_event_data()),
                 ("lightcurve", self.state.get_lightcurve_data()),
                 ("analysis_result", self.state.get_analysis_result()),
+                ("spectrum", self.state.get_spectrum_data()),
             )
             for object_type, entries in sources:
                 for name, obj in entries:
@@ -2990,6 +3120,11 @@ class IOUtilityService(BaseService):
                                 f"Object has {row_count:,} rows; the export cap is "
                                 f"{MAX_EXPORT_ROWS:,}"
                             )
+                        elif object_type == "spectrum":
+                            # Validate the shared scientific projection even
+                            # without optional HDF5. Shape, identity, and norm
+                            # failures apply to every advertised format.
+                            spectrum_table(copy.copy(obj))
                     except Exception as exception:
                         row_count = None
                         reason = str(exception)
@@ -3006,17 +3141,33 @@ class IOUtilityService(BaseService):
                             format_reasons["hdf5"] = hdf5_reason
                             if "hdf5" in formats:
                                 formats.remove("hdf5")
-                    objects.append(
-                        {
-                            "object_type": object_type,
-                            "name": name,
-                            "row_count": row_count,
-                            "exportable": reason is None,
-                            "formats": formats,
-                            "format_reasons": format_reasons,
-                            "reason": reason,
-                        }
-                    )
+                    entry = {
+                        "object_type": object_type,
+                        "name": name,
+                        "row_count": row_count,
+                        "exportable": reason is None,
+                        "formats": formats,
+                        "format_reasons": format_reasons,
+                        "reason": reason,
+                    }
+                    if object_type in {"spectrum", "lightcurve"}:
+                        identity = getattr(obj, "result_identity", {})
+                        if identity.get("result_id"):
+                            entry["result_id"] = identity["result_id"]
+                            entry["backend_session_id"] = identity.get(
+                                "backend_session_id"
+                            )
+                        if (
+                            object_type == "spectrum"
+                            and not identity.get("result_id")
+                            and reason is None
+                        ):
+                            entry["exportable"] = False
+                            entry["formats"] = []
+                            entry["reason"] = (
+                                "This spectrum has no saved result identity; recreate it before export"
+                            )
+                    objects.append(entry)
 
             matrix = {
                 object_type: self._format_capabilities(object_type, hdf5_capability)
@@ -3047,7 +3198,9 @@ class IOUtilityService(BaseService):
         except Exception as exception:
             return self.handle_error(exception, "Listing exportable objects")
 
-    def _copy_export_object(self, object_type: str, object_name: str) -> Any:
+    def _copy_export_object(
+        self, object_type: str, object_name: str, expected_result_id: str | None = None
+    ) -> Any:
         if object_type == "event_list":
             result = self.state.copy_event_data(
                 object_name,
@@ -3057,12 +3210,18 @@ class IOUtilityService(BaseService):
                 max_bytes=MAX_EXPORT_ESTIMATED_BYTES,
             )
         elif object_type == "lightcurve":
+            identity_guard = (
+                {"expected_result_id": expected_result_id}
+                if expected_result_id is not None
+                else {}
+            )
             result = self.state.copy_lightcurve_data(
                 object_name,
                 max_points=MAX_EXPORT_ROWS,
                 max_columns=MAX_EXPORT_COLUMNS,
                 max_cells=MAX_EXPORT_CELLS,
                 max_bytes=MAX_EXPORT_ESTIMATED_BYTES,
+                **identity_guard,
             )
         elif object_type == "analysis_result":
             result = self.state.copy_analysis_result(
@@ -3072,9 +3231,22 @@ class IOUtilityService(BaseService):
                 max_cells=MAX_EXPORT_CELLS,
                 max_bytes=MAX_EXPORT_ESTIMATED_BYTES,
             )
+        elif object_type == "spectrum":
+            if not isinstance(expected_result_id, str) or not expected_result_id:
+                raise ValueError(
+                    "Spectrum export requires expected_result_id from the current catalog; refresh and select the result again"
+                )
+            result = self.state.copy_spectrum_data(
+                object_name,
+                max_rows=MAX_EXPORT_ROWS,
+                max_columns=MAX_EXPORT_COLUMNS,
+                max_cells=MAX_EXPORT_CELLS,
+                max_bytes=MAX_EXPORT_ESTIMATED_BYTES,
+                expected_result_id=expected_result_id,
+            )
         else:
             raise ValueError(
-                "object_type must be one of: event_list, lightcurve, analysis_result"
+                "object_type must be one of: event_list, lightcurve, analysis_result, spectrum"
             )
         if result is None:
             label = object_type.replace("_", " ").title()
@@ -3088,6 +3260,7 @@ class IOUtilityService(BaseService):
         export_format: str,
         destination_path: str,
         destination_grant: str,
+        expected_result_id: str | None = None,
     ) -> dict[str, Any]:
         context_stack = ExitStack()
         warning_messages: list[str] = []
@@ -3126,7 +3299,7 @@ class IOUtilityService(BaseService):
                 if name_reason is not None:
                     raise ValueError(name_reason)
             publication.assert_destination_available()
-            obj = self._copy_export_object(object_type, object_name)
+            obj = self._copy_export_object(object_type, object_name, expected_result_id)
             row_count = _object_row_count(obj, object_type)
             if row_count > MAX_EXPORT_ROWS:
                 raise ValueError(
@@ -3217,6 +3390,7 @@ class IOUtilityService(BaseService):
             # JSON's standard decoder expects text.
             read_mode = "r" if requested_format == "json" else "rb"
             hdf5_checks: list[str] | None = None
+            spectrum_checks: list[str] | None = None
             with publication.open_reader(
                 read_mode,
                 encoding=None if read_mode == "rb" else "utf-8",
@@ -3229,6 +3403,10 @@ class IOUtilityService(BaseService):
                         ),
                     )
                     reopened_rows = len(reopened)
+                    if object_type == "spectrum":
+                        spectrum_checks = _verify_spectrum_table(
+                            table, reopened, requested_format
+                        )
                 elif requested_format == "fits":
                     with fits.open(
                         reopened_stream, checksum=True, memmap=False
@@ -3261,6 +3439,15 @@ class IOUtilityService(BaseService):
                             raise ValueError(
                                 "FITS verification could not find object metadata"
                             )
+                        if object_type == "spectrum":
+                            reopened = Table(hdul[1].data)
+                            for column in hdul[1].columns:
+                                if column.unit:
+                                    reopened[column.name].unit = u.Unit(column.unit)
+                            reopened.meta = json.loads(hdul["METADATA"].data["JSON"][0])
+                            spectrum_checks = _verify_spectrum_table(
+                                table, reopened, requested_format
+                            )
                 elif requested_format == "hdf5":
                     assert h5py_module is not None
                     assert hdf5_manifest is not None
@@ -3277,11 +3464,30 @@ class IOUtilityService(BaseService):
                     )
                     hdf5_checks = _verify_hdf5_table(table, reopened)
                     reopened_rows = len(reopened)
+                    if object_type == "spectrum":
+                        spectrum_checks = _verify_spectrum_table(
+                            table, reopened, requested_format
+                        )
                 else:
                     reopened_json = json.load(reopened_stream)
                     if reopened_json.get("schema") != "stingray-explorer.tabular.v1":
                         raise ValueError("JSON verification found an unexpected schema")
                     reopened_rows = int(reopened_json.get("row_count", -1))
+                    if object_type == "spectrum":
+                        if reopened_json != payload or list(
+                            reopened_json.get("columns", {})
+                        ) != list(payload["columns"]):
+                            raise ValueError(
+                                "Spectrum semantic verification changed numeric values, units, or frozen result identity"
+                            )
+                        spectrum_checks = [
+                            "ordered_columns",
+                            "numeric_values",
+                            "nullable_values",
+                            "complex_components",
+                            "column_units",
+                            "result_identity_and_original_inputs",
+                        ]
             if reopened_rows != row_count:
                 raise ValueError(
                     f"Reopened artifact has {reopened_rows:,} rows; expected {row_count:,}"
@@ -3315,6 +3521,27 @@ class IOUtilityService(BaseService):
                     parameters=provenance_parameters,
                 ),
             }
+            source_identity = getattr(obj, "result_identity", None)
+            if isinstance(source_identity, dict) and source_identity.get("result_id"):
+                identity = copy.deepcopy(source_identity)
+                data["result_id"] = identity["result_id"]
+                data["backend_session_id"] = identity["backend_session_id"]
+                data["result_identity"] = identity
+                data["provenance"]["input_source"].update(
+                    {
+                        "result_id": identity["result_id"],
+                        "backend_session_id": identity["backend_session_id"],
+                    }
+                )
+            if object_type == "spectrum":
+                assert spectrum_checks is not None
+                data["verification"] = {
+                    "schema": "stingray-explorer.spectrum-export.v1",
+                    "format": requested_format,
+                    "semantic_round_trip": True,
+                    "metadata_preserved": requested_format != "csv",
+                    "checks": spectrum_checks,
+                }
             if requested_format == "hdf5":
                 assert h5py_module is not None
                 assert hdf5_checks is not None
@@ -3325,6 +3552,9 @@ class IOUtilityService(BaseService):
                     "checks": hdf5_checks,
                     "h5py_version": str(getattr(h5py_module, "__version__", "unknown")),
                 }
+                if object_type == "spectrum":
+                    data["verification"]["metadata_preserved"] = True
+                    data["verification"]["spectrum_checks"] = spectrum_checks
             return self.create_result(
                 success=True,
                 data=data,

@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/testUtils';
 import { useUIStore } from '@/store/uiStore';
+import { BackendContext } from '@/context/BackendContext';
+import { publishBackendEpoch } from '@/api/backendEpoch';
 import type {
+  ExportableObject,
   ExportableObjectsResult,
   FileInspectionResult,
   RmfInspectionResult,
@@ -39,6 +42,13 @@ vi.mock('@/components/plots/PlotlyChart', () => ({
 import IOPage from './index';
 
 const CAPABILITIES: ExportableObjectsResult['capability_matrix'] = {
+  spectrum: {
+    csv: { supported: true, notes: 'Numeric spectrum columns only; metadata is not preserved.' },
+    ecsv: { supported: true, notes: 'Spectrum columns and original input metadata.' },
+    json: { supported: true, notes: 'Spectrum envelope with identity and provenance.' },
+    fits: { supported: true, notes: 'Generic spectrum table with metadata.' },
+    hdf5: { supported: false, notes: 'HDF5 unavailable.', reason: 'h5py unavailable.' },
+  },
   event_list: {
     csv: { supported: true, notes: 'Tabular only' },
     ecsv: { supported: true, notes: 'Metadata' },
@@ -81,6 +91,7 @@ const CAPABILITIES: ExportableObjectsResult['capability_matrix'] = {
 };
 
 const HDF5_CAPABILITIES: ExportableObjectsResult['capability_matrix'] = {
+  spectrum: CAPABILITIES.spectrum,
   event_list: {
     ...CAPABILITIES.event_list,
     hdf5: {
@@ -112,6 +123,19 @@ const HDF5_CAPABILITIES: ExportableObjectsResult['capability_matrix'] = {
     },
   },
 };
+
+function spectrumObject(resultId: string, name = 'power'): ExportableObject {
+  return {
+    object_type: 'spectrum',
+    name,
+    row_count: 3,
+    exportable: true,
+    formats: ['ecsv'],
+    reason: null,
+    result_id: resultId,
+    backend_session_id: 'session-one',
+  };
+}
 
 function catalog(
   objects: ExportableObjectsResult['objects'] = []
@@ -237,6 +261,7 @@ describe('General I/O Utilities page', () => {
   });
 
   afterEach(() => {
+    publishBackendEpoch(null, true);
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
       value: originalElectronApi,
@@ -578,6 +603,278 @@ describe('General I/O Utilities page', () => {
     await userEvent.click(screen.getByRole('option', { name: 'FITS' }));
     expect(screen.getByLabelText('Destination')).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Export' })).toBeDisabled();
+  });
+
+  it('exports a spectrum with its selected result identity and generic semantic verification', async () => {
+    listExportableObjects.mockResolvedValue(success(catalog([
+      spectrumObject('result-original', 'cross'),
+      {
+        object_type: 'spectrum',
+        name: 'dynamic',
+        row_count: null,
+        exportable: false,
+        formats: [],
+        reason: 'Two-dimensional dynamical spectra require a different export schema.',
+      },
+    ])));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        ...originalElectronApi,
+        saveGrantedFile: vi.fn().mockResolvedValue({
+          path: '/exports/cross.ecsv',
+          grant: 'write-grant',
+        }),
+      },
+    });
+    exportObject.mockResolvedValue(success({
+      path: '/exports/cross.ecsv',
+      bytes: 512,
+      format: 'ecsv',
+      row_count: 3,
+      object_type: 'spectrum',
+      object_name: 'cross',
+      verified: true,
+      warnings: [],
+      verification: {
+        schema: 'stingray-explorer.spectrum-export.v1',
+        semantic_round_trip: true,
+        checks: ['Complex components and original inputs match.'],
+        format: 'ecsv',
+        metadata_preserved: true,
+      },
+      provenance: { operation: 'export_loaded_object' },
+    }));
+    renderWithProviders(<IOPage />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Export / conversion' }));
+    await screen.findByLabelText('Loaded object');
+    await userEvent.click(screen.getByLabelText('Loaded object'));
+    expect(screen.getByRole('option', { name: /dynamic/ })).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('button', { name: 'Choose destination' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Export' }));
+    expect(exportObject).toHaveBeenCalledWith({
+      object_type: 'spectrum',
+      object_name: 'cross',
+      expected_result_id: 'result-original',
+      format: 'ecsv',
+      destination_path: '/exports/cross.ecsv',
+      destination_grant: 'write-grant',
+    });
+    expect(await screen.findByText('Complex components and original inputs match.')).toBeInTheDocument();
+    expect(screen.queryByText('h5py version')).not.toBeInTheDocument();
+  });
+
+  it.each(['spectrum', 'lightcurve'] as const)(
+    'requires a fresh native destination when a same-named %s is replaced', async (objectType) => {
+    const original = { ...spectrumObject('result-one'), object_type: objectType };
+    listExportableObjects.mockResolvedValueOnce(success(catalog([original])))
+      .mockResolvedValue(success(catalog([{ ...original, result_id: 'result-two' }])));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        ...originalElectronApi,
+        saveGrantedFile: vi.fn().mockResolvedValue({
+          path: '/exports/power.ecsv',
+          grant: 'original-grant',
+        }),
+      },
+    });
+    renderWithProviders(<IOPage />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Export / conversion' }));
+    await screen.findByLabelText('Loaded object');
+    await userEvent.click(screen.getByRole('button', { name: 'Choose destination' }));
+    expect(screen.getByLabelText('Destination')).toHaveValue('/exports/power.ecsv');
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(listExportableObjects).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByLabelText('Destination')).toHaveValue(''));
+    expect(screen.getByRole('button', { name: 'Export' })).toBeDisabled();
+  });
+
+  it('binds an identified light curve export to its original result ID', async () => {
+    listExportableObjects.mockResolvedValue(success(catalog([
+      { ...spectrumObject('lightcurve-result', 'curve'), object_type: 'lightcurve' },
+    ])));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        ...originalElectronApi,
+        saveGrantedFile: vi.fn().mockResolvedValue({
+          path: '/exports/curve.ecsv', grant: 'curve-grant',
+        }),
+      },
+    });
+    exportObject.mockResolvedValue(success({
+      path: '/exports/curve.ecsv', bytes: 256, format: 'ecsv', row_count: 3,
+      object_type: 'lightcurve', object_name: 'curve', result_id: 'lightcurve-result',
+      verified: true, warnings: [], provenance: { operation: 'export_loaded_object' },
+    }));
+    renderWithProviders(<IOPage />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Export / conversion' }));
+    await screen.findByText('Source result: lightcurve-result');
+    await userEvent.click(screen.getByRole('button', { name: 'Choose destination' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Export' }));
+    expect(exportObject).toHaveBeenCalledWith({
+      object_type: 'lightcurve', object_name: 'curve', expected_result_id: 'lightcurve-result',
+      format: 'ecsv', destination_path: '/exports/curve.ecsv', destination_grant: 'curve-grant',
+    });
+  });
+
+  it('ignores a native save-dialog completion for a replaced spectrum', async () => {
+    const original = spectrumObject('result-one');
+    listExportableObjects.mockResolvedValueOnce(success(catalog([original])))
+      .mockResolvedValue(success(catalog([{ ...original, result_id: 'result-two' }])));
+    let finishDialog: ((value: { path: string; grant: string }) => void) | undefined;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        ...originalElectronApi,
+        saveGrantedFile: vi.fn().mockImplementation(() => new Promise((resolve) => {
+          finishDialog = resolve;
+        })),
+      },
+    });
+    renderWithProviders(<IOPage />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Export / conversion' }));
+    await screen.findByLabelText('Loaded object');
+    await userEvent.click(screen.getByRole('button', { name: 'Choose destination' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(listExportableObjects).toHaveBeenCalledTimes(2));
+    await screen.findByText('Spectrum result: result-two');
+    await act(async () => {
+      finishDialog?.({ path: '/exports/old-power.ecsv', grant: 'old-grant' });
+      await Promise.resolve();
+    });
+    expect(screen.getByLabelText('Destination')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Export' })).toBeDisabled();
+  });
+
+  it('invalidates catalogs and native grants immediately when the backend generation changes', async () => {
+    listExportableObjects.mockResolvedValue(success(catalog([spectrumObject('result-one')])));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        ...originalElectronApi,
+        saveGrantedFile: vi.fn().mockResolvedValue({
+          path: '/exports/power.ecsv',
+          grant: 'old-grant',
+        }),
+      },
+    });
+    const ready = {
+      generation: 1,
+      phase: 'ready' as const,
+      port: 51001,
+      isReady: true,
+      error: null,
+    };
+    const view = renderWithProviders(
+      <BackendContext.Provider value={ready}><IOPage /></BackendContext.Provider>
+    );
+    await userEvent.click(screen.getByRole('tab', { name: 'Export / conversion' }));
+    await screen.findByLabelText('Loaded object');
+    await userEvent.click(screen.getByRole('button', { name: 'Choose destination' }));
+    expect(screen.getByRole('button', { name: 'Export' })).toBeEnabled();
+    view.rerender(
+      <BackendContext.Provider
+        value={{ ...ready, generation: 2, phase: 'starting', port: null, isReady: false }}
+      >
+        <IOPage />
+      </BackendContext.Provider>
+    );
+    expect(screen.queryByLabelText('Loaded object')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('/exports/power.ecsv')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the newest destination when same-selection dialogs complete out of order', async () => {
+    listExportableObjects.mockResolvedValue(success(catalog([spectrumObject('result-one')])));
+    type Destination = { path: string; grant: string };
+    let finishOlder: ((selection: Destination) => void) | undefined;
+    let finishNewer: ((selection: Destination) => void) | undefined;
+    const saveGrantedFile = vi.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => { finishOlder = resolve; }))
+      .mockImplementationOnce(() => new Promise((resolve) => { finishNewer = resolve; }));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { ...originalElectronApi, saveGrantedFile },
+    });
+    renderWithProviders(<IOPage />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Export / conversion' }));
+    await screen.findByLabelText('Loaded object');
+    await userEvent.click(screen.getByRole('button', { name: 'Choose destination' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Choose destination' }));
+    await act(async () => {
+      finishNewer?.({ path: '/exports/newer.ecsv', grant: 'newer-grant' });
+      await Promise.resolve();
+    });
+    expect(screen.getByLabelText('Destination')).toHaveValue('/exports/newer.ecsv');
+    await act(async () => {
+      finishOlder?.({ path: '/exports/older.ecsv', grant: 'older-grant' });
+      await Promise.resolve();
+    });
+    expect(screen.getByLabelText('Destination')).toHaveValue('/exports/newer.ecsv');
+  });
+
+  it('ignores a catalog response from the previous backend generation', async () => {
+    const spectrum = { ...spectrumObject('new-result', 'new_power'), backend_session_id: 'session-two' };
+    let finishOldCatalog: ((value: unknown) => void) | undefined;
+    listExportableObjects.mockImplementationOnce(() => new Promise((resolve) => {
+      finishOldCatalog = resolve;
+    })).mockResolvedValue(success(catalog([spectrum])));
+    const ready = {
+      generation: 1,
+      phase: 'ready' as const,
+      port: 51001,
+      isReady: true,
+      error: null,
+    };
+    const view = renderWithProviders(
+      <BackendContext.Provider value={ready}><IOPage /></BackendContext.Provider>
+    );
+    await userEvent.click(screen.getByRole('tab', { name: 'Export / conversion' }));
+    await waitFor(() => expect(listExportableObjects).toHaveBeenCalledTimes(1));
+    view.rerender(
+      <BackendContext.Provider value={{ ...ready, generation: 2, port: 51002 }}>
+        <IOPage />
+      </BackendContext.Provider>
+    );
+    await screen.findByText('Spectrum result: new-result');
+    await act(async () => {
+      finishOldCatalog?.(success(catalog([{
+        ...spectrum,
+        name: 'old_power',
+        result_id: 'old-result',
+        backend_session_id: 'session-one',
+      }])));
+      await Promise.resolve();
+    });
+    expect(screen.getByText('Spectrum result: new-result')).toBeInTheDocument();
+    expect(screen.queryByText('Spectrum result: old-result')).not.toBeInTheDocument();
+  });
+
+  it('rejects a file-dialog completion after an epoch change before React rerenders', async () => {
+    let finishDialog: ((selection: Array<{ path: string; grant: string }>) => void) | undefined;
+    const openGrantedFile = vi.fn()
+      .mockResolvedValueOnce([{ path: '/science/events.fits', grant: 'first-grant' }])
+      .mockImplementationOnce(() => new Promise((resolve) => { finishDialog = resolve; }));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { ...originalElectronApi, openGrantedFile },
+    });
+    inspectFile.mockResolvedValue(success(INSPECTION));
+    renderWithProviders(<IOPage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Choose' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Inspect file' }));
+    await screen.findByText('58000.12345678901234568');
+    await userEvent.click(screen.getByRole('button', { name: 'Choose' }));
+    await act(async () => {
+      publishBackendEpoch(9, false);
+      finishDialog?.([{ path: '/science/stale.fits', grant: 'stale-grant' }]);
+      await Promise.resolve();
+    });
+    expect(screen.getByLabelText('Scientific file')).toHaveValue('/science/events.fits');
+    expect(screen.getByText('58000.12345678901234568')).toBeInTheDocument();
   });
 
   it('offers only capability-advertised HDF5 with an exact .hdf5 destination and verification record', async () => {

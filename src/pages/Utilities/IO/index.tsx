@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useWorkspaceState } from '@/api/workspaceSession';
+import ProjectPanel from '@/components/analysis/ProjectPanel';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -39,6 +41,8 @@ import {
 } from '@/components/utilities/UtilityResult';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import { useAnalysisRunner } from '@/hooks/useAnalysisRunner';
+import { useBackendContext } from '@/context/BackendContext';
+import { captureBackendEpoch, isBackendEpochCurrent } from '@/api/backendEpoch';
 import { EVENT_LISTS_QUERY_KEY } from '@/hooks/useEventLists';
 import { parseNumericArray, validateDerivedName } from '@/utils/utilityInputs';
 import {
@@ -117,14 +121,18 @@ function getObjectFormats(
   catalog: ExportableObjectsResult | null
 ): UtilityExportFormat[] {
   if (!object || !catalog) return [];
+  if (object.object_type === 'spectrum' && !object.result_id) return [];
   const advertisedFormats = new Set(catalog.format_allowlist);
   const capabilityMatrix = catalog.capability_matrix[object.object_type];
   return object.formats.filter(
-    (format) => advertisedFormats.has(format) && capabilityMatrix[format]?.supported === true
+    (format) => advertisedFormats.has(format) && capabilityMatrix?.[format]?.supported === true
   );
 }
 
 function getObjectKey(object: ExportableObject): string {
+  if (object.result_id) {
+    return `${object.object_type}:${object.name}:${object.backend_session_id ?? ''}:${object.result_id ?? ''}`;
+  }
   return `${object.object_type}:${getObjectName(object)}`;
 }
 
@@ -209,7 +217,7 @@ const ExportCapabilitySummary: React.FC<{ catalog: ExportableObjectsResult }> = 
         object_type: objectType.replace(/_/g, ' '),
         ...Object.fromEntries(
           catalog.format_allowlist.map((allowedFormat) => {
-            const capability = matrix[allowedFormat];
+            const capability = matrix?.[allowedFormat];
             return [
               allowedFormat,
               capability?.supported
@@ -238,15 +246,15 @@ const ExportCapabilitySummary: React.FC<{ catalog: ExportableObjectsResult }> = 
 
 interface FileInspectorPanelProps {
   selection: GrantedFileSelection | null;
-  onSelectionChange: (selection: GrantedFileSelection | null) => void;
+  onSelectionChange: (selection: GrantedFileSelection | null) => boolean;
 }
 
 const FileInspectorPanel: React.FC<FileInspectorPanelProps> = ({ selection, onSelectionChange }) => {
   const inspection = useAnalysisRunner<FileInspectionResult>('File inspection');
 
   const changeSelection = (nextSelection: GrantedFileSelection | null): void => {
+    if (!onSelectionChange(nextSelection)) return;
     inspection.reset();
-    onSelectionChange(nextSelection);
   };
 
   const inspect = (): void => {
@@ -367,7 +375,7 @@ const FileInspectorPanel: React.FC<FileInspectorPanelProps> = ({ selection, onSe
 
 interface RmfPanelProps {
   rmfSelection: GrantedFileSelection | null;
-  onRmfSelectionChange: (selection: GrantedFileSelection | null) => void;
+  onRmfSelectionChange: (selection: GrantedFileSelection | null) => boolean;
   eventLists: ExportableObject[];
   onEventListSaved: () => void;
 }
@@ -382,9 +390,9 @@ const RmfPanel: React.FC<RmfPanelProps> = ({
   const rmfInspection = useAnalysisRunner<RmfInspectionResult>('RMF inspection');
   const piConversion = useAnalysisRunner<PiConversionResult>('PI-to-energy conversion');
   const eventConversion = useAnalysisRunner<EventListConversionResult>('Derived EventList conversion');
-  const [piText, setPiText] = useState('');
-  const [sourceEventList, setSourceEventList] = useState('');
-  const [saveAs, setSaveAs] = useState('');
+  const [piText, setPiText] = useWorkspaceState('Utilities/IO/index.tsx:piText:1', '');
+  const [sourceEventList, setSourceEventList] = useWorkspaceState('Utilities/IO/index.tsx:sourceEventList:2', '');
+  const [saveAs, setSaveAs] = useWorkspaceState('Utilities/IO/index.tsx:saveAs:3', '');
   const [piResultSignature, setPiResultSignature] = useState<string | null>(null);
   const [piRequestSignature, setPiRequestSignature] = useState<string | null>(null);
   const [eventResultSignature, setEventResultSignature] = useState<string | null>(null);
@@ -427,10 +435,10 @@ const RmfPanel: React.FC<RmfPanelProps> = ({
   const conversionUnavailable = selectedRmfInspection?.conversion_supported === false;
 
   const changeRmfSelection = (selection: GrantedFileSelection | null): void => {
+    if (!onRmfSelectionChange(selection)) return;
     rmfInspection.reset();
     piConversion.reset();
     eventConversion.reset();
-    onRmfSelectionChange(selection);
   };
 
   const inspectRmf = (): void => {
@@ -610,8 +618,7 @@ const RmfPanel: React.FC<RmfPanelProps> = ({
               <UtilityWarnings warnings={piResult.warnings} />
               {plot && plot.pi.length > 0 ? (
                 <Paper variant="outlined" sx={{ p: 1 }}>
-                  <PlotlyChart
-                    height={330}
+                  <PlotlyChart workspaceKey='Utilities/IO/index.tsx:chart:1'                     height={330}
                     data={[
                       {
                         x: plot.pi,
@@ -743,8 +750,7 @@ const RmfPanel: React.FC<RmfPanelProps> = ({
                 />
                 {eventResult.plot.arrays[0].length > 0 ? (
                   <Paper variant="outlined" sx={{ p: 1 }}>
-                    <PlotlyChart
-                      height={330}
+                    <PlotlyChart workspaceKey='Utilities/IO/index.tsx:chart:2'                       height={330}
                       data={[
                         {
                           x: eventResult.plot.arrays[0],
@@ -805,29 +811,42 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
   objectsError,
   onRefresh,
 }) => {
+  const { generation, isReady } = useBackendContext();
+  const backendAvailable = generation === null || isReady;
+  const backendKey = `${generation ?? 'unmanaged'}:${backendAvailable}`;
   const objects = catalog?.objects ?? EMPTY_EXPORTABLE_OBJECTS;
   const exportRunner = useAnalysisRunner<ExportResult>('Scientific data export');
-  const [objectKey, setObjectKey] = useState('');
-  const [format, setFormat] = useState<UtilityExportFormat | ''>('');
+  const [objectKey, setObjectKey] = useWorkspaceState('Utilities/IO/index.tsx:objectKey:4', '');
+  const [format, setFormat] = useWorkspaceState<UtilityExportFormat | ''>('Utilities/IO/index.tsx:format:5', '');
   const [destination, setDestination] = useState<GrantedFileSelection | null>(null);
   const [destinationError, setDestinationError] = useState<string | null>(null);
+  const dialogRevision = useRef(0);
+
+  useEffect(() => {
+    dialogRevision.current += 1;
+    setDestination(null);
+    setDestinationError(null);
+    return () => { dialogRevision.current += 1; };
+  }, [backendKey]);
 
   useEffect(() => {
     const current = objects.find((object) => getObjectKey(object) === objectKey);
     if (current?.exportable) {
       const formats = getObjectFormats(current, catalog);
       if (format && formats.includes(format)) return;
+      dialogRevision.current += 1;
       setFormat(formats[0] ?? '');
       setDestination(null);
       setDestinationError(null);
       return;
     }
     const first = objects.find((object) => object.exportable);
+    dialogRevision.current += 1;
     setObjectKey(first ? getObjectKey(first) : '');
     setFormat(first ? getObjectFormats(first, catalog)[0] ?? '' : '');
     setDestination(null);
     setDestinationError(null);
-  }, [objects, objectKey, format, catalog]);
+  }, [objects, objectKey, format, catalog, setFormat, setObjectKey]);
 
   const selectedObject = useMemo(
     () => objects.find((object) => getObjectKey(object) === objectKey),
@@ -836,10 +855,14 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
   const formats = getObjectFormats(selectedObject, catalog);
   const selectedCapability =
     selectedObject && format && catalog
-      ? catalog.capability_matrix[selectedObject.object_type][format]
+      ? catalog.capability_matrix[selectedObject.object_type]?.[format]
       : null;
+  const selectionKey = `${backendKey}:${selectedObject ? getObjectKey(selectedObject) : ''}:${format}`;
+  const latestSelection = useRef(selectionKey);
+  latestSelection.current = selectionKey;
 
   const selectObject = (nextKey: string): void => {
+    dialogRevision.current += 1;
     const nextObject = objects.find((object) => getObjectKey(object) === nextKey);
     setObjectKey(nextKey);
     setFormat(getObjectFormats(nextObject, catalog)[0] ?? '');
@@ -848,13 +871,17 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
   };
 
   const selectFormat = (nextFormat: UtilityExportFormat): void => {
+    dialogRevision.current += 1;
     setFormat(nextFormat);
     setDestination(null);
     setDestinationError(null);
   };
 
   const chooseDestination = async (): Promise<void> => {
-    if (!selectedObject || !format) return;
+    if (!backendAvailable || loadingObjects || !selectedObject || !format) return;
+    const requestedSelection = latestSelection.current;
+    const requestedEpoch = captureBackendEpoch();
+    const requestedDialogRevision = ++dialogRevision.current;
     setDestinationError(null);
     if (!window.electronAPI?.saveGrantedFile) {
       setDestinationError('The native save dialog is unavailable.');
@@ -868,23 +895,41 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
         filters: [{ name: format.toUpperCase(), extensions: [extension] }],
       });
       // Cancelling the native dialog intentionally preserves the previous destination.
+      if (
+        requestedDialogRevision !== dialogRevision.current ||
+        requestedSelection !== latestSelection.current ||
+        !isBackendEpochCurrent(requestedEpoch)
+      ) return;
       if (selected) setDestination(selected);
     } catch (error) {
+      if (
+        requestedDialogRevision !== dialogRevision.current ||
+        requestedSelection !== latestSelection.current ||
+        !isBackendEpochCurrent(requestedEpoch)
+      ) return;
       const detail = error instanceof Error ? error.message : String(error);
       setDestinationError(`Could not open the native save dialog: ${detail}`);
     }
   };
 
   const exportData = (): void => {
-    if (!selectedObject || !format || !destination) return;
+    if (!backendAvailable || loadingObjects || !selectedObject || !format || !destination) return;
+    const expectedIdentity = selectedObject.result_id
+      ? { expected_result_id: selectedObject.result_id }
+      : {};
+    const inputs = {
+      object_type: selectedObject.object_type,
+      object_name: getObjectName(selectedObject),
+      format,
+      destination_path: destination.path,
+      ...expectedIdentity,
+    };
     void exportRunner.run(() =>
       ioApi.exportObject({
-        object_type: selectedObject.object_type,
-        object_name: getObjectName(selectedObject),
-        format,
-        destination_path: destination.path,
+        ...inputs,
         destination_grant: destination.grant,
-      })
+      }),
+      inputs
     );
   };
 
@@ -972,6 +1017,11 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
                 )
               )
             : null}
+          {selectedObject?.result_id ? (
+            <Typography variant="caption" color="text.secondary">
+              {selectedObject.object_type === 'spectrum' ? 'Spectrum' : 'Source'} result: {selectedObject.result_id}
+            </Typography>
+          ) : null}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
             <TextField
               fullWidth
@@ -985,7 +1035,7 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
               variant="outlined"
               startIcon={<SaveAltIcon />}
               onClick={() => void chooseDestination()}
-              disabled={!selectedObject || !format || exportRunner.running}
+              disabled={!backendAvailable || loadingObjects || !selectedObject || !format || exportRunner.running}
             >
               Choose destination
             </Button>
@@ -994,7 +1044,7 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
           <Box>
             <Button
               variant="contained"
-              disabled={!selectedObject || !format || !destination || exportRunner.running}
+              disabled={!backendAvailable || loadingObjects || !selectedObject || !format || !destination || exportRunner.running}
               onClick={exportData}
             >
               <LoadingButtonContent loading={exportRunner.running} idle="Export" busy="Exporting…" />
@@ -1009,6 +1059,11 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
               </Alert>
               <SummaryGrid
                 values={[
+                  { label: 'Source object', value: exportRunner.result.object_name },
+                  { label: 'Source type', value: exportRunner.result.object_type.replace(/_/g, ' ') },
+                  ...(exportRunner.result.result_id
+                    ? [{ label: 'Source result ID', value: exportRunner.result.result_id }]
+                    : []),
                   { label: 'Format', value: exportRunner.result.format.toUpperCase() },
                   { label: 'File size', value: formatBytes(exportRunner.result.bytes) },
                   {
@@ -1027,12 +1082,19 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
                   <SummaryGrid
                     values={[
                       { label: 'Schema', value: exportRunner.result.verification.schema },
-                      { label: 'Table path', value: exportRunner.result.verification.table_path },
+                      ...(exportRunner.result.verification.table_path
+                        ? [{ label: 'Table path', value: exportRunner.result.verification.table_path }]
+                        : []),
                       {
                         label: 'Semantic round trip',
                         value: exportRunner.result.verification.semantic_round_trip ? 'Passed' : 'Failed',
                       },
-                      { label: 'h5py version', value: exportRunner.result.verification.h5py_version },
+                      ...(exportRunner.result.verification.h5py_version
+                        ? [{ label: 'h5py version', value: exportRunner.result.verification.h5py_version }]
+                        : []),
+                      ...(exportRunner.result.verification.metadata_preserved !== undefined
+                        ? [{ label: 'Original metadata preserved', value: exportRunner.result.verification.metadata_preserved ? 'Yes' : 'No' }]
+                        : []),
                     ]}
                   />
                   <Stack component="ul" spacing={0.5} sx={{ my: 0, pl: 3 }}>
@@ -1054,10 +1116,51 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
 };
 
 const IOPage: React.FC = () => {
-  const [tab, setTab] = useState(0);
-  const [fileSelection, setFileSelection] = useState<GrantedFileSelection | null>(null);
-  const [rmfSelection, setRmfSelection] = useState<GrantedFileSelection | null>(null);
-  const [catalog, setCatalog] = useState<ExportableObjectsResult | null>(null);
+  const { generation, isReady } = useBackendContext();
+  const backendAvailable = generation === null || isReady;
+  const backendKey = `${generation ?? 'unmanaged'}:${backendAvailable}`;
+  const latestBackendKey = useRef(backendKey);
+  latestBackendKey.current = backendKey;
+  const renderedEpoch = captureBackendEpoch();
+  const [tab, setTab] = useWorkspaceState('Utilities/IO/index.tsx:tab:6', 0);
+  const [fileResource, setFileResource] = useState<{
+    backendKey: string;
+    selection: GrantedFileSelection | null;
+  } | null>(null);
+  const [rmfResource, setRmfResource] = useState<{
+    backendKey: string;
+    selection: GrantedFileSelection | null;
+  } | null>(null);
+  const fileSelection = backendAvailable && fileResource?.backendKey === backendKey
+    ? fileResource.selection : null;
+  const rmfSelection = backendAvailable && rmfResource?.backendKey === backendKey
+    ? rmfResource.selection : null;
+  const setFileSelection = (selection: GrantedFileSelection | null): boolean => {
+    if (
+      latestBackendKey.current === backendKey && backendAvailable &&
+      isBackendEpochCurrent(renderedEpoch)
+    ) {
+      setFileResource({ backendKey, selection });
+      return true;
+    }
+    return false;
+  };
+  const setRmfSelection = (selection: GrantedFileSelection | null): boolean => {
+    if (
+      latestBackendKey.current === backendKey && backendAvailable &&
+      isBackendEpochCurrent(renderedEpoch)
+    ) {
+      setRmfResource({ backendKey, selection });
+      return true;
+    }
+    return false;
+  };
+  const [catalogResource, setCatalogResource] = useState<{
+    backendKey: string;
+    catalog: ExportableObjectsResult;
+  } | null>(null);
+  const catalog = backendAvailable && catalogResource?.backendKey === backendKey
+    ? catalogResource.catalog : null;
   const [loadingObjects, setLoadingObjects] = useState(true);
   const [objectsError, setObjectsError] = useState<string | null>(null);
   const [refreshSequence, setRefreshSequence] = useState(0);
@@ -1066,12 +1169,20 @@ const IOPage: React.FC = () => {
     let active = true;
     setLoadingObjects(true);
     setObjectsError(null);
+    if (!backendAvailable) {
+      setCatalogResource(null);
+      setFileResource(null);
+      setRmfResource(null);
+      setLoadingObjects(false);
+      return;
+    }
+    const requestedEpoch = captureBackendEpoch();
     void ioApi
       .listExportableObjects()
       .then((response) => {
-        if (!active) return;
+        if (!active || latestBackendKey.current !== backendKey || !isBackendEpochCurrent(requestedEpoch)) return;
         if (response.success && response.data) {
-          setCatalog(response.data);
+          setCatalogResource({ backendKey, catalog: response.data });
           setObjectsError(null);
         } else {
           setObjectsError(
@@ -1081,14 +1192,14 @@ const IOPage: React.FC = () => {
         setLoadingObjects(false);
       })
       .catch((error: unknown) => {
-        if (!active) return;
+        if (!active || latestBackendKey.current !== backendKey || !isBackendEpochCurrent(requestedEpoch)) return;
         setObjectsError(error instanceof Error ? error.message : 'Could not list exportable objects');
         setLoadingObjects(false);
       });
     return () => {
       active = false;
     };
-  }, [refreshSequence]);
+  }, [refreshSequence, backendAvailable, backendKey]);
 
   const eventLists = useMemo(
     () => (catalog?.objects ?? EMPTY_EXPORTABLE_OBJECTS).filter(
@@ -1124,8 +1235,10 @@ const IOPage: React.FC = () => {
           <Tab id="io-tab-0" aria-controls="io-panel-0" label="File inspector" />
           <Tab id="io-tab-1" aria-controls="io-panel-1" label="RMF utilities" />
           <Tab id="io-tab-2" aria-controls="io-panel-2" label="Export / conversion" />
+          <Tab id="io-tab-3" aria-controls="io-panel-3" label="Analysis projects" />
         </Tabs>
         <Box sx={{ p: { xs: 2, md: 3 } }}>
+          <Box id="io-panel-3" role="tabpanel" aria-labelledby="io-tab-3" hidden={tab !== 3}><ProjectPanel /></Box>
           <Box
             id="io-panel-0"
             role="tabpanel"

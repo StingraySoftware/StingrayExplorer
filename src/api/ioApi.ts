@@ -108,7 +108,7 @@ export interface EventListConversionResult extends UtilityMetadata {
   pi_preserved: boolean;
 }
 
-export type ExportableObjectType = 'event_list' | 'lightcurve' | 'analysis_result';
+export type ExportableObjectType = 'event_list' | 'lightcurve' | 'analysis_result' | 'spectrum';
 export type UtilityExportFormat = 'fits' | 'csv' | 'ecsv' | 'json' | 'hdf5';
 
 export interface ExportableObject {
@@ -119,6 +119,8 @@ export interface ExportableObject {
   formats: UtilityExportFormat[];
   format_reasons?: Partial<Record<UtilityExportFormat, string>>;
   reason: string | null;
+  result_id?: string;
+  backend_session_id?: string;
 }
 
 export interface FormatCapability {
@@ -136,9 +138,9 @@ export interface FormatCapability {
 export interface ExportableObjectsResult {
   objects: ExportableObject[];
   capability_matrix: Record<
-    ExportableObjectType,
+    Exclude<ExportableObjectType, 'spectrum'>,
     Record<UtilityExportFormat, FormatCapability>
-  >;
+  > & Partial<Record<'spectrum', Record<UtilityExportFormat, FormatCapability>>>;
   format_allowlist: UtilityExportFormat[];
   excluded_formats: Record<string, string>;
   row_cap: number;
@@ -152,13 +154,18 @@ export interface ExportResult extends UtilityMetadata {
   row_count: number;
   object_type: ExportableObjectType;
   object_name: string;
+  result_id?: string;
+  backend_session_id?: string;
+  result_identity?: Record<string, unknown>;
   verified: boolean;
   verification?: {
     schema: string;
-    table_path: string;
+    table_path?: string;
     semantic_round_trip: boolean;
     checks: string[];
-    h5py_version: string;
+    h5py_version?: string;
+    format?: UtilityExportFormat;
+    metadata_preserved?: boolean;
   } | null;
 }
 
@@ -201,6 +208,7 @@ export const ioApi = {
     format: UtilityExportFormat;
     destination_path: string;
     destination_grant: string;
+    expected_result_id?: string;
   }): Promise<ApiResponse<ExportResult>> {
     return apiClient.post(`${IO_PREFIX}/export`, params);
   },

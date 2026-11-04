@@ -49,11 +49,12 @@ class ConvertEventListRequest(RmfInputRequest):
 class ExportObjectRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False, strict=True)
 
-    object_type: Literal["event_list", "lightcurve", "analysis_result"]
+    object_type: Literal["event_list", "lightcurve", "analysis_result", "spectrum"]
     object_name: str = Field(min_length=1)
     format: Literal["csv", "ecsv", "json", "fits", "hdf5"]
     destination_path: str = Field(min_length=1, max_length=4_096)
     destination_grant: str = Field(min_length=1, max_length=512)
+    expected_result_id: str | None = Field(default=None, min_length=1, max_length=128)
 
 
 @router.post("/inspect-file", response_model=UtilityResponse)
@@ -132,4 +133,5 @@ async def export_object(
         export_format=request.format,
         destination_path=request.destination_path,
         destination_grant=request.destination_grant,
+        expected_result_id=request.expected_result_id,
     )
