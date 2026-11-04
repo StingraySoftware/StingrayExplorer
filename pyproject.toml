@@ -17,3 +17,9 @@ dependencies = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["python-backend/tests"]
+
+[tool.ruff.lint]
+# Ruff 0.17 widened its default rule set. Keep the rules this project has
+# enforced so far (the pre-0.17 defaults); adopting the new families is a
+# separate code-style migration.
+select = ["E4", "E7", "E9", "F"]

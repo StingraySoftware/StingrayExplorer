@@ -6,7 +6,7 @@ import time
 import psutil
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List
 
 
 @dataclass

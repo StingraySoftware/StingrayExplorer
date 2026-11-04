@@ -1,8 +1,9 @@
 # Stingray Explorer Python Backend Dependencies
 # Core
-fastapi>=0.109.0
-uvicorn[standard]>=0.27.0
-pydantic>=2.5.0
+fastapi>=0.162.0
+starlette>=1.10.0
+uvicorn[standard]>=0.54.0
+pydantic>=2.14.2
 
 # Stingray and scientific stack
 stingray>=2.0.0
@@ -14,17 +15,17 @@ matplotlib>=3.11.2
 tables>=3.11.1
 
 # HTTP client (for URL loading)
-requests>=2.31.0
-httpx>=0.26.0
+requests>=2.34.2
+httpx>=0.28.1
 
 # Performance monitoring
-psutil>=5.9.0
+psutil>=7.2.2
 
 # CORS support
-python-multipart>=0.0.6
+python-multipart>=0.0.33
 
 # Optional: async support
-aiofiles>=23.2.1
+aiofiles>=25.1.0
 
 # HEASARC archive queries
-astroquery>=0.4.8
+astroquery>=0.4.11

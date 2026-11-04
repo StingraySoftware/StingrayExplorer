@@ -3,7 +3,7 @@ Error handling utilities for Stingray Explorer.
 """
 
 import traceback
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 
 class ErrorHandler:
