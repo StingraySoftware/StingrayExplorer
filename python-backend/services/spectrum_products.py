@@ -89,6 +89,8 @@ def input_snapshot(name, events, dataset_id):
     # FITS headers, paths, temporary file grants, or arbitrary object attributes.
     if getattr(events, "gti_selection", None) is not None:
         snapshot["gti_selection"] = _public_lineage(events.gti_selection)
+    if getattr(events, "event_selection", None) is not None:
+        snapshot["selection"] = _public_lineage(events.event_selection)
     calibration = getattr(events, "rmf_conversion_provenance", None)
     if calibration is not None:
         snapshot["rmf_conversion_provenance"] = _public_lineage(calibration)

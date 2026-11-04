@@ -368,7 +368,7 @@ class StateManager:
         with self._lock:
             return self._event_identities.get(name)
 
-    def copy_event_data_with_identity(self, name: str) -> Any:
+    def copy_event_data_with_identity(self, name: str, selection: Any = None) -> Any:
         """Atomically snapshot the exact photons and identity used by an analysis.
 
         A name may be replaced or deleted while a worker runs. Capturing both
@@ -395,12 +395,17 @@ class StateManager:
                 "instr",
                 "dt",
                 "gti_selection",
+                "event_selection",
                 "rmf_conversion_provenance",
                 "mission_io_provenance_json",
             ):
                 if hasattr(event_list, field):
                     setattr(detached, field, copy.deepcopy(getattr(event_list, field)))
-            return detached, self._event_identities[name]
+            dataset_id = self._event_identities[name]
+        # Select photons outside the lock; the detached copy is private.
+        from .event_selection import apply_event_selection
+
+        return apply_event_selection(detached, selection), dataset_id
 
     def get_event_data(self, name: Optional[str] = None) -> Any:
         """
