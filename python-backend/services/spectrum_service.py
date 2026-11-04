@@ -19,7 +19,7 @@ from stingray import (
 from models.event_selection import EventSelection
 
 from .base_service import BaseService
-from .event_selection import band_overlap_warning
+from .event_selection import EventSelectionError, band_overlap_warning
 from .scientific_compatibility import compatible_event_lightcurve
 from .analysis_helpers import (
     analysis_event_copy,
@@ -30,6 +30,8 @@ from .analysis_helpers import (
     segment_size_error as _segment_size_error,
 )
 from .spectrum_products import (
+    _decimal,
+    _public_lineage,
     attach_spectrum_identity,
     input_snapshot,
     spectrum_identity,
@@ -74,6 +76,38 @@ class SpectrumService(BaseService):
         event_list, dataset_id = captured
         snapshot = input_snapshot(name, event_list, dataset_id)
         return event_list, snapshot
+
+    def _lightcurve_source(self, name, dt, selection):
+        """A stored light curve as a spectral source, with its own lineage."""
+        if selection is not None and not selection.is_empty():
+            raise EventSelectionError(
+                "Photon selections apply to event lists; a light curve has no "
+                "photons to select. Remove the selection or choose an event list."
+            )
+        captured = self.state.copy_lightcurve_data_with_identity(name)
+        if captured is None:
+            raise ValueError(f"Light curve '{name}' not found")
+        lightcurve, result_id = captured
+        if dt is not None and not np.isclose(dt, lightcurve.dt, rtol=1e-9, atol=0):
+            raise ValueError(
+                f"Light curve '{name}' has {lightcurve.dt} s bins; leave dt empty "
+                "to use them, or rebin the light curve first"
+            )
+        identity = getattr(lightcurve, "result_identity", None) or {}
+        times = np.asarray(lightcurve.time)
+        source = {
+            "name": name,
+            "kind": "lightcurve",
+            "result_id": result_id,
+            "dt": float(lightcurve.dt),
+            "n_bins": int(times.size),
+            "time_range": [_decimal(np.min(times)), _decimal(np.max(times))],
+            "mjdref": _decimal(getattr(lightcurve, "mjdref", None)),
+            "lineage": _public_lineage(
+                {key: identity.get(key) for key in ("operation", "inputs", "parameters")}
+            ),
+        }
+        return lightcurve, source
 
     def _complete(
         self, spectrum, name, operation, inputs, parameters, warnings, *, parent=None
@@ -153,11 +187,12 @@ class SpectrumService(BaseService):
 
     def create_power_spectrum(
         self,
-        event_list_name: str,
-        dt: float,
+        event_list_name: Optional[str] = None,
+        dt: Optional[float] = None,
         norm: str = "leahy",
         output_name: Optional[str] = None,
         selection: Optional[EventSelection] = None,
+        lightcurve_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a power spectrum from an EventList.
@@ -172,18 +207,24 @@ class SpectrumService(BaseService):
             Result dictionary with power spectrum data
         """
         try:
-            if not self.state.has_event_data(event_list_name):
-                return self.create_result(
-                    success=False,
-                    data=None,
-                    message=f"EventList '{event_list_name}' not found",
-                    error=None,
-                )
-
-            event_list, source = self._source(event_list_name, selection)
+            if (event_list_name is None) == (lightcurve_name is None):
+                raise ValueError("Choose exactly one source: an event list or a light curve")
+            if lightcurve_name is not None:
+                lc, source = self._lightcurve_source(lightcurve_name, dt, selection)
+            else:
+                if not self.state.has_event_data(event_list_name):
+                    return self.create_result(
+                        success=False,
+                        data=None,
+                        message=f"EventList '{event_list_name}' not found",
+                        error=None,
+                    )
+                event_list, source = self._source(event_list_name, selection)
+                lc = None
             warnings = []
             with collect_warnings(warnings):
-                lc = compatible_event_lightcurve(event_list, dt)
+                if lc is None:
+                    lc = compatible_event_lightcurve(event_list, dt)
                 ps = Powerspectrum(lc, norm=norm)
             ps_data = self._complete(
                 ps,
@@ -198,7 +239,7 @@ class SpectrumService(BaseService):
             return self.create_result(
                 success=True,
                 data=ps_data,
-                message=f"Power spectrum created (dt={dt}s, norm={norm})",
+                message=f"Power spectrum created (dt={ps.dt}s, norm={norm})",
                 warnings=warnings,
             )
 
@@ -213,12 +254,13 @@ class SpectrumService(BaseService):
 
     def create_averaged_power_spectrum(
         self,
-        event_list_name: str,
-        dt: float,
-        segment_size: float,
+        event_list_name: Optional[str] = None,
+        dt: Optional[float] = None,
+        segment_size: Optional[float] = None,
         norm: str = "leahy",
         output_name: Optional[str] = None,
         selection: Optional[EventSelection] = None,
+        lightcurve_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create an averaged power spectrum from an EventList.
@@ -234,24 +276,34 @@ class SpectrumService(BaseService):
             Result dictionary with averaged power spectrum data
         """
         try:
-            if not self.state.has_event_data(event_list_name):
-                return self.create_result(
-                    success=False,
-                    data=None,
-                    message=f"EventList '{event_list_name}' not found",
-                    error=None,
-                )
+            if (event_list_name is None) == (lightcurve_name is None):
+                raise ValueError("Choose exactly one source: an event list or a light curve")
+            if lightcurve_name is not None:
+                lc, source = self._lightcurve_source(lightcurve_name, dt, selection)
+                effective_dt = float(lc.dt)
+            else:
+                if not self.state.has_event_data(event_list_name):
+                    return self.create_result(
+                        success=False,
+                        data=None,
+                        message=f"EventList '{event_list_name}' not found",
+                        error=None,
+                    )
+                lc = None
+                effective_dt = dt
 
-            seg_error = _segment_size_error(segment_size, dt)
+            seg_error = _segment_size_error(segment_size, effective_dt)
             if seg_error:
                 return self.create_result(
                     success=False, data=None, message=seg_error, error=None
                 )
 
-            event_list, source = self._source(event_list_name, selection)
+            if lc is None:
+                event_list, source = self._source(event_list_name, selection)
             warnings = []
             with collect_warnings(warnings):
-                lc = compatible_event_lightcurve(event_list, dt)
+                if lc is None:
+                    lc = compatible_event_lightcurve(event_list, dt)
                 ps = AveragedPowerspectrum.from_lightcurve(lc, segment_size, norm=norm)
             ps_data = self._complete(
                 ps,

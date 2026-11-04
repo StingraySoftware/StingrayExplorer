@@ -3,10 +3,10 @@ API routes for Lightcurve operations.
 """
 
 import asyncio
-from typing import List, Optional
+from typing import Annotated, List, Optional, Union
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from models.event_selection import EventSelection
 
 from services.lightcurve_service import DEFAULT_MAX_PLOT_POINTS, LightcurveService
@@ -29,6 +29,25 @@ class CreateLightcurveFromEventListRequest(BaseModel):
     dt: float
     output_name: str
     gti: Optional[List[List[float]]] = None
+    max_points: Optional[int] = Field(default=DEFAULT_MAX_PLOT_POINTS, ge=0)
+
+
+GrantText = Annotated[str, Field(min_length=1, max_length=512)]
+
+
+class LightcurveFileRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    file_path: str = Field(min_length=1, max_length=4_096)
+    file_grant: GrantText
+
+
+class LoadLightcurveFileRequest(LightcurveFileRequest):
+    output_name: str = Field(min_length=1, max_length=64)
+    hdu: Optional[Union[int, str]] = None
+    rate_column: Optional[str] = None
+    band: Optional[int] = Field(default=None, ge=0)
+    mjdref: Optional[float] = None
     max_points: Optional[int] = Field(default=DEFAULT_MAX_PLOT_POINTS, ge=0)
 
 
@@ -61,6 +80,36 @@ async def create_lightcurve_from_event_list(
         dt=request.dt,
         output_name=request.output_name,
         gti=request.gti,
+        max_points=request.max_points,
+    )
+
+
+@router.post("/inspect-file")
+async def inspect_lightcurve_file(
+    request: LightcurveFileRequest,
+    service: LightcurveService = Depends(get_lightcurve_service),
+):
+    """List the light-curve tables (HDUs, rate columns, bands) in a FITS file."""
+    return await asyncio.to_thread(
+        service.inspect_lightcurve_file, request.file_path, request.file_grant
+    )
+
+
+@router.post("/from-file")
+async def load_lightcurve_file(
+    request: LoadLightcurveFileRequest,
+    service: LightcurveService = Depends(get_lightcurve_service),
+):
+    """Store a light curve read from a natively selected mission FITS file."""
+    return await asyncio.to_thread(
+        service.load_lightcurve_file,
+        file_path=request.file_path,
+        file_grant=request.file_grant,
+        output_name=request.output_name,
+        hdu=request.hdu,
+        rate_column=request.rate_column,
+        band=request.band,
+        mjdref=request.mjdref,
         max_points=request.max_points,
     )
 

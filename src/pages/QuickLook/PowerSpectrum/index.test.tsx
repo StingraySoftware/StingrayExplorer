@@ -13,6 +13,9 @@ vi.mock('@/api/dataApi', () => ({ dataApi: { listEventLists: async () => ({
   success: true, data: [{ name: 'obs1', n_events: 1000 }, { name: 'obs2', n_events: 2000 }],
 }) } }));
 vi.mock('@/api/spectrumApi', () => ({ spectrumApi: { createPowerSpectrum, rebinSpectrum, listSpectra } }));
+vi.mock('@/api/lightcurveApi', () => ({ lightcurveApi: { listLightcurves: async () => ({
+  success: true, data: [{ name: 'nicer lc', n_bins: 100, dt: 1, time_range: [0, 100] }],
+}) } }));
 vi.mock('@/api/selectionApi', () => ({ selectionApi: { previewSelection: async () => ({
   success: false, message: 'preview unavailable in this test', error: null,
 }) } }));
@@ -187,5 +190,19 @@ it('sends the chosen energy band with the power spectrum request', async () => {
   await userEvent.click(compute);
   await waitFor(() => expect(createPowerSpectrum).toHaveBeenCalledWith(
     expect.objectContaining({ event_list_name: 'obs1', selection: { energy_range: [2, 10] } })
+  ));
+});
+
+it('computes from a stored light curve using its own bins', async () => {
+  createPowerSpectrum.mockResolvedValue({ success: true, data: original, message: 'computed', error: null });
+  listSpectra.mockResolvedValue({ success: true, data: [] });
+  renderPage();
+  await userEvent.click(screen.getByRole('button', { name: 'Light curve' }));
+  expect(screen.queryByLabelText('Time bin dt (s)')).not.toBeInTheDocument();
+  await userEvent.click(await screen.findByLabelText('Light curve'));
+  await userEvent.click(await screen.findByRole('option', { name: /nicer lc/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Compute' }));
+  await waitFor(() => expect(createPowerSpectrum).toHaveBeenCalledWith(
+    { lightcurve_name: 'nicer lc', norm: 'leahy', output_name: undefined }
   ));
 });

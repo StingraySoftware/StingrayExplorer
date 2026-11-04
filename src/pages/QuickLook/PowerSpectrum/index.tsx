@@ -19,6 +19,8 @@ import {
   Stack,
   Switch,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -26,6 +28,7 @@ import type { Data } from 'plotly.js';
 import PageTemplate from '@/components/common/PageTemplate';
 import PlotlyChart from '@/components/plots/PlotlyChart';
 import EventListSelector from '@/components/analysis/EventListSelector';
+import LightcurveSelector from '@/components/analysis/LightcurveSelector';
 import EventSelectionField from '@/components/analysis/EventSelectionField';
 import { useEventSelection } from '@/hooks/useEventSelection';
 import AnalysisResultIdentity from '@/components/analysis/AnalysisResultIdentity';
@@ -39,6 +42,9 @@ const PowerSpectrumPage: React.FC = () => {
   const [eventList, setEventList] = useWorkspaceState('QuickLook/PowerSpectrum/index.tsx:eventList:1', '');
   const { draft: selectionDraft, setDraft: setSelectionDraft, selection, error: selectionError } =
     useEventSelection('QuickLook/PowerSpectrum/index.tsx:selection');
+  const [source, setSource] = useWorkspaceState<'event_list' | 'lightcurve'>('QuickLook/PowerSpectrum/index.tsx:source', 'event_list');
+  const [lightcurveName, setLightcurveName] = useWorkspaceState('QuickLook/PowerSpectrum/index.tsx:selected:lightcurve', '');
+  const fromLightcurve = source === 'lightcurve';
   const [dt, setDt] = useWorkspaceState('QuickLook/PowerSpectrum/index.tsx:dt:2', '0.0625');
   const [norm, setNorm] = useWorkspaceState('QuickLook/PowerSpectrum/index.tsx:norm:3', 'leahy');
   const [outputName, setOutputName] = useWorkspaceState('QuickLook/PowerSpectrum/index.tsx:outputName:4', '');
@@ -82,24 +88,42 @@ const PowerSpectrumPage: React.FC = () => {
 
   const dtNum = parsePositiveNumber(dt);
   const rebinNum = parsePositiveNumber(rebinFactor);
-  const canRun = selectionError === null && eventList !== '' && dtNum !== null && !running && backendAvailable;
+  const sourceReady = fromLightcurve
+    ? lightcurveName !== ''
+    : selectionError === null && eventList !== '' && dtNum !== null;
+  const canRun = sourceReady && !running && backendAvailable;
   const rebinValid = logRebin ? rebinNum !== null : rebinNum !== null && rebinNum > 1;
 
-  const createParams = {
-    event_list_name: eventList,
-    ...(selection ? { selection } : {}),
-    dt: dtNum,
-    norm,
-    output_name: outputName.trim() || undefined,
-  };
+  const createParams = fromLightcurve
+    ? {
+      lightcurve_name: lightcurveName,
+      norm,
+      output_name: outputName.trim() || undefined,
+    }
+    : {
+      event_list_name: eventList,
+      ...(selection ? { selection } : {}),
+      dt: dtNum,
+      norm,
+      output_name: outputName.trim() || undefined,
+    };
   const creationInputs = { operation: 'power_spectrum', ...createParams };
   const currentInputs = resultInputs?.operation === 'rebin_spectrum'
     ? { ...resultInputs, rebin_factor: rebinNum, log: logRebin, creation_inputs: creationInputs }
     : creationInputs;
 
   const handleRun = (): void => {
-    if (!dtNum || !backendAvailable) return;
-    const params = { ...createParams, dt: dtNum };
+    if (!canRun) return;
+    const output_name = outputName.trim() || undefined;
+    const params = fromLightcurve
+      ? { lightcurve_name: lightcurveName, norm, output_name }
+      : {
+        event_list_name: eventList,
+        ...(selection ? { selection } : {}),
+        dt: dtNum ?? undefined,
+        norm,
+        output_name,
+      };
     void run(() => spectrumApi.createPowerSpectrum(params), { operation: 'power_spectrum', ...params });
   };
 
@@ -151,20 +175,49 @@ const PowerSpectrumPage: React.FC = () => {
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
-                <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
-                <EventSelectionField
-                  eventListName={eventList}
-                  value={selectionDraft}
-                  onChange={setSelectionDraft}
-                />
-                <TextField
-                  label="Time bin dt (s)"
+                <ToggleButtonGroup
                   size="small"
-                  value={dt}
-                  onChange={(e) => setDt(e.target.value)}
-                  error={dt !== '' && dtNum === null}
-                  helperText={dt !== '' && dtNum === null ? 'Must be a positive number' : ' '}
-                />
+                  exclusive
+                  fullWidth
+                  value={source}
+                  onChange={(_event, value: 'event_list' | 'lightcurve' | null) => {
+                    if (value) setSource(value);
+                  }}
+                  aria-label="Source"
+                >
+                  <ToggleButton value="event_list">Event list</ToggleButton>
+                  <ToggleButton value="lightcurve">Light curve</ToggleButton>
+                </ToggleButtonGroup>
+                {fromLightcurve ? (
+                  <>
+                    <LightcurveSelector
+                      label="Light curve"
+                      value={lightcurveName}
+                      onChange={setLightcurveName}
+                    />
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Uses the light curve&apos;s own bins; rebin it on the Light Curve page to
+                      change dt.
+                    </Typography>
+                  </>
+                ) : (
+                  <>
+                    <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
+                    <EventSelectionField
+                      eventListName={eventList}
+                      value={selectionDraft}
+                      onChange={setSelectionDraft}
+                    />
+                    <TextField
+                      label="Time bin dt (s)"
+                      size="small"
+                      value={dt}
+                      onChange={(e) => setDt(e.target.value)}
+                      error={dt !== '' && dtNum === null}
+                      helperText={dt !== '' && dtNum === null ? 'Must be a positive number' : ' '}
+                    />
+                  </>
+                )}
                 <FormControl size="small">
                   <InputLabel id="ps-norm-label">Normalization</InputLabel>
                   <Select

@@ -6,9 +6,11 @@ Handles creation and manipulation of lightcurves.
 
 from copy import deepcopy
 import hashlib
+from pathlib import PurePath
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+from astropy.io import fits
 from stingray import Lightcurve
 from stingray.gti import create_gti_mask, cross_two_gtis
 
@@ -20,7 +22,13 @@ from .scientific_compatibility import (
     compatible_event_lightcurve,
     rebin_lightcurve_with_standard_errors,
 )
+from .lightcurve_files import (
+    LightcurveFileError,
+    describe_lightcurve_hdus,
+    read_lightcurve_fits,
+)
 from .spectrum_products import attach_spectrum_identity, input_snapshot
+from .utility_helpers import open_verified_read_grant, validate_derived_name
 
 # Cap on points transferred for plotting. The full-resolution Lightcurve stays
 # in StateManager; only the JSON payload is strided.
@@ -538,6 +546,108 @@ class LightcurveService(BaseService):
 
         except Exception as e:
             return self.handle_error(e, "Getting lightcurve data", name=name)
+
+    def inspect_lightcurve_file(self, file_path: str, file_grant: str) -> Dict[str, Any]:
+        """Describe the light-curve tables in a natively selected FITS file."""
+        try:
+            with open_verified_read_grant(file_path, file_grant) as granted:
+                granted.stream.seek(0)
+                with fits.open(granted.stream, memmap=False) as hdul:
+                    tables = describe_lightcurve_hdus(hdul)
+            if not tables:
+                raise LightcurveFileError(
+                    "This file has no light-curve table: no extension has a TIME "
+                    "column and a RATE, RATE1 or COUNTS column."
+                )
+            return self.create_result(
+                success=True,
+                data={"tables": tables},
+                message=f"Found {len(tables)} light-curve table(s)",
+            )
+        except Exception as error:
+            return self.handle_error(error, "Inspecting a light-curve file")
+
+    def load_lightcurve_file(
+        self,
+        file_path: str,
+        file_grant: str,
+        output_name: str,
+        hdu: Optional[Any] = None,
+        rate_column: Optional[str] = None,
+        band: Optional[int] = None,
+        mjdref: Optional[float] = None,
+        max_points: Optional[int] = DEFAULT_MAX_PLOT_POINTS,
+    ) -> Dict[str, Any]:
+        """Store a light curve read from a natively selected mission FITS file."""
+        try:
+            problem = validate_derived_name(output_name)
+            if problem:
+                raise ValueError(problem)
+            with open_verified_read_grant(file_path, file_grant) as granted:
+                digest = hashlib.sha256()
+                for block in iter(lambda: granted.stream.read(1 << 20), b""):
+                    digest.update(block)
+                lc, provenance, warnings = read_lightcurve_fits(
+                    granted.stream,
+                    hdu=hdu,
+                    rate_column=rate_column,
+                    band=band,
+                    mjdref=mjdref,
+                )
+                source_name = PurePath(str(granted.path)).name
+
+            source = {
+                "kind": "fits_file",
+                "source_name": source_name,
+                "sha256": digest.hexdigest(),
+                **provenance,
+            }
+            identity = attach_spectrum_identity(
+                lc,
+                operation="lightcurve_from_fits",
+                backend_session_id=self.state.session_id,
+                inputs=[source],
+                parameters={
+                    "output_name": output_name,
+                    "hdu": hdu,
+                    "rate_column": rate_column,
+                    "band": band,
+                    "mjdref": mjdref,
+                    "dt": float(lc.dt),
+                },
+                warnings=warnings,
+                result_kind="lightcurve",
+                input_kind="file",
+            )
+            plot_time, plot_counts, stride = _decimate_for_plot(
+                lc.time, lc.counts, max_points
+            )
+            lc_data = {
+                "name": output_name,
+                "time": plot_time.astype(float).tolist(),
+                "counts": plot_counts.astype(float).tolist(),
+                "dt": float(lc.dt),
+                "n_bins": len(lc.time),
+                "plot_stride": stride,
+                "time_range": [float(lc.time.min()), float(lc.time.max())],
+                "count_rate_mean": float(np.mean(lc.counts / lc.dt)),
+                **deepcopy(identity),
+            }
+            if not self.state.add_lightcurve_data_if_absent(output_name, lc):
+                raise ValueError(
+                    f"Lightcurve '{output_name}' already exists; choose a new output name"
+                )
+            return self.create_result(
+                success=True,
+                data=lc_data,
+                message=(
+                    f"Loaded light curve '{output_name}' from {source_name} "
+                    f"({len(lc.time)} bins of {lc.dt} s)"
+                ),
+                warnings=warnings,
+            )
+        except Exception as error:
+            return self.handle_error(error, "Loading a light-curve file")
 
     def list_lightcurves(self) -> Dict[str, Any]:
         """List all loaded lightcurves."""

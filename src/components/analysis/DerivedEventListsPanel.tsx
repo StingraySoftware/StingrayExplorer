@@ -32,8 +32,8 @@ import { useEventSelection } from '@/hooks/useEventSelection';
 import { useBackendContext } from '@/context/BackendContext';
 import EventListSelector from './EventListSelector';
 import EventSelectionField from './EventSelectionField';
+import { nameError } from '@/utils/derivedName';
 
-const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$/;
 const KEY = 'DataIngestion/DerivedEventLists';
 const GTI_STRATEGIES: Array<{ value: GtiStrategy; label: string }> = [
   { value: 'infer', label: 'Infer (intersect if they overlap, else union)' },
@@ -49,15 +49,6 @@ const OPERATION_LABELS: Record<string, string> = {
   apply_deadtime: 'dead time',
   rmf_pi_to_energy: 'RMF calibrated',
 };
-
-export function nameError(name: string): string | null {
-  if (name === '') return 'Enter a name for the new event list';
-  if (name !== name.trim()) return 'Name must not start or end with whitespace';
-  if (!NAME_PATTERN.test(name)) {
-    return "1–64 characters: letters, digits, spaces, '.', '_' or '-', starting with a letter or digit";
-  }
-  return null;
-}
 
 /** Short lineage text for chips and tooltips, e.g. "filtered from obs1". */
 export function describeLineage(lineage: EventLineage): string {
@@ -323,4 +314,5 @@ const DerivedEventListsPanel: React.FC<DerivedEventListsPanelProps> = ({
   );
 };
 
+export { nameError };
 export default DerivedEventListsPanel;

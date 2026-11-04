@@ -35,8 +35,42 @@ export interface LightcurveSummary {
   result_id?: string;
 }
 
+/** A light-curve table found in a FITS file. */
+export interface LightcurveFileTable {
+  index: number;
+  name: string;
+  rate_columns: string[];
+  n_rows: number;
+  n_bands: number;
+  timeunit: string | null;
+  has_mjdref: boolean;
+  telescope: string | null;
+  instrument: string | null;
+}
+
 // API functions
 export const lightcurveApi = {
+  /** List the light-curve tables in a natively selected FITS file. */
+  async inspectFile(params: {
+    file_path: string;
+    file_grant: string;
+  }): Promise<ApiResponse<{ tables: LightcurveFileTable[] }>> {
+    return apiClient.post('/api/lightcurve/inspect-file', params);
+  },
+
+  /** Store a light curve read from a natively selected mission FITS file. */
+  async loadFromFile(params: {
+    file_path: string;
+    file_grant: string;
+    output_name: string;
+    hdu?: number;
+    rate_column?: string;
+    band?: number;
+    mjdref?: number;
+  }): Promise<ApiResponse<LightcurveData>> {
+    return apiClient.post('/api/lightcurve/from-file', params);
+  },
+
   /**
    * Create a Lightcurve from an EventList
    */

@@ -6,7 +6,7 @@ import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from models.event_selection import EventSelection
 
 from services.spectrum_service import SpectrumService
@@ -23,18 +23,34 @@ def get_spectrum_service(request: Request) -> SpectrumService:
 
 
 # Request Models
-class CreatePowerSpectrumRequest(BaseModel):
-    event_list_name: str
+class _SingleSourceRequest(BaseModel):
+    """An event list (binned at dt, optionally selected) or a stored light curve."""
+
+    event_list_name: Optional[str] = None
+    lightcurve_name: Optional[str] = None
     selection: Optional[EventSelection] = None
-    dt: float
+    dt: Optional[float] = None
+
+    @model_validator(mode="after")
+    def _one_source(self):
+        if (self.event_list_name is None) == (self.lightcurve_name is None):
+            raise ValueError("Give exactly one of event_list_name or lightcurve_name")
+        if self.event_list_name is not None and self.dt is None:
+            raise ValueError("dt is required to bin an event list")
+        if self.lightcurve_name is not None and self.selection is not None:
+            raise ValueError(
+                "Photon selections apply to event lists; a light curve has no "
+                "photons to select"
+            )
+        return self
+
+
+class CreatePowerSpectrumRequest(_SingleSourceRequest):
     norm: str = "leahy"
     output_name: Optional[str] = None
 
 
-class CreateAveragedPowerSpectrumRequest(BaseModel):
-    event_list_name: str
-    selection: Optional[EventSelection] = None
-    dt: float
+class CreateAveragedPowerSpectrumRequest(_SingleSourceRequest):
     segment_size: float
     norm: str = "leahy"
     output_name: Optional[str] = None
@@ -88,6 +104,7 @@ async def create_power_spectrum(
     return await asyncio.to_thread(
         service.create_power_spectrum,
         event_list_name=request.event_list_name,
+        lightcurve_name=request.lightcurve_name,
         selection=request.selection,
         dt=request.dt,
         norm=request.norm,
@@ -104,6 +121,7 @@ async def create_averaged_power_spectrum(
     return await asyncio.to_thread(
         service.create_averaged_power_spectrum,
         event_list_name=request.event_list_name,
+        lightcurve_name=request.lightcurve_name,
         selection=request.selection,
         dt=request.dt,
         segment_size=request.segment_size,

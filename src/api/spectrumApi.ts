@@ -56,14 +56,17 @@ export const spectrumApi = {
    * Create a power spectrum from an EventList
    */
   async createPowerSpectrum(params: {
-    event_list_name: string;
+    /** Exactly one of event_list_name (binned at dt) or lightcurve_name. */
+    event_list_name?: string;
+    lightcurve_name?: string;
     selection?: EventSelection | null;
-    dt: number;
+    dt?: number;
     norm?: string;
     output_name?: string;
   }): Promise<ApiResponse<PowerSpectrumData>> {
     return apiClient.post('/api/spectrum/power-spectrum', {
       event_list_name: params.event_list_name,
+      lightcurve_name: params.lightcurve_name,
       selection: params.selection ?? undefined,
       dt: params.dt,
       norm: params.norm || 'leahy',
@@ -75,15 +78,18 @@ export const spectrumApi = {
    * Create an averaged power spectrum from an EventList
    */
   async createAveragedPowerSpectrum(params: {
-    event_list_name: string;
+    /** Exactly one of event_list_name (binned at dt) or lightcurve_name. */
+    event_list_name?: string;
+    lightcurve_name?: string;
     selection?: EventSelection | null;
-    dt: number;
+    dt?: number;
     segment_size: number;
     norm?: string;
     output_name?: string;
   }): Promise<ApiResponse<PowerSpectrumData>> {
     return apiClient.post('/api/spectrum/averaged-power-spectrum', {
       event_list_name: params.event_list_name,
+      lightcurve_name: params.lightcurve_name,
       selection: params.selection ?? undefined,
       dt: params.dt,
       segment_size: params.segment_size,

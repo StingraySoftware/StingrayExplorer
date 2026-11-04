@@ -85,6 +85,8 @@ import type { BatchFileConfig } from '@/types/job';
 import DerivedEventListsPanel, { describeLineage } from '@/components/analysis/DerivedEventListsPanel';
 import type { GrantedFileSelection } from '@/components/utilities/GrantedFileField';
 import HeasarcBrowserPanel from './HeasarcBrowserPanel';
+import LightcurveFilePanel from './LightcurveFilePanel';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
 import { apiClient } from '@/api/client';
 import { useUIStore } from '@/store/uiStore';
 import { useJobStore } from '@/store/jobStore';
@@ -1203,6 +1205,12 @@ const DataIngestionPage: React.FC = () => {
             label="Browse HEASARC"
             sx={{ textTransform: 'none' }}
           />
+          <Tab
+            icon={<ShowChartIcon />}
+            iconPosition="start"
+            label="Light Curve"
+            sx={{ textTransform: 'none' }}
+          />
         </Tabs>
 
         <CardContent>
@@ -2260,6 +2268,9 @@ const DataIngestionPage: React.FC = () => {
           {dataInputTab === 2 && (
             <HeasarcBrowserPanel onDataLoaded={fetchEventLists} />
           )}
+
+          {/* Tab 3: Load a binned light curve from a mission FITS file */}
+          {dataInputTab === 3 && <LightcurveFilePanel />}
         </CardContent>
       </Card>
 
