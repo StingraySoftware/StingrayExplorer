@@ -1,0 +1,413 @@
+{
+  "date": "2026-10-30",
+  "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+  "scope": "Linux full supported-version matrix; Windows full-suite certification deferred by user",
+  "linux": {
+    "execution": "Debian Bookworm arm64 container with a real Linux kernel",
+    "image": "python:3.12-slim-bookworm",
+    "jobs": 4,
+    "results": [
+      {
+        "version": "2.2",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.2.1",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2.1",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.2.2",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2.2",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.2.3",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2.3",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.2.4",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2.4",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.2.5",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2.5",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.2.6",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2.6",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.2.7",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2.7",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.2.9",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2.9",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.2.10",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.2.10",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.3.0",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.3.0",
+          "numba_enabled": false,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.3.1",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.3.1",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      },
+      {
+        "version": "2.3.2",
+        "exit_code": 0,
+        "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+        "tests": 1415,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 17,
+        "environment": {
+          "stingray": "2.3.2",
+          "numba_enabled": true,
+          "python": "3.12.16",
+          "platform": "Linux-6.12.76-linuxkit-aarch64-with-glibc2.36",
+          "numpy": "2.3.5",
+          "scipy": "1.16.3",
+          "astropy": "7.2.0"
+        },
+        "passed": 1398
+      }
+    ],
+    "total_passed": 18174,
+    "skip_reasons": {
+      "interpreter has no context-aware warnings mode (needs Python 3.14+)": 1,
+      "interpreter has no context-aware warnings mode": 2,
+      "Real Windows NTFS handles are required": 14
+    }
+  },
+  "macos_regression": {
+    "version": "2.2.10",
+    "exit_code": 0,
+    "source_sha256": "3ce111b7a2c874e06c1ad7f81d5c84bbdb20e37b3ea1ffaf47126d3a9b1ca389",
+    "tests": 1415,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 18,
+    "environment": {
+      "stingray": "2.2.10",
+      "numba_enabled": true,
+      "python": "3.14.2",
+      "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+      "numpy": "2.3.5",
+      "scipy": "1.16.3",
+      "astropy": "7.2.0"
+    },
+    "passed": 1397
+  },
+  "renderer": {
+    "system": "Linux",
+    "architecture": "arm64",
+    "node": "24.15.0",
+    "files": 55,
+    "passed": 297,
+    "failed": 0,
+    "typecheck": "passed",
+    "eslint_errors": 0,
+    "eslint_existing_warnings": 2,
+    "production_build": "passed"
+  },
+  "regression_cases_added": {
+    "backend": 15,
+    "renderer": 3
+  },
+  "preservation": {
+    "interchange_fixtures": [
+      {
+        "writer": "Darwin",
+        "sha256": "566596c2194ea973a74aa1db804aca17af104ae4f3fb6cec64d5b24a97a4a76c"
+      },
+      {
+        "writer": "Linux",
+        "sha256": "2d6b7d168883341ec3c569bae78fdcd50938dff010febdf53b0db077e5bb2887"
+      },
+      {
+        "writer": "Windows",
+        "sha256": "63bdea09a2f459ad4b3ad3cc36da3e0401f4ae2264695c340ad00f2d57dce06c"
+      }
+    ],
+    "successful_writer_reader_combinations": 9,
+    "checks": [
+      "exact saved arrays",
+      "complex spectra",
+      "uint64 and endian-specific arrays",
+      "masks",
+      "workspace drafts",
+      "complete identities and provenance",
+      "unchanged original archive SHA256"
+    ],
+    "historical_projects": {
+      "checks": [
+        {
+          "source": "2.2.10.srproj",
+          "reader": "2.2",
+          "exit_code": 0
+        },
+        {
+          "source": "2.2.10.srproj",
+          "reader": "2.2.10",
+          "exit_code": 0
+        },
+        {
+          "source": "2.2.10.srproj",
+          "reader": "2.3.2",
+          "exit_code": 0
+        },
+        {
+          "source": "2.2.srproj",
+          "reader": "2.2",
+          "exit_code": 0
+        },
+        {
+          "source": "2.2.srproj",
+          "reader": "2.2.10",
+          "exit_code": 0
+        },
+        {
+          "source": "2.2.srproj",
+          "reader": "2.3.2",
+          "exit_code": 0
+        },
+        {
+          "source": "2.3.2.srproj",
+          "reader": "2.2",
+          "exit_code": 0
+        },
+        {
+          "source": "2.3.2.srproj",
+          "reader": "2.2.10",
+          "exit_code": 0
+        },
+        {
+          "source": "2.3.2.srproj",
+          "reader": "2.3.2",
+          "exit_code": 0
+        }
+      ],
+      "unchanged_archives": {
+        "2.2.10.srproj": "472c8906ad401209c04477886be69e28f96aa5083aa66a5b4a19059673a2ad4e",
+        "2.2.srproj": "8fb73704e1993ce794d3f66d3c12e897edaf4e2e10447800ec39a265eb1e90ae",
+        "2.3.2.srproj": "bc8c9a3219e25a7c2c14bda67303b9968499e519687f04280a879f84872d6757"
+      }
+    }
+  },
+  "windows": {
+    "status": "deferred_by_user",
+    "vm_restored_to": "stopped",
+    "full_suite_certified": false,
+    "known_failures": [
+      "test_rmf_swap_after_grant_open_cannot_redirect_calibration",
+      "test_gzip_ogip_load_is_preserved_without_reopening_selected_path",
+      "test_direct_remote_load_pins_optional_rmf_before_network",
+      "test_streaming_remote_load_pins_optional_rmf_before_network"
+    ],
+    "cause": "An upstream FITS memory mapping retains the private snapshot; Windows refuses deletion during TemporaryDirectory cleanup.",
+    "renderer_certified": false,
+    "notes": "Exploratory x64-emulated renderer testing hit timeouts. Native Node dependency installation was interrupted when Windows work was deferred."
+  },
+  "ci": {
+    "workflow": ".github/workflows/cross-platform.yml",
+    "default_platform": "ubuntu-24.04",
+    "supported_releases": 13,
+    "windows": "windows-2025 via manual include_windows input; default false",
+    "python": "3.12",
+    "node": "22",
+    "actionlint": "passed",
+    "ruff": "passed",
+    "hosted_workflow_executed": false,
+    "configuration_sha256": "d70e59df4d9ae11695ae0bb218f9cccbcc08ed3e6d35032cf18dda52364a94f9",
+    "runner_sha256": "453bf66815365b9d8ad59586b26d8e50b07aa10ec0367bfa9b4352a986f66c57"
+  },
+  "limitations": [
+    "Linux arm64 was executed locally; Ubuntu x64 hosted jobs are configured but have not run.",
+    "Windows full-suite certification is deferred.",
+    "New extended floating arrays require an exact portable projection or the original numeric ABI; legacy unmarked extended arrays are not certified across ABIs.",
+    "No application installer packaging, GUI end-to-end, commit, push or hosted CI run was performed."
+  ]
+}

@@ -1,0 +1,296 @@
+{
+  "schema": "stingray-explorer.scientific-compatibility-report.v1",
+  "tested_at": "2026-10-30",
+  "scope": "Full application backend suite on macOS arm64 with a fixed Python/scientific stack",
+  "source_sha256": "a082560c8191afc557905199b0dcd8773ed112d02a07668c609a9d60f1a89de6",
+  "runtimes": [
+    {
+      "version": "2.2",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.2.1",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2.1",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.2.2",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2.2",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.2.3",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2.3",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.2.4",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2.4",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.2.5",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2.5",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.2.6",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2.6",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.2.7",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2.7",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.2.9",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2.9",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.2.10",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.2.10",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.3.0",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.3.0",
+        "numba_enabled": false,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.3.1",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.3.1",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    },
+    {
+      "version": "2.3.2",
+      "passed": 1386,
+      "tests": 1400,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 14,
+      "environment": {
+        "stingray": "2.3.2",
+        "numba_enabled": true,
+        "python": "3.14.2",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "numpy": "2.3.5",
+        "scipy": "1.16.3",
+        "astropy": "7.2.0"
+      }
+    }
+  ],
+  "frontend": {
+    "passed": 294,
+    "files": 55,
+    "workers": 1
+  },
+  "checks": {
+    "typecheck": "passed",
+    "eslint_errors": 0,
+    "eslint_existing_warnings": 2,
+    "ruff": "passed",
+    "production_build": "passed"
+  },
+  "project_preservation": {
+    "checks": [
+      {
+        "source": "2.2.srproj",
+        "reader": "2.2",
+        "passed": true
+      },
+      {
+        "source": "2.2.srproj",
+        "reader": "2.2.10",
+        "passed": true
+      },
+      {
+        "source": "2.2.srproj",
+        "reader": "2.3.2",
+        "passed": true
+      },
+      {
+        "source": "2.2.10.srproj",
+        "reader": "2.2",
+        "passed": true
+      },
+      {
+        "source": "2.2.10.srproj",
+        "reader": "2.2.10",
+        "passed": true
+      },
+      {
+        "source": "2.2.10.srproj",
+        "reader": "2.3.2",
+        "passed": true
+      },
+      {
+        "source": "2.3.2.srproj",
+        "reader": "2.2",
+        "passed": true
+      },
+      {
+        "source": "2.3.2.srproj",
+        "reader": "2.2.10",
+        "passed": true
+      },
+      {
+        "source": "2.3.2.srproj",
+        "reader": "2.3.2",
+        "passed": true
+      }
+    ],
+    "archive_sha256": {
+      "2.2.srproj": "8fb73704e1993ce794d3f66d3c12e897edaf4e2e10447800ec39a265eb1e90ae",
+      "2.2.10.srproj": "472c8906ad401209c04477886be69e28f96aa5083aa66a5b4a19059673a2ad4e",
+      "2.3.2.srproj": "bc8c9a3219e25a7c2c14bda67303b9968499e519687f04280a879f84872d6757"
+    },
+    "archives_unchanged": true
+  }
+}
