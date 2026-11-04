@@ -108,7 +108,9 @@ const AnalysisResultIdentity: React.FC<AnalysisResultIdentityProps> = ({
           <Stack component="dl" spacing={1} sx={{ m: 0 }}>
             {Object.entries(inputs).filter(([, value]) => value !== undefined).map(([key, value]) => (
               <Box key={key}>
-                <Typography component="dt" variant="caption" color="text.secondary">
+                <Typography component="dt" variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {key.replace(/_/g, ' ')}
                 </Typography>
                 <Typography
@@ -122,7 +124,9 @@ const AnalysisResultIdentity: React.FC<AnalysisResultIdentityProps> = ({
             ))}
             {result?.inputs !== undefined ? (
               <Box>
-                <Typography component="dt" variant="caption" color="text.secondary">
+                <Typography component="dt" variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   Captured input datasets
                 </Typography>
                 <Typography component="dd" variant="body2" sx={{ m: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: 160, overflow: 'auto' }}>
@@ -132,7 +136,9 @@ const AnalysisResultIdentity: React.FC<AnalysisResultIdentityProps> = ({
             ) : null}
             {result?.parameters !== undefined ? (
               <Box>
-                <Typography component="dt" variant="caption" color="text.secondary">
+                <Typography component="dt" variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   Effective calculation settings
                 </Typography>
                 <Typography component="dd" variant="body2" sx={{ m: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: 160, overflow: 'auto' }}>

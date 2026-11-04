@@ -574,7 +574,12 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
         <Typography variant="h6">Browse HEASARC Archive</Typography>
       </Box>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 3
+        }}>
         Search NASA&apos;s HEASARC archive for X-ray observations by source name, coordinates, or ObsID
       </Typography>
 
@@ -647,7 +652,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
             placeholder="e.g., 83.6287"
             helperText="Right Ascension"
             type="number"
-            inputProps={{ step: 0.0001 }}
+            slotProps={{
+              htmlInput: { step: 0.0001 }
+            }}
           />
           <TextField
             label="Dec (degrees)"
@@ -658,7 +665,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
             placeholder="e.g., 22.0145"
             helperText="Declination"
             type="number"
-            inputProps={{ step: 0.0001 }}
+            slotProps={{
+              htmlInput: { step: 0.0001 }
+            }}
           />
         </Box>
       )}
@@ -687,7 +696,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
             size="small"
             sx={{ width: 200 }}
             type="number"
-            inputProps={{ step: 0.1, min: 0.01, max: 10 }}
+            slotProps={{
+              htmlInput: { step: 0.1, min: 0.01, max: 10 }
+            }}
           />
           <TextField
             label="Max Results"
@@ -699,7 +710,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
             size="small"
             sx={{ width: 140 }}
             type="number"
-            inputProps={{ min: 1, step: 50 }}
+            slotProps={{
+              htmlInput: { min: 1, step: 50 }
+            }}
           />
         </Box>
       )}
@@ -725,8 +738,10 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                   size="small"
                   sx={{ width: 160 }}
                   type="number"
-                  inputProps={{ min: 0, step: 100 }}
                   placeholder="e.g., 1000"
+                  slotProps={{
+                    htmlInput: { min: 0, step: 100 }
+                  }}
                 />
                 <TextField
                   label="Start Date"
@@ -735,7 +750,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                   size="small"
                   sx={{ width: 180 }}
                   type="date"
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{
+                    inputLabel: { shrink: true }
+                  }}
                 />
                 <TextField
                   label="End Date"
@@ -744,7 +761,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                   size="small"
                   sx={{ width: 180 }}
                   type="date"
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{
+                    inputLabel: { shrink: true }
+                  }}
                 />
                 {(minExposure || startDate || endDate) && (
                   <Button
@@ -779,7 +798,12 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
 
       {/* Search Results */}
       {searchMessage && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           {searchMessage}
         </Typography>
       )}
@@ -831,7 +855,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                 >
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <Typography variant="body2" fontFamily="monospace">
+                      <Typography variant="body2" sx={{
+                        fontFamily: "monospace"
+                      }}>
                         {obs.obsid}
                       </Typography>
                       {isNuSTAR && obs.issue_flag === 1 && (
@@ -849,12 +875,16 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                     </Tooltip>
                   </TableCell>
                   <TableCell align="right">
-                    <Typography variant="body2" fontFamily="monospace">
+                    <Typography variant="body2" sx={{
+                      fontFamily: "monospace"
+                    }}>
                       {formatCoord(obs.ra)}
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
-                    <Typography variant="body2" fontFamily="monospace">
+                    <Typography variant="body2" sx={{
+                      fontFamily: "monospace"
+                    }}>
                       {formatCoord(obs.dec)}
                     </Typography>
                   </TableCell>
@@ -908,7 +938,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{
+                      color: "text.secondary"
+                    }}>
                       {obs.time || 'N/A'}
                     </Typography>
                   </TableCell>
@@ -924,7 +956,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                           />
                         </Tooltip>
                       ) : (
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" sx={{
+                          color: "text.secondary"
+                        }}>
                           —
                         </Typography>
                       )}
@@ -948,7 +982,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                           />
                         </Tooltip>
                       ) : (
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" sx={{
+                          color: "text.secondary"
+                        }}>
                           —
                         </Typography>
                       )}
@@ -967,7 +1003,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                             />
                           </Tooltip>
                         ) : (
-                          <Typography variant="body2" color="text.secondary">—</Typography>
+                          <Typography variant="body2" sx={{
+                            color: "text.secondary"
+                          }}>—</Typography>
                         )}
                         {obs.data_in_heasarc === 'N' && (
                           <Tooltip title="Data not available in HEASARC archive">
@@ -996,7 +1034,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                           </Tooltip>
                         )}
                         {(obs.pn_time ?? 0) === 0 && (obs.mos1_time ?? 0) === 0 && (obs.mos2_time ?? 0) === 0 && (
-                          <Typography variant="body2" color="text.secondary">—</Typography>
+                          <Typography variant="body2" sx={{
+                            color: "text.secondary"
+                          }}>—</Typography>
                         )}
                       </Box>
                     </TableCell>
@@ -1013,7 +1053,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                           />
                         </Tooltip>
                       ) : (
-                        <Typography variant="body2" color="text.secondary">—</Typography>
+                        <Typography variant="body2" sx={{
+                          color: "text.secondary"
+                        }}>—</Typography>
                       )}
                     </TableCell>
                   )}
@@ -1029,7 +1071,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
                           />
                         </Tooltip>
                       ) : (
-                        <Typography variant="body2" color="text.secondary">—</Typography>
+                        <Typography variant="body2" sx={{
+                          color: "text.secondary"
+                        }}>—</Typography>
                       )}
                     </TableCell>
                   )}
@@ -1076,10 +1120,14 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
 
       {/* Help Text */}
       <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           <strong>How to use:</strong>
         </Typography>
-        <Typography variant="body2" color="text.secondary" component="div">
+        <Typography variant="body2" component="div" sx={{
+          color: "text.secondary"
+        }}>
           <ol style={{ margin: '8px 0', paddingLeft: 20 }}>
             <li>Select a mission (e.g., NICER, NuSTAR)</li>
             <li>Enter a source name, coordinates, or ObsID</li>
@@ -1088,7 +1136,9 @@ const HeasarcBrowserPanel: React.FC<HeasarcBrowserPanelProps> = ({ onDataLoaded 
             <li>Select an event file and click Download & Load</li>
           </ol>
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" sx={{
+          color: "text.secondary"
+        }}>
           The file browser shows all available files in the observation directory.
           Event files are marked with a star icon.
           Use &quot;Show Filters&quot; to filter by minimum exposure or date range.

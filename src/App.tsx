@@ -266,22 +266,24 @@ const createDarkTheme = (): Theme =>
           root: {
             backdropFilter: 'blur(8px)',
             border: '1px solid',
-          },
-          standardSuccess: {
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-            borderColor: 'rgba(34, 197, 94, 0.2)',
-          },
-          standardWarning: {
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            borderColor: 'rgba(245, 158, 11, 0.2)',
-          },
-          standardError: {
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            borderColor: 'rgba(239, 68, 68, 0.2)',
-          },
-          standardInfo: {
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            borderColor: 'rgba(59, 130, 246, 0.2)',
+            variants: [
+              {
+                props: { variant: 'standard', severity: 'success' },
+                style: { backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.2)' },
+              },
+              {
+                props: { variant: 'standard', severity: 'warning' },
+                style: { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.2)' },
+              },
+              {
+                props: { variant: 'standard', severity: 'error' },
+                style: { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' },
+              },
+              {
+                props: { variant: 'standard', severity: 'info' },
+                style: { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' },
+              },
+            ],
           },
         },
       },
@@ -519,22 +521,24 @@ const createLightTheme = (): Theme =>
         styleOverrides: {
           root: {
             border: '1px solid',
-          },
-          standardSuccess: {
-            backgroundColor: 'rgba(22, 163, 74, 0.08)',
-            borderColor: 'rgba(22, 163, 74, 0.2)',
-          },
-          standardWarning: {
-            backgroundColor: 'rgba(217, 119, 6, 0.08)',
-            borderColor: 'rgba(217, 119, 6, 0.2)',
-          },
-          standardError: {
-            backgroundColor: 'rgba(220, 38, 38, 0.08)',
-            borderColor: 'rgba(220, 38, 38, 0.2)',
-          },
-          standardInfo: {
-            backgroundColor: 'rgba(37, 99, 235, 0.08)',
-            borderColor: 'rgba(37, 99, 235, 0.2)',
+            variants: [
+              {
+                props: { variant: 'standard', severity: 'success' },
+                style: { backgroundColor: 'rgba(22, 163, 74, 0.08)', borderColor: 'rgba(22, 163, 74, 0.2)' },
+              },
+              {
+                props: { variant: 'standard', severity: 'warning' },
+                style: { backgroundColor: 'rgba(217, 119, 6, 0.08)', borderColor: 'rgba(217, 119, 6, 0.2)' },
+              },
+              {
+                props: { variant: 'standard', severity: 'error' },
+                style: { backgroundColor: 'rgba(220, 38, 38, 0.08)', borderColor: 'rgba(220, 38, 38, 0.2)' },
+              },
+              {
+                props: { variant: 'standard', severity: 'info' },
+                style: { backgroundColor: 'rgba(37, 99, 235, 0.08)', borderColor: 'rgba(37, 99, 235, 0.2)' },
+              },
+            ],
           },
         },
       },

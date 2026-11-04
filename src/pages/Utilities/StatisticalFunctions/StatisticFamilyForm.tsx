@@ -26,7 +26,12 @@ export function StatisticFamilyForm({ config, model }: StatisticFamilyFormProps)
         <Stack spacing={2}>
           <Box>
             <Typography variant="subtitle2">{config.title}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mt: 0.75
+              }}>
               {config.description}
             </Typography>
           </Box>
@@ -52,7 +57,9 @@ export function StatisticFamilyForm({ config, model }: StatisticFamilyFormProps)
               onChange={(event) => model.setRawStatistic(event.target.value)}
               error={model.statisticError !== null}
               helperText={model.statisticError ?? config.statisticDomain}
-              inputProps={{ inputMode: 'decimal' }}
+              slotProps={{
+                htmlInput: { inputMode: 'decimal' }
+              }}
             />
           ) : (
             <TextField
@@ -64,7 +71,9 @@ export function StatisticFamilyForm({ config, model }: StatisticFamilyFormProps)
               helperText={
                 model.falseAlarm.error ?? 'Desired global/post-trial FAP; domain: 0 < p < 1'
               }
-              inputProps={{ inputMode: 'decimal' }}
+              slotProps={{
+                htmlInput: { inputMode: 'decimal' }
+              }}
             />
           )}
           <TextField
@@ -76,7 +85,9 @@ export function StatisticFamilyForm({ config, model }: StatisticFamilyFormProps)
             helperText={
               model.trials.error ?? 'Exact independent-trial correction; positive integer'
             }
-            inputProps={{ inputMode: 'numeric' }}
+            slotProps={{
+              htmlInput: { inputMode: 'numeric' }
+            }}
           />
           {config.hasHarmonics && (
             <TextField
@@ -86,7 +97,9 @@ export function StatisticFamilyForm({ config, model }: StatisticFamilyFormProps)
               onChange={(event) => model.setRawHarmonics(event.target.value)}
               error={model.harmonics.error !== null}
               helperText={model.harmonics.error ?? 'Includes the fundamental; positive integer'}
-              inputProps={{ inputMode: 'numeric' }}
+              slotProps={{
+                htmlInput: { inputMode: 'numeric' }
+              }}
             />
           )}
           {config.hasSummedSpectra && (
@@ -97,7 +110,9 @@ export function StatisticFamilyForm({ config, model }: StatisticFamilyFormProps)
               onChange={(event) => model.setRawSummed(event.target.value)}
               error={model.summed.error !== null}
               helperText={model.summed.error ?? 'Number averaged; positive integer'}
-              inputProps={{ inputMode: 'numeric' }}
+              slotProps={{
+                htmlInput: { inputMode: 'numeric' }
+              }}
             />
           )}
           {config.hasRebin && (
@@ -108,7 +123,9 @@ export function StatisticFamilyForm({ config, model }: StatisticFamilyFormProps)
               onChange={(event) => model.setRawRebin(event.target.value)}
               error={model.rebin.error !== null}
               helperText={model.rebin.error ?? 'Averaged frequency bins per output power'}
-              inputProps={{ inputMode: 'numeric' }}
+              slotProps={{
+                htmlInput: { inputMode: 'numeric' }
+              }}
             />
           )}
           {config.hasSamples && (
@@ -123,7 +140,9 @@ export function StatisticFamilyForm({ config, model }: StatisticFamilyFormProps)
                 model.sampleRelationError ??
                 'Integer ≥ 3 and greater than phase bins'
               }
-              inputProps={{ inputMode: 'numeric' }}
+              slotProps={{
+                htmlInput: { inputMode: 'numeric' }
+              }}
             />
           )}
           {config.hasPhaseBins && (
@@ -138,7 +157,9 @@ export function StatisticFamilyForm({ config, model }: StatisticFamilyFormProps)
                 model.sampleRelationError ??
                 `Integer ≥ ${config.minimumPhaseBins ?? 1}${config.hasSamples ? ' and less than samples' : ''}`
               }
-              inputProps={{ inputMode: 'numeric' }}
+              slotProps={{
+                htmlInput: { inputMode: 'numeric' }
+              }}
             />
           )}
           <Alert severity="info" icon={false}>

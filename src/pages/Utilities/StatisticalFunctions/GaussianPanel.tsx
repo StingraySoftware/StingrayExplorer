@@ -86,12 +86,19 @@ export function GaussianPanel() {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={5} lg={4}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 5,
+          lg: 4
+        }}>
         <Card variant="outlined">
           <CardContent component="form" onSubmit={submit}>
             <Stack spacing={2}>
               <Typography variant="subtitle2">Probability → Gaussian sigma</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 Converts a tail probability to an equivalent standard-normal deviation. Log input
                 keeps extremely small probabilities numerically meaningful.
               </Typography>
@@ -123,7 +130,9 @@ export function GaussianPanel() {
                     ? 'Domain: 0 < p < 1'
                     : 'Domain: finite ln(p) < 0; natural logarithm')
                 }
-                inputProps={{ inputMode: 'decimal' }}
+                slotProps={{
+                  htmlInput: { inputMode: 'decimal' }
+                }}
               />
               <FormControl size="small" fullWidth>
                 <InputLabel id="gaussian-sidedness-label">Tail convention</InputLabel>
@@ -154,7 +163,12 @@ export function GaussianPanel() {
           </CardContent>
         </Card>
       </Grid>
-      <Grid item xs={12} md={7} lg={8}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 7,
+          lg: 8
+        }}>
         <ResultFrame
           title="Gaussian significance result"
           running={runner.running}

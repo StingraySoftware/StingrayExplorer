@@ -96,17 +96,19 @@ const JobItem: React.FC<{ job: Job; onCancel: (id: string) => void }> = ({ job, 
         <ListItemText
           primary={job.display_name}
           secondary={job.progress_message}
-          primaryTypographyProps={{
-            variant: 'body2',
-            noWrap: true,
-            sx: { ml: 1, maxWidth: '140px' },
-          }}
-          secondaryTypographyProps={{
-            variant: 'caption',
-            noWrap: true,
-            sx: { ml: 1 },
-          }}
-        />
+          slotProps={{
+            primary: {
+              variant: 'body2',
+              noWrap: true,
+              sx: { ml: 1, maxWidth: '140px' },
+            },
+
+            secondary: {
+              variant: 'caption',
+              noWrap: true,
+              sx: { ml: 1 },
+            }
+          }} />
         {isActive && job.status === 'pending' && (
           <ListItemSecondaryAction>
             <Tooltip title="Cancel job">
@@ -119,13 +121,25 @@ const JobItem: React.FC<{ job: Job; onCancel: (id: string) => void }> = ({ job, 
       </Box>
 
       {job.status === 'running' && job.total_items > 1 && (
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 3 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            mt: 0.5,
+            ml: 3
+          }}>
           {job.completed_items}/{job.total_items} files
         </Typography>
       )}
 
       {!isActive && (
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 3 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            mt: 0.5,
+            ml: 3
+          }}>
           {formatRelativeTime(job.completed_at || job.created_at)}
         </Typography>
       )}
@@ -274,9 +288,12 @@ const JobStatusPanel: React.FC<JobStatusPanelProps> = ({ sidebarOpen }) => {
                   {completedJobs.length > 10 && (
                     <Typography
                       variant="caption"
-                      color="text.secondary"
-                      sx={{ display: 'block', textAlign: 'center', py: 1 }}
-                    >
+                      sx={{
+                        color: "text.secondary",
+                        display: 'block',
+                        textAlign: 'center',
+                        py: 1
+                      }}>
                       +{completedJobs.length - 10} more
                     </Typography>
                   )}
@@ -289,9 +306,12 @@ const JobStatusPanel: React.FC<JobStatusPanelProps> = ({ sidebarOpen }) => {
           {!hasJobs && (
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', textAlign: 'center', py: 2 }}
-            >
+              sx={{
+                color: "text.secondary",
+                display: 'block',
+                textAlign: 'center',
+                py: 2
+              }}>
               No jobs running or completed
             </Typography>
           )}
@@ -300,9 +320,12 @@ const JobStatusPanel: React.FC<JobStatusPanelProps> = ({ sidebarOpen }) => {
           {activeJobs.length === 0 && completedJobs.length > 0 && !showCompleted && (
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', textAlign: 'center', py: 2 }}
-            >
+              sx={{
+                color: "text.secondary",
+                display: 'block',
+                textAlign: 'center',
+                py: 2
+              }}>
               No active jobs
             </Typography>
           )}

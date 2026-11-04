@@ -94,14 +94,18 @@ const InterpretationPanel: React.FC = () => {
       </Alert>
 
       {capabilities.isLoading ? (
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} sx={{
+          alignItems: "center"
+        }}>
           <CircularProgress size={18} />
           <Typography variant="body2">Checking runtime interpreter support…</Typography>
         </Stack>
       ) : capabilities.isError ? (
         <Alert severity="error">Could not load runtime interpreter capabilities.</Alert>
       ) : (
-        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        <Stack direction="row" spacing={1} useFlexGap sx={{
+          flexWrap: "wrap"
+        }}>
           {(supported ?? []).length > 0 ? (
             supported?.map((row) => (
               <Chip
@@ -120,7 +124,9 @@ const InterpretationPanel: React.FC = () => {
         <CardContent>
           <Stack spacing={2}>
             <Typography variant="h6">Read-only FITS interpretation</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               The backend operates on a bounded in-memory copy. The selected FITS file is never
               changed.
             </Typography>
@@ -157,7 +163,9 @@ const InterpretationPanel: React.FC = () => {
             instrument={result.instrument}
             mode={result.mode}
           />
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+          <Stack direction="row" spacing={1} useFlexGap sx={{
+            flexWrap: "wrap"
+          }}>
             <Chip label={`HDU: ${result.hdu}`} />
             <Chip label={`${result.event_count.toLocaleString()} events`} />
             <Chip label={`${result.changed_count.toLocaleString()} channels changed`} />

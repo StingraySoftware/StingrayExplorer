@@ -172,7 +172,12 @@ const LagEnergySpectrumPage: React.FC = () => {
       status="ready"
     >
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4} lg={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+            lg: 3
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Stack spacing={2}>
@@ -307,7 +312,9 @@ const LagEnergySpectrumPage: React.FC = () => {
                     }
                   />
                 </Box>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   Leave both blank to use the full band as the reference; fill both to compare against a
                   specific band. stingray requires both edges or neither.
                 </Typography>
@@ -324,7 +331,12 @@ const LagEnergySpectrumPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8} lg={9}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 8,
+            lg: 9
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
@@ -378,7 +390,9 @@ const LagEnergySpectrumPage: React.FC = () => {
               {result ? (
                 allNull ? (
                   <Box sx={{ py: 10, textAlign: 'center' }}>
-                    <Typography color="text.secondary">
+                    <Typography sx={{
+                      color: "text.secondary"
+                    }}>
                       No finite lag values in any energy band. See the warnings above for why (e.g. low
                       count rate or no variability above the Poisson floor) and try a coarser bin, fewer
                       bands, or a longer segment.
@@ -406,7 +420,9 @@ const LagEnergySpectrumPage: React.FC = () => {
                 )
               ) : (
                 <Box sx={{ py: 10, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
+                  <Typography sx={{
+                    color: "text.secondary"
+                  }}>
                     Choose an event list and compute the lag-energy spectrum.
                   </Typography>
                 </Box>

@@ -328,7 +328,9 @@ const LogPanel: React.FC<LogPanelProps> = ({ leftOffset = 0, rightOffset = 0 }) 
           },
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack direction="row" spacing={1} sx={{
+          alignItems: "center"
+        }}>
           <Terminal fontSize="small" />
           <Typography variant="subtitle2" sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem' }}>Console</Typography>
           <Chip
@@ -365,15 +367,17 @@ const LogPanel: React.FC<LogPanelProps> = ({ leftOffset = 0, rightOffset = 0 }) 
               placeholder="Filter logs..."
               value={filter.search}
               onChange={(e) => setSearchFilter(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search fontSize="small" />
-                  </InputAdornment>
-                ),
-                sx: { fontSize: '0.8rem', height: 32 },
-              }}
               sx={{ width: 200 }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" />
+                    </InputAdornment>
+                  ),
+                  sx: { fontSize: '0.8rem', height: 32 },
+                }
+              }}
             />
 
             <Divider orientation="vertical" flexItem />

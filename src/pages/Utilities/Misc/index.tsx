@@ -218,7 +218,9 @@ function ResultCard<T extends UtilityData>({
           <Box>
             <Typography variant="subtitle2">Result</Typography>
             {running && result ? (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 Updating; the last successful result remains visible.
               </Typography>
             ) : null}
@@ -236,7 +238,9 @@ function ResultCard<T extends UtilityData>({
           ) : (
             <Box sx={{ py: { xs: 5, md: 9 }, textAlign: 'center' }}>
               {running ? <CircularProgress size={28} sx={{ mb: 2 }} /> : null}
-              <Typography color="text.secondary">{emptyText}</Typography>
+              <Typography sx={{
+                color: "text.secondary"
+              }}>{emptyText}</Typography>
             </Box>
           )}
         </Stack>
@@ -376,7 +380,12 @@ function RebinWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={4} lg={3}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 4,
+          lg: 3
+        }}>
         <ParameterCard>
           <Typography variant="subtitle2">Rebin parameters</Typography>
           <FormControl size="small" fullWidth>
@@ -477,7 +486,12 @@ function RebinWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
           </Alert>
         ) : null}
       </Grid>
-      <Grid item xs={12} md={8} lg={9}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 8,
+          lg: 9
+        }}>
         <ResultCard
           {...activeRunner}
           emptyText="Paste aligned x/y arrays, choose a rebinning rule and compute."
@@ -515,14 +529,22 @@ function RebinWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
                   }}
                 />
                 <Grid container spacing={2}>
-                  <Grid item xs={12} lg={6}>
+                  <Grid
+                    size={{
+                      xs: 12,
+                      lg: 6
+                    }}>
                     <NumericResultTable
                       title="Original exact values"
                       columns={SERIES_COLUMNS.slice(0, 4)}
                       rows={buildSeriesRows(result.original)}
                     />
                   </Grid>
-                  <Grid item xs={12} lg={6}>
+                  <Grid
+                    size={{
+                      xs: 12,
+                      lg: 6
+                    }}>
                     <NumericResultTable
                       title="Rebinned exact values"
                       columns={SERIES_COLUMNS}
@@ -581,10 +603,17 @@ function BaselineWorkbench({ capabilities }: { capabilities?: MiscCapabilities }
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={4} lg={3}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 4,
+          lg: 3
+        }}>
         <ParameterCard>
           <Typography variant="subtitle2">Asymmetric least squares</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             Estimates a slowly varying baseline, then returns both the fitted baseline and
             baseline-subtracted series.
           </Typography>
@@ -598,7 +627,12 @@ function BaselineWorkbench({ capabilities }: { capabilities?: MiscCapabilities }
           <RunButton running={runner.running} disabled={Boolean(validationError)} onClick={handleRun}>Estimate baseline</RunButton>
         </ParameterCard>
       </Grid>
-      <Grid item xs={12} md={8} lg={9}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 8,
+          lg: 9
+        }}>
         <ResultCard {...runner} emptyText="Paste a series to estimate its asymmetric least-squares baseline.">
           {(result) => {
             const values = result.plot_preview.values;
@@ -645,10 +679,17 @@ function WindowWorkbench({ capabilities }: { capabilities?: MiscCapabilities }):
   };
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={4} lg={3}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 4,
+          lg: 3
+        }}>
         <ParameterCard>
           <Typography variant="subtitle2">Analysis window</Typography>
-          <Typography variant="body2" color="text.secondary">The allowlist below comes from the installed public Stingray implementation, including its exact spellings.</Typography>
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>The allowlist below comes from the installed public Stingray implementation, including its exact spellings.</Typography>
           <TextField label="Sample count N" value={sampleCount} onChange={(event) => setSampleCount(event.target.value)} size="small" helperText="Dimensionless sample count; N ≥ 2." />
           <FormControl size="small" fullWidth disabled={!capabilities}>
             <InputLabel id="window-type-label">Window type</InputLabel>
@@ -660,7 +701,12 @@ function WindowWorkbench({ capabilities }: { capabilities?: MiscCapabilities }):
           <RunButton running={runner.running} disabled={Boolean(validationError)} onClick={handleRun}>Generate window</RunButton>
         </ParameterCard>
       </Grid>
-      <Grid item xs={12} md={8} lg={9}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 8,
+          lg: 9
+        }}>
         <ResultCard {...runner} emptyText="Choose a runtime-supported window and generate its coefficients.">
           {(result) => {
             const rows = result.sample_index.map((index, position) => ({ index, coefficient: result.window[position] }));
@@ -670,8 +716,16 @@ function WindowWorkbench({ capabilities }: { capabilities?: MiscCapabilities }):
                 <Alert severity="info">Sample index and coefficients are dimensionless. ENBW is reported in FFT-bin units; coherent gain is the coefficient mean.</Alert>
                 <PlotlyChart workspaceKey='Utilities/Misc/index.tsx:chart:3' data={[{ x: previewValues(result.plot_preview, 'sample_index'), y: previewValues(result.plot_preview, 'window'), type: 'scattergl', mode: 'lines', name: result.window_type } as Data]} layout={{ xaxis: { title: { text: 'Sample index' } }, yaxis: { title: { text: 'Window coefficient' } } }} />
                 <Grid container spacing={2}>
-                  <Grid item xs={12} lg={5}><NumericResultTable title="Window summary" columns={[{ key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }]} rows={summaryRows} /></Grid>
-                  <Grid item xs={12} lg={7}><NumericResultTable title="Exact coefficients" columns={[{ key: 'index', label: 'Sample index' }, { key: 'coefficient', label: 'Coefficient' }]} rows={rows} /></Grid>
+                  <Grid
+                    size={{
+                      xs: 12,
+                      lg: 5
+                    }}><NumericResultTable title="Window summary" columns={[{ key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }]} rows={summaryRows} /></Grid>
+                  <Grid
+                    size={{
+                      xs: 12,
+                      lg: 7
+                    }}><NumericResultTable title="Exact coefficients" columns={[{ key: 'index', label: 'Sample index' }, { key: 'coefficient', label: 'Coefficient' }]} rows={rows} /></Grid>
                 </Grid>
               </>
             );
@@ -730,7 +784,12 @@ function SamplingWorkbench({ capabilities }: { capabilities?: MiscCapabilities }
     : [];
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={4} lg={3}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 4,
+          lg: 3
+        }}>
         <ParameterCard>
           <Typography variant="subtitle2">Sampling and binning</Typography>
           <FormControl size="small" fullWidth>
@@ -760,7 +819,12 @@ function SamplingWorkbench({ capabilities }: { capabilities?: MiscCapabilities }
           <RunButton running={activeRunner.running} disabled={Boolean(validationError)} onClick={handleRun}>{mode === 'optimal' ? 'Calculate bin time' : mode === 'power' ? 'Find nearest power' : 'Adjust segment'}</RunButton>
         </ParameterCard>
       </Grid>
-      <Grid item xs={12} md={8} lg={9}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 8,
+          lg: 9
+        }}>
         <ResultCard {...activeRunner} emptyText="Choose a sampling helper to see the requested and adjusted values.">
           {(result) => <>
             <Alert severity="info">{mode === 'power' ? 'All values are dimensionless integers.' : 'Requested, adjusted and delta values use the same time unit supplied in the form. Fractional change is dimensionless.'}</Alert>
@@ -818,7 +882,12 @@ function ErrorWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
   const activeRunner = mode === 'poisson' ? poissonRunner : standardRunner;
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={4} lg={3}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 4,
+          lg: 3
+        }}>
         <ParameterCard>
           <Typography variant="subtitle2">Statistical error helper</Typography>
           <FormControl size="small" fullWidth>
@@ -836,7 +905,12 @@ function ErrorWorkbench({ capabilities }: { capabilities?: MiscCapabilities }): 
           <RunButton running={activeRunner.running} disabled={Boolean(validationError)} onClick={handleRun}>{mode === 'poisson' ? 'Calculate Poisson errors' : 'Calculate standard error'}</RunButton>
         </ParameterCard>
       </Grid>
-      <Grid item xs={12} md={8} lg={9}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 8,
+          lg: 9
+        }}>
         <ResultCard {...activeRunner} emptyText="Supply counts or a rectangular sample matrix to calculate errors.">
           {(result) => mode === 'poisson' ? (() => {
             const value = result as PoissonErrorData;
@@ -919,10 +993,17 @@ function EnergyRangesWorkbench({ capabilities }: { capabilities?: MiscCapabiliti
   };
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={4} lg={3}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 4,
+          lg: 3
+        }}>
         <ParameterCard>
           <Typography variant="subtitle2">Equal-count energy ranges</Typography>
-          <Typography variant="body2" color="text.secondary">Percentile edges aim to place the same number of selected events in each positive-width energy range.</Typography>
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>Percentile edges aim to place the same number of selected events in each positive-width energy range.</Typography>
           <FormControl size="small" fullWidth>
             <InputLabel id="energy-source-label">Energy source</InputLabel>
             <Select labelId="energy-source-label" label="Energy source" value={source} onChange={(event) => setSource(event.target.value as 'pasted' | 'event')}>
@@ -949,7 +1030,12 @@ function EnergyRangesWorkbench({ capabilities }: { capabilities?: MiscCapabiliti
           <RunButton running={runner.running} disabled={Boolean(validationError)} onClick={handleRun}>Create energy ranges</RunButton>
         </ParameterCard>
       </Grid>
-      <Grid item xs={12} md={8} lg={9}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 8,
+          lg: 9
+        }}>
         <ResultCard {...runner} emptyText="Choose exactly one energy source and calculate equal-count ranges.">
           {(result) => {
             const rows = result.counts.map((count, index) => ({ bin: index + 1, lower: result.bin_edges[index], upper: result.bin_edges[index + 1], count }));

@@ -87,11 +87,15 @@ const MissionFieldCard: React.FC<{
   <Card variant="outlined" sx={{ height: '100%' }}>
     <CardContent>
       <Stack spacing={1}>
-        <Typography variant="overline" color="text.secondary">
+        <Typography variant="overline" sx={{
+          color: "text.secondary"
+        }}>
           {label}
         </Typography>
         <Typography variant="h6">{field.value ?? 'Not identified'}</Typography>
-        <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+        <Stack direction="row" spacing={0.75} useFlexGap sx={{
+          flexWrap: "wrap"
+        }}>
           <Chip
             size="small"
             color={field.source_type === 'missing' ? 'default' : field.override ? 'warning' : 'info'}
@@ -107,11 +111,15 @@ const MissionFieldCard: React.FC<{
             />
           ) : null}
         </Stack>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" sx={{
+          color: "text.secondary"
+        }}>
           Source: {field.source ?? 'none'}
         </Typography>
         {field.raw_value && field.raw_value !== field.value ? (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>
             Raw value: {field.raw_value}
           </Typography>
         ) : null}
@@ -131,7 +139,12 @@ export const MissionFieldCards: React.FC<{
       ['Instrument', instrument],
       ['Observing mode', mode],
     ].map(([label, field]) => (
-      <Grid item xs={12} md={4} key={label as string}>
+      <Grid
+        key={label as string}
+        size={{
+          xs: 12,
+          md: 4
+        }}>
         <MissionFieldCard label={label as string} field={field as MissionSourceField} />
       </Grid>
     ))}
@@ -182,52 +195,70 @@ export const OptionalOverrides: React.FC<{
   const errors = overrideErrors(values);
   return (
     <Stack spacing={1.5}>
-    <Alert severity={missionRequired ? 'info' : 'warning'}>
-      Overrides are accepted only when source metadata are absent. They never replace a mission,
-      instrument, or mode already present in an EventList or FITS header.
-    </Alert>
-    <Grid container spacing={1.5}>
-      <Grid item xs={12} md={4}>
-        <TextField
-          fullWidth
-          size="small"
-          label={missionRequired ? 'Mission override (required)' : 'Mission override (if missing)'}
-          value={values.mission}
-          onChange={(event) => onChange({ ...values, mission: event.target.value })}
-          disabled={disabled}
-          required={missionRequired}
-          error={errors.mission !== null}
-          helperText={errors.mission}
-          inputProps={{ maxLength: OVERRIDE_LIMITS.mission }}
-        />
+      <Alert severity={missionRequired ? 'info' : 'warning'}>
+        Overrides are accepted only when source metadata are absent. They never replace a mission,
+        instrument, or mode already present in an EventList or FITS header.
+      </Alert>
+      <Grid container spacing={1.5}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4
+          }}>
+          <TextField
+            fullWidth
+            size="small"
+            label={missionRequired ? 'Mission override (required)' : 'Mission override (if missing)'}
+            value={values.mission}
+            onChange={(event) => onChange({ ...values, mission: event.target.value })}
+            disabled={disabled}
+            required={missionRequired}
+            error={errors.mission !== null}
+            helperText={errors.mission}
+            slotProps={{
+              htmlInput: { maxLength: OVERRIDE_LIMITS.mission }
+            }}
+          />
+        </Grid>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4
+          }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Instrument override (if missing)"
+            value={values.instrument}
+            onChange={(event) => onChange({ ...values, instrument: event.target.value })}
+            disabled={disabled}
+            error={errors.instrument !== null}
+            helperText={errors.instrument}
+            slotProps={{
+              htmlInput: { maxLength: OVERRIDE_LIMITS.instrument }
+            }}
+          />
+        </Grid>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4
+          }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Mode override (if missing)"
+            value={values.mode}
+            onChange={(event) => onChange({ ...values, mode: event.target.value })}
+            disabled={disabled}
+            error={errors.mode !== null}
+            helperText={errors.mode}
+            slotProps={{
+              htmlInput: { maxLength: OVERRIDE_LIMITS.mode }
+            }}
+          />
+        </Grid>
       </Grid>
-      <Grid item xs={12} md={4}>
-        <TextField
-          fullWidth
-          size="small"
-          label="Instrument override (if missing)"
-          value={values.instrument}
-          onChange={(event) => onChange({ ...values, instrument: event.target.value })}
-          disabled={disabled}
-          error={errors.instrument !== null}
-          helperText={errors.instrument}
-          inputProps={{ maxLength: OVERRIDE_LIMITS.instrument }}
-        />
-      </Grid>
-      <Grid item xs={12} md={4}>
-        <TextField
-          fullWidth
-          size="small"
-          label="Mode override (if missing)"
-          value={values.mode}
-          onChange={(event) => onChange({ ...values, mode: event.target.value })}
-          disabled={disabled}
-          error={errors.mode !== null}
-          helperText={errors.mode}
-          inputProps={{ maxLength: OVERRIDE_LIMITS.mode }}
-        />
-      </Grid>
-    </Grid>
     </Stack>
   );
 };

@@ -154,7 +154,12 @@ const AvgCrossSpectrumPage: React.FC = () => {
       status="ready"
     >
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4} lg={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+            lg: 3
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Stack spacing={2}>
@@ -258,7 +263,12 @@ const AvgCrossSpectrumPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8} lg={9}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 8,
+            lg: 9
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
@@ -307,7 +317,9 @@ const AvgCrossSpectrumPage: React.FC = () => {
               {result ? (
                 <Stack spacing={2}>
                   <Box>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>
                       Cross-power magnitude
                     </Typography>
                     <PlotlyChart workspaceKey='QuickLook/AvgCrossSpectrum/index.tsx:chart:1'                       data={magnitudeTrace}
@@ -320,7 +332,9 @@ const AvgCrossSpectrumPage: React.FC = () => {
                   </Box>
                   {phaseTrace.length > 0 && (
                     <Box>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>
                         Cross-spectrum phase
                       </Typography>
                       <PlotlyChart workspaceKey='QuickLook/AvgCrossSpectrum/index.tsx:chart:2'                         data={phaseTrace}
@@ -335,7 +349,9 @@ const AvgCrossSpectrumPage: React.FC = () => {
                 </Stack>
               ) : (
                 <Box sx={{ py: 10, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
+                  <Typography sx={{
+                    color: "text.secondary"
+                  }}>
                     Choose two event lists and compute their averaged cross spectrum.
                   </Typography>
                 </Box>

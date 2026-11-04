@@ -178,7 +178,12 @@ const LightCurvePage: React.FC = () => {
       status="ready"
     >
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4} lg={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+            lg: 3
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Stack spacing={2}>
@@ -281,7 +286,12 @@ const LightCurvePage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8} lg={9}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 8,
+            lg: 9
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
@@ -330,7 +340,9 @@ const LightCurvePage: React.FC = () => {
                 />
               ) : (
                 <Box sx={{ py: 10, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
+                  <Typography sx={{
+                    color: "text.secondary"
+                  }}>
                     Generate a light curve or view a stored one.
                   </Typography>
                 </Box>

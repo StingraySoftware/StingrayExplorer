@@ -154,12 +154,18 @@ const SegmentationPanel: React.FC<SegmentationPanelProps> = ({
         disabled={fixedRunner.running || exposureRunner.running}
       />
       <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 6
+          }}>
           <Card variant="outlined" sx={{ height: '100%' }}>
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="h6">Fixed-duration intervals</Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>
                   Generates only complete, non-overlapping segments fully contained in good time.
                   Short remainders are reported and omitted.
                 </Typography>
@@ -186,12 +192,18 @@ const SegmentationPanel: React.FC<SegmentationPanelProps> = ({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 6
+          }}>
           <Card variant="outlined" sx={{ height: '100%' }}>
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="h6">Approximate-exposure chunks</Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>
                   Splits GTIs into chunk groups near the requested exposure while preserving GTI
                   boundaries. Chunk exposure is approximate, not guaranteed exact.
                 </Typography>
@@ -241,13 +253,21 @@ const SegmentationPanel: React.FC<SegmentationPanelProps> = ({
         <Stack spacing={2}>
           <UtilityWarnings warnings={fixedRunner.result.warnings} />
           <Grid container spacing={1.5}>
-            <Grid item xs={6} md={3}>
+            <Grid
+              size={{
+                xs: 6,
+                md: 3
+              }}>
               <MetricCard
                 label="Segment size"
                 value={formatMetric(fixedRunner.result.segment_size_s, ' s')}
               />
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid
+              size={{
+                xs: 6,
+                md: 3
+              }}>
               <MetricCard
                 label="Unused remainder"
                 value={formatMetric(fixedRunner.result.unused_exposure_s, ' s')}
@@ -271,13 +291,21 @@ const SegmentationPanel: React.FC<SegmentationPanelProps> = ({
           </Alert>
           <UtilityWarnings warnings={exposureRunner.result.warnings} />
           <Grid container spacing={1.5}>
-            <Grid item xs={6} md={3}>
+            <Grid
+              size={{
+                xs: 6,
+                md: 3
+              }}>
               <MetricCard
                 label="Chunks"
                 value={exposureRunner.result.chunk_count.toLocaleString()}
               />
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid
+              size={{
+                xs: 6,
+                md: 3
+              }}>
               <MetricCard
                 label="Output exposure"
                 value={formatMetric(exposureRunner.result.output_exposure_s, ' s')}

@@ -172,9 +172,11 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
         {!entry.is_directory && entry.size_display && (
           <Typography
             variant="caption"
-            color="text.secondary"
-            sx={{ minWidth: 80, textAlign: 'right' }}
-          >
+            sx={{
+              color: "text.secondary",
+              minWidth: 80,
+              textAlign: 'right'
+            }}>
             {entry.size_display}
           </Typography>
         )}
@@ -563,7 +565,9 @@ const FileBrowserDialog: React.FC<FileBrowserDialogProps> = ({
       onClose={isDownloading ? undefined : onClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { minHeight: 500 } }}
+      slotProps={{
+        paper: { sx: { minHeight: 500 } }
+      }}
     >
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -572,7 +576,9 @@ const FileBrowserDialog: React.FC<FileBrowserDialogProps> = ({
             <Typography variant="h6">
               Browse Files: {mission} Observation {obsid}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               Target: {targetName}
             </Typography>
           </Box>
@@ -596,9 +602,12 @@ const FileBrowserDialog: React.FC<FileBrowserDialogProps> = ({
             {/* Base URL display */}
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', mb: 1, fontFamily: 'monospace' }}
-            >
+              sx={{
+                color: "text.secondary",
+                display: 'block',
+                mb: 1,
+                fontFamily: 'monospace'
+              }}>
               {baseUrl}
             </Typography>
 
@@ -614,7 +623,12 @@ const FileBrowserDialog: React.FC<FileBrowserDialogProps> = ({
               }}
             >
               {files.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                    p: 2
+                  }}>
                   No files found in this observation directory.
                 </Typography>
               ) : (
@@ -672,7 +686,13 @@ const FileBrowserDialog: React.FC<FileBrowserDialogProps> = ({
             )}
 
             {/* Hint */}
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: 'block',
+                mt: 2
+              }}>
               Select a file and click "Download" to save it locally.
               Then use the "Load from Local" tab to load it into the application.
             </Typography>

@@ -73,13 +73,20 @@ const AutoCorrelationPage: React.FC = () => {
       status="ready"
     >
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4} lg={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+            lg: 3
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list" value={eventList} onChange={setEventList} />
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   Requires one continuous good-time interval. For an observation with gaps, use GTI
                   Utilities to select a continuous interval first.
                 </Typography>
@@ -115,7 +122,9 @@ const AutoCorrelationPage: React.FC = () => {
                     <MenuItem value="variance">variance</MenuItem>
                   </Select>
                 </FormControl>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {norm === 'variance'
                     ? "Variance normalization scales the correlation to roughly [-1, 1]."
                     : "Counts² scale (unnormalized correlation)."}
@@ -135,7 +144,12 @@ const AutoCorrelationPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8} lg={9}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 8,
+            lg: 9
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
@@ -195,7 +209,9 @@ const AutoCorrelationPage: React.FC = () => {
                 />
               ) : (
                 <Box sx={{ py: 10, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
+                  <Typography sx={{
+                    color: "text.secondary"
+                  }}>
                     Choose an event list and compute its auto-correlation.
                   </Typography>
                 </Box>

@@ -33,7 +33,12 @@ const NotFoundPage: React.FC = () => {
       >
         404
       </Typography>
-      <Typography variant="h5" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography
+        variant="h5"
+        sx={{
+          color: "text.secondary",
+          mb: 4
+        }}>
         Page not found
       </Typography>
       <Button

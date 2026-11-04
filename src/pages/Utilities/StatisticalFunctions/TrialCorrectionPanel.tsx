@@ -81,12 +81,19 @@ export function TrialCorrectionPanel() {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={5} lg={4}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 5,
+          lg: 4
+        }}>
         <Card variant="outlined">
           <CardContent component="form" onSubmit={submit}>
             <Stack spacing={2}>
               <Typography variant="subtitle2">Independent-trial correction</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 Applies Stingray&apos;s exact independent-trial (Šidák/binomial) conversion in
                 either direction, rather than the small-probability approximation.
               </Typography>
@@ -116,7 +123,9 @@ export function TrialCorrectionPanel() {
                   probabilityError ??
                   (direction === 'single-to-multi' ? 'Domain: 0 ≤ p ≤ 1' : 'Domain: 0 ≤ p < 1')
                 }
-                inputProps={{ inputMode: 'decimal' }}
+                slotProps={{
+                  htmlInput: { inputMode: 'decimal' }
+                }}
               />
               <TextField
                 label="Independent trials"
@@ -127,7 +136,9 @@ export function TrialCorrectionPanel() {
                 helperText={
                   trials.error ?? 'Positive integer; trials must be statistically independent'
                 }
-                inputProps={{ inputMode: 'numeric' }}
+                slotProps={{
+                  htmlInput: { inputMode: 'numeric' }
+                }}
               />
               <SubmitButton
                 running={runner.running}
@@ -138,7 +149,12 @@ export function TrialCorrectionPanel() {
           </CardContent>
         </Card>
       </Grid>
-      <Grid item xs={12} md={7} lg={8}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 7,
+          lg: 8
+        }}>
         <ResultFrame
           title="Trial-corrected probability"
           running={runner.running}

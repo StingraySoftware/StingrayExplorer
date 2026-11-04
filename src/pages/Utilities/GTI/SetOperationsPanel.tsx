@@ -101,7 +101,11 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
   return (
     <Stack spacing={3}>
       <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 6
+          }}>
           <GtiRowsField
             label="Left / good GTIs"
             value={leftRows}
@@ -110,7 +114,11 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
             disabled={setRunner.running || badTimeRunner.running}
           />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 6
+          }}>
           <GtiRowsField
             label="Right GTIs"
             value={rightRows}
@@ -127,8 +135,14 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
       ) : null}
       <Card variant="outlined">
         <CardContent>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={7}>
+          <Grid container spacing={2} sx={{
+            alignItems: "center"
+          }}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 7
+              }}>
               <FormControl size="small" fullWidth>
                 <InputLabel id="gti-set-operation-label">Set operation</InputLabel>
                 <Select
@@ -153,7 +167,11 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
                 </FormHelperText>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={5}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 5
+              }}>
               <RunButton
                 label="Compute set result"
                 running={setRunner.running}
@@ -161,7 +179,7 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
                 onClick={runSetOperation}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TimeReferenceControl
                 value={timeReference}
                 onChange={onTimeReferenceChange}
@@ -189,12 +207,18 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
         <CardContent>
           <Stack spacing={2}>
             <Typography variant="h6">Bad-time interval complement</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               Treat the left rows as good time and return every gap inside an explicit observation
               range.
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 4
+                }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -205,7 +229,11 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
                   helperText={observationStart !== '' && startNumber === null ? 'Must be finite' : ' '}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 4
+                }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -220,7 +248,11 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
                   }
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 4
+                }}>
                 <RunButton
                   label="Generate BTIs"
                   running={badTimeRunner.running}
@@ -241,13 +273,13 @@ const SetOperationsPanel: React.FC<SetOperationsPanelProps> = ({
       {badTimeRunner.result ? (
         <Stack spacing={2}>
           <Grid container spacing={1.5}>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <MetricCard
                 label="Good exposure"
                 value={formatMetric(badTimeRunner.result.good_exposure_s, ' s')}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <MetricCard
                 label="Bad exposure"
                 value={formatMetric(badTimeRunner.result.bad_exposure_s, ' s')}

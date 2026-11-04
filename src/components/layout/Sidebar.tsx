@@ -239,9 +239,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onSubmenuStateChange }) => {
               </ListItemIcon>
               <ListItemText
                 primary={item.text}
-                primaryTypographyProps={{
-                  fontSize: '0.875rem',
-                  fontWeight: isActive ? 600 : 400,
+                slotProps={{
+                  primary: {
+                    sx: { fontSize: '0.875rem', fontWeight: isActive ? 600 : 400 },
+                  }
                 }}
               />
               {item.hasSubmenu && (
@@ -342,9 +343,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onSubmenuStateChange }) => {
                         >
                           <ListItemText
                             primary={subItem.text}
-                            primaryTypographyProps={{
-                              fontSize: '0.8rem',
-                              fontWeight: isActive ? 600 : 400,
+                            slotProps={{
+                              primary: {
+                                sx: { fontSize: '0.8rem', fontWeight: isActive ? 600 : 400 },
+                              }
                             }}
                           />
                         </ListItemButton>
@@ -368,9 +370,10 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onSubmenuStateChange }) => {
                   >
                     <ListItemText
                       primary={subItem.text}
-                      primaryTypographyProps={{
-                        fontSize: '0.85rem',
-                        fontWeight: isActive ? 600 : 400,
+                      slotProps={{
+                        primary: {
+                          sx: { fontSize: '0.85rem', fontWeight: isActive ? 600 : 400 },
+                        }
                       }}
                     />
                   </ListItemButton>

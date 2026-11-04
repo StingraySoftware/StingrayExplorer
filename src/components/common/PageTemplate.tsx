@@ -52,7 +52,9 @@ const PageTemplate: React.FC<PageTemplateProps> = ({
           {title}
         </Typography>
         {description && (
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" sx={{
+            color: "text.secondary"
+          }}>
             {description}
           </Typography>
         )}
@@ -97,12 +99,15 @@ const PageTemplate: React.FC<PageTemplateProps> = ({
           />
           <Typography
             variant="h6"
-            color="text.secondary"
-            sx={{ fontFamily: '"JetBrains Mono", monospace' }}
-          >
+            sx={{
+              color: "text.secondary",
+              fontFamily: '"JetBrains Mono", monospace'
+            }}>
             {title}
           </Typography>
-          <Typography variant="body2" color="text.disabled">
+          <Typography variant="body2" sx={{
+            color: "text.disabled"
+          }}>
             This analysis module will be implemented soon.
           </Typography>
         </Paper>

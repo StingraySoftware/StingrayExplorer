@@ -192,7 +192,12 @@ const CovarianceSpectrumPage: React.FC = () => {
       status="ready"
     >
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4} lg={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+            lg: 3
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Stack spacing={2}>
@@ -278,7 +283,9 @@ const CovarianceSpectrumPage: React.FC = () => {
                     helperText={refHelperText(refMax, refMaxNum)}
                   />
                 </Box>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   Leave the reference band blank to use the full energy range. Covariance measures
                   variability correlated with this band.
                 </Typography>
@@ -294,12 +301,16 @@ const CovarianceSpectrumPage: React.FC = () => {
                     <MenuItem value="frac">frac</MenuItem>
                   </Select>
                 </FormControl>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {norm === 'frac'
                     ? 'Fractional normalization is unitless (divided by the mean count rate).'
                     : 'Absolute normalization retains the source count-rate scale.'}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   No segment-size control: the spectrum is computed over one segment spanning the
                   longest good-time interval. Use Avg Covariance Spectrum to average over multiple
                   segments.
@@ -317,7 +328,12 @@ const CovarianceSpectrumPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8} lg={9}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 8,
+            lg: 9
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
@@ -389,7 +405,9 @@ const CovarianceSpectrumPage: React.FC = () => {
               {result ? (
                 allNull ? (
                   <Box sx={{ py: 10, textAlign: 'center' }}>
-                    <Typography color="text.secondary">
+                    <Typography sx={{
+                      color: "text.secondary"
+                    }}>
                       No finite covariance values in any energy band. This is expected for
                       Poisson-dominated or weakly variable sources — it is not an error. See the
                       warnings above and try a coarser bin, fewer bands, or a source with stronger
@@ -406,7 +424,9 @@ const CovarianceSpectrumPage: React.FC = () => {
                 )
               ) : (
                 <Box sx={{ py: 10, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
+                  <Typography sx={{
+                    color: "text.secondary"
+                  }}>
                     Choose an event list and compute its covariance spectrum.
                   </Typography>
                 </Box>

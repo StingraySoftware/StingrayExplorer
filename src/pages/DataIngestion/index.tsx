@@ -1151,7 +1151,12 @@ const DataIngestionPage: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Data Ingestion
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography
+        variant="body1"
+        sx={{
+          color: "text.secondary",
+          mb: 4
+        }}>
         Load X-ray astronomy event list files for analysis
       </Typography>
 
@@ -1203,7 +1208,12 @@ const DataIngestionPage: React.FC = () => {
                 <Typography variant="h6">Load Local File</Typography>
               </Box>
 
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  mb: 3
+                }}>
                 Load FITS/OGIP, HDF5, or ECSV event lists through the native file picker.
               </Typography>
 
@@ -1235,9 +1245,11 @@ const DataIngestionPage: React.FC = () => {
                 {hasLastLoadedFiles && lastLoadedHints.length > 0 && (
                   <Typography
                     variant="caption"
-                    color="text.secondary"
-                    sx={{ display: 'block', overflowWrap: 'anywhere' }}
-                  >
+                    sx={{
+                      color: "text.secondary",
+                      display: 'block',
+                      overflowWrap: 'anywhere'
+                    }}>
                     Previous path hints (fresh native selection required): {lastLoadedHints.join(', ')}
                   </Typography>
                 )}
@@ -1267,7 +1279,9 @@ const DataIngestionPage: React.FC = () => {
                     {(isCheckingBatchSize || isCheckingFileSize) && (
                       <Box sx={{ mb: 2 }}>
                         <LinearProgress />
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{
+                          color: "text.secondary"
+                        }}>
                           Checking file sizes...
                         </Typography>
                       </Box>
@@ -1296,7 +1310,9 @@ const DataIngestionPage: React.FC = () => {
                             ) : (
                               <WarningAmberIcon fontSize="small" color={batchSizeInfo.total.risk_level === 'caution' ? 'warning' : 'error'} />
                             )}
-                            <Typography variant="body2" fontWeight="medium">
+                            <Typography variant="body2" sx={{
+                              fontWeight: "medium"
+                            }}>
                               Total: {batchSizeInfo.total.size_mb.toFixed(1)} MB → ~{batchSizeInfo.total.estimated_ram_mb.toFixed(0)} MB RAM
                             </Typography>
                           </Box>
@@ -1307,11 +1323,19 @@ const DataIngestionPage: React.FC = () => {
                                    batchSizeInfo.total.risk_level === 'caution' ? 'warning' : 'error'}
                           />
                         </Box>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{
+                          color: "text.secondary"
+                        }}>
                           Available RAM: {batchSizeInfo.available_ram_mb.toFixed(0)} MB
                         </Typography>
                         {batchSizeInfo.recommend_partial_loading && (
-                          <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "warning.main",
+                              display: 'block',
+                              mt: 0.5
+                            }}>
                             Consider using partial loading to reduce memory usage.
                           </Typography>
                         )}
@@ -1340,7 +1364,9 @@ const DataIngestionPage: React.FC = () => {
                           ) : (
                             <WarningAmberIcon fontSize="small" color={fileSizeInfo.risk_level === 'caution' ? 'warning' : 'error'} />
                           )}
-                          <Typography variant="body2" fontWeight="medium">
+                          <Typography variant="body2" sx={{
+                            fontWeight: "medium"
+                          }}>
                             {fileSizeInfo.file_size_mb < 1
                               ? `${(fileSizeInfo.file_size_bytes / 1024).toFixed(1)} KB`
                               : fileSizeInfo.file_size_gb >= 1
@@ -1356,7 +1382,9 @@ const DataIngestionPage: React.FC = () => {
                           />
                         </Box>
                         {fileSizeInfo.ram_usage_percent !== undefined && (
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>
                             Would use ~{fileSizeInfo.ram_usage_percent.toFixed(0)}% of available RAM
                           </Typography>
                         )}
@@ -1380,7 +1408,13 @@ const DataIngestionPage: React.FC = () => {
                             </Typography>
                           }
                         />
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 3.5 }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "text.secondary",
+                            display: 'block',
+                            ml: 3.5
+                          }}>
                           {useSameSettings
                             ? 'All files will use the format and options below'
                             : 'Each file can have different settings (expand to configure)'}
@@ -1413,14 +1447,18 @@ const DataIngestionPage: React.FC = () => {
                                     onChange={(e) => handleFileNameChange(filePath, e.target.value)}
                                     placeholder="Name"
                                     sx={{ width: 140, flexShrink: 0 }}
-                                    inputProps={{ style: { fontSize: '0.875rem' } }}
+                                    slotProps={{
+                                      htmlInput: { style: { fontSize: '0.875rem' } }
+                                    }}
                                   />
                                   <Box sx={{ flex: 1, minWidth: 0 }}>
                                     <Typography variant="body2" noWrap title={fileName}>
                                       {fileName}
                                     </Typography>
                                     {sizeInfo && (
-                                      <Typography variant="caption" color="text.secondary">
+                                      <Typography variant="caption" sx={{
+                                        color: "text.secondary"
+                                      }}>
                                         {sizeInfo.size_mb.toFixed(1)} MB
                                         {sizeInfo.ram_percent > 30 && (
                                           <Chip
@@ -1458,7 +1496,7 @@ const DataIngestionPage: React.FC = () => {
                                   <Box sx={{ mt: 1, pl: 2, pr: 1, pb: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                                     <Grid container spacing={1} sx={{ mt: 0.5 }}>
                                       {/* Format */}
-                                      <Grid item xs={12}>
+                                      <Grid size={12}>
                                         <FormControl fullWidth size="small">
                                           <InputLabel>Format</InputLabel>
                                           <Select
@@ -1477,8 +1515,14 @@ const DataIngestionPage: React.FC = () => {
                                       </Grid>
 
                                       {/* RMF File */}
-                                      <Grid item xs={12}>
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                      <Grid size={12}>
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            color: "text.secondary",
+                                            display: 'block',
+                                            mb: 0.5
+                                          }}>
                                           RMF File (optional)
                                         </Typography>
                                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
@@ -1487,9 +1531,10 @@ const DataIngestionPage: React.FC = () => {
                                             value={perFileRmfSelections[filePath]?.path || ''}
                                             fullWidth
                                             placeholder="Choose an RMF file"
-                                            InputProps={{ readOnly: true }}
-                                            inputProps={{ style: { fontSize: '0.75rem' } }}
-                                          />
+                                            slotProps={{
+                                              input: { readOnly: true },
+                                              htmlInput: { style: { fontSize: '0.75rem' } }
+                                            }} />
                                           <Button
                                             size="small"
                                             variant="outlined"
@@ -1513,7 +1558,7 @@ const DataIngestionPage: React.FC = () => {
                                       </Grid>
 
                                       {/* Additional Columns */}
-                                      <Grid item xs={12}>
+                                      <Grid size={12}>
                                         <TextField
                                           size="small"
                                           label="Additional Columns"
@@ -1527,12 +1572,14 @@ const DataIngestionPage: React.FC = () => {
                                           fullWidth
                                           placeholder="e.g., PI, ENERGY, DET_ID"
                                           helperText="Comma-separated"
-                                          inputProps={{ style: { fontSize: '0.75rem' } }}
+                                          slotProps={{
+                                            htmlInput: { style: { fontSize: '0.75rem' } }
+                                          }}
                                         />
                                       </Grid>
 
                                       {/* Notes */}
-                                      <Grid item xs={12}>
+                                      <Grid size={12}>
                                         <TextField
                                           size="small"
                                           label="Notes"
@@ -1544,12 +1591,14 @@ const DataIngestionPage: React.FC = () => {
                                           multiline
                                           rows={2}
                                           placeholder="Add notes about this file..."
-                                          inputProps={{ style: { fontSize: '0.75rem' } }}
+                                          slotProps={{
+                                            htmlInput: { style: { fontSize: '0.75rem' } }
+                                          }}
                                         />
                                       </Grid>
 
                                       {/* High Precision & Skip Checks */}
-                                      <Grid item xs={6}>
+                                      <Grid size={6}>
                                         <Tooltip title="Uses float128 for time arrays (nanosecond precision)" arrow placement="top">
                                           <FormControlLabel
                                             control={
@@ -1568,7 +1617,7 @@ const DataIngestionPage: React.FC = () => {
                                           />
                                         </Tooltip>
                                       </Grid>
-                                      <Grid item xs={6}>
+                                      <Grid size={6}>
                                         <Tooltip title="Skip time ordering and GTI validation" arrow placement="top">
                                           <FormControlLabel
                                             control={
@@ -1589,7 +1638,7 @@ const DataIngestionPage: React.FC = () => {
                                       </Grid>
 
                                       {/* Partial Loading */}
-                                      <Grid item xs={12}>
+                                      <Grid size={12}>
                                         <Tooltip title="Load only a portion of the file (FITS only)" arrow placement="top">
                                           <FormControlLabel
                                             control={
@@ -1612,7 +1661,7 @@ const DataIngestionPage: React.FC = () => {
 
                                       {perFileConfigs[filePath]?.use_partial_loading && (
                                         <>
-                                          <Grid item xs={12}>
+                                          <Grid size={12}>
                                             <FormControl fullWidth size="small">
                                               <InputLabel>Mode</InputLabel>
                                               <Select
@@ -1627,7 +1676,7 @@ const DataIngestionPage: React.FC = () => {
                                           </Grid>
                                           {perFileConfigs[filePath]?.partial_mode === 'time_range' ? (
                                             <>
-                                              <Grid item xs={6}>
+                                              <Grid size={6}>
                                                 <TextField
                                                   size="small"
                                                   label="Start (s)"
@@ -1637,7 +1686,7 @@ const DataIngestionPage: React.FC = () => {
                                                   fullWidth
                                                 />
                                               </Grid>
-                                              <Grid item xs={6}>
+                                              <Grid size={6}>
                                                 <TextField
                                                   size="small"
                                                   label="End (s)"
@@ -1650,7 +1699,7 @@ const DataIngestionPage: React.FC = () => {
                                             </>
                                           ) : (
                                             <>
-                                              <Grid item xs={6}>
+                                              <Grid size={6}>
                                                 <TextField
                                                   size="small"
                                                   label="Start Index"
@@ -1660,7 +1709,7 @@ const DataIngestionPage: React.FC = () => {
                                                   fullWidth
                                                 />
                                               </Grid>
-                                              <Grid item xs={6}>
+                                              <Grid size={6}>
                                                 <TextField
                                                   size="small"
                                                   label="Count"
@@ -1722,7 +1771,13 @@ const DataIngestionPage: React.FC = () => {
               <Collapse in={showAdvancedOptions && useSameSettings}>
                 <Box sx={{ mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
                   {/* RMF File */}
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      display: 'block',
+                      mb: 1
+                    }}>
                     RMF File (for PI → Energy calibration)
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
@@ -1731,8 +1786,10 @@ const DataIngestionPage: React.FC = () => {
                       fullWidth
                       size="small"
                       placeholder="Optional: Path to RMF file"
-                      InputProps={{
-                        readOnly: true,
+                      slotProps={{
+                        input: {
+                          readOnly: true,
+                        }
                       }}
                     />
                     <Button
@@ -1751,7 +1808,13 @@ const DataIngestionPage: React.FC = () => {
                   </Box>
 
                   {/* Additional Columns */}
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      display: 'block',
+                      mb: 1
+                    }}>
                     Additional Columns
                   </Typography>
                   <TextField
@@ -1765,7 +1828,13 @@ const DataIngestionPage: React.FC = () => {
                   />
 
                   {/* Notes/Comments */}
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      display: 'block',
+                      mb: 1
+                    }}>
                     Notes / Comments
                   </Typography>
                   <TextField
@@ -1792,7 +1861,9 @@ const DataIngestionPage: React.FC = () => {
                   <Tooltip
                     title={
                       <Box>
-                        <Typography variant="body2" fontWeight="bold" gutterBottom>High Precision Timing</Typography>
+                        <Typography variant="body2" gutterBottom sx={{
+                          fontWeight: "bold"
+                        }}>High Precision Timing</Typography>
                         <Typography variant="caption" component="p" gutterBottom>
                           Uses numpy.float128 (128-bit) instead of float64 for time arrays, providing ~18 more decimal digits of precision.
                         </Typography>
@@ -1828,7 +1899,9 @@ const DataIngestionPage: React.FC = () => {
                   <Tooltip
                     title={
                       <Box>
-                        <Typography variant="body2" fontWeight="bold" gutterBottom>Skip Validation Checks</Typography>
+                        <Typography variant="body2" gutterBottom sx={{
+                          fontWeight: "bold"
+                        }}>Skip Validation Checks</Typography>
                         <Typography variant="caption" component="p" gutterBottom>
                           Bypasses time ordering verification and GTI (Good Time Interval) validation during loading.
                         </Typography>
@@ -1864,7 +1937,9 @@ const DataIngestionPage: React.FC = () => {
                   <Tooltip
                     title={
                       <Box>
-                        <Typography variant="body2" fontWeight="bold" gutterBottom>Partial Loading</Typography>
+                        <Typography variant="body2" gutterBottom sx={{
+                          fontWeight: "bold"
+                        }}>Partial Loading</Typography>
                         <Typography variant="caption" component="p" gutterBottom>
                           Loads only a specific portion of the file (by time range or event count) without reading the entire file into memory.
                         </Typography>
@@ -1920,20 +1995,45 @@ const DataIngestionPage: React.FC = () => {
                       {/* File Metadata Display */}
                       {fileMetadata && (
                         <Box sx={{ mb: 2, p: 1.5, bgcolor: 'background.paper', borderRadius: 1 }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "text.secondary",
+                              display: 'block'
+                            }}>
                             <strong>Total Events:</strong> {fileMetadata.total_events.toLocaleString()}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "text.secondary",
+                              display: 'block'
+                            }}>
                             <strong>Duration:</strong> {fileMetadata.duration.toFixed(2)}s
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "text.secondary",
+                              display: 'block'
+                            }}>
                             <strong>File Size:</strong> {fileMetadata.file_size_mb.toFixed(1)} MB
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "text.secondary",
+                              display: 'block'
+                            }}>
                             <strong>GTIs:</strong> {fileMetadata.gti_count}
                           </Typography>
                           {fileMetadata.mission && (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: "text.secondary",
+                                display: 'block'
+                              }}>
                               <strong>Mission:</strong> {fileMetadata.mission}
                             </Typography>
                           )}
@@ -1980,7 +2080,9 @@ const DataIngestionPage: React.FC = () => {
                             onChange={(e) => setTimeRangeStart(parseFloat(e.target.value) || 0)}
                             size="small"
                             fullWidth
-                            inputProps={{ min: 0, step: 1 }}
+                            slotProps={{
+                              htmlInput: { min: 0, step: 1 }
+                            }}
                           />
                           <TextField
                             label="End Time (s)"
@@ -1989,7 +2091,9 @@ const DataIngestionPage: React.FC = () => {
                             onChange={(e) => setTimeRangeEnd(parseFloat(e.target.value) || 100)}
                             size="small"
                             fullWidth
-                            inputProps={{ min: 0, step: 1 }}
+                            slotProps={{
+                              htmlInput: { min: 0, step: 1 }
+                            }}
                           />
                         </Box>
                       )}
@@ -2004,7 +2108,9 @@ const DataIngestionPage: React.FC = () => {
                             onChange={(e) => setEventCountStart(parseInt(e.target.value) || 0)}
                             size="small"
                             fullWidth
-                            inputProps={{ min: 0, step: 1000 }}
+                            slotProps={{
+                              htmlInput: { min: 0, step: 1000 }
+                            }}
                           />
                           <TextField
                             label="Event Count"
@@ -2013,12 +2119,20 @@ const DataIngestionPage: React.FC = () => {
                             onChange={(e) => setEventCount(parseInt(e.target.value) || 10000)}
                             size="small"
                             fullWidth
-                            inputProps={{ min: 1, step: 1000 }}
+                            slotProps={{
+                              htmlInput: { min: 1, step: 1000 }
+                            }}
                           />
                         </Box>
                       )}
 
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "text.secondary",
+                          display: 'block',
+                          mt: 1
+                        }}>
                         {trueLazyMode === 'time_range'
                           ? `Will load events from ${timeRangeStart}s to ${timeRangeEnd}s (${timeRangeEnd - timeRangeStart}s duration)`
                           : `Will load ${eventCount.toLocaleString()} events starting from index ${eventCountStart.toLocaleString()}`}
@@ -2068,7 +2182,12 @@ const DataIngestionPage: React.FC = () => {
                 <Typography variant="h6">Load from URL</Typography>
               </Box>
 
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  mb: 3
+                }}>
                 Fetch event list data directly from a remote URL (use raw links for GitHub)
               </Typography>
 
@@ -2082,8 +2201,10 @@ const DataIngestionPage: React.FC = () => {
                 sx={{ mb: 2 }}
                 placeholder="https://example.com/data/events.fits"
                 helperText="Enter the direct link to the event file"
-                InputProps={{
-                  startAdornment: <LinkIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                slotProps={{
+                  input: {
+                    startAdornment: <LinkIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                  }
                 }}
               />
 
@@ -2161,7 +2282,9 @@ const DataIngestionPage: React.FC = () => {
         </Box>
 
         {loadedEventLists.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             No event lists loaded yet. Use the options above to load your data.
           </Typography>
         ) : (
@@ -2173,7 +2296,9 @@ const DataIngestionPage: React.FC = () => {
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="subtitle1" fontWeight="medium">
+                        <Typography variant="subtitle1" sx={{
+                          fontWeight: "medium"
+                        }}>
                           {eventList.name}
                         </Typography>
                         {eventList.has_energy && (
@@ -2231,21 +2356,39 @@ const DataIngestionPage: React.FC = () => {
                     }
                     secondary={
                       <Box sx={{ mt: 0.5 }}>
-                        <Typography variant="body2" color="text.secondary" component="span">
+                        <Typography variant="body2" component="span" sx={{
+                          color: "text.secondary"
+                        }}>
                           {formatNumber(eventList.n_events)} events
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" component="span" sx={{ mx: 1 }}>
+                        <Typography
+                          variant="body2"
+                          component="span"
+                          sx={{
+                            color: "text.secondary",
+                            mx: 1
+                          }}>
                           •
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" component="span">
+                        <Typography variant="body2" component="span" sx={{
+                          color: "text.secondary"
+                        }}>
                           Duration: {formatTimeRange(eventList.time_range)}
                         </Typography>
                         {eventList.gti_count !== undefined && eventList.gti_count > 0 && (
                           <>
-                            <Typography variant="body2" color="text.secondary" component="span" sx={{ mx: 1 }}>
+                            <Typography
+                              variant="body2"
+                              component="span"
+                              sx={{
+                                color: "text.secondary",
+                                mx: 1
+                              }}>
                               •
                             </Typography>
-                            <Typography variant="body2" color="text.secondary" component="span">
+                            <Typography variant="body2" component="span" sx={{
+                              color: "text.secondary"
+                            }}>
                               {eventList.gti_count} GTI(s)
                             </Typography>
                           </>
@@ -2333,33 +2476,69 @@ const DataIngestionPage: React.FC = () => {
                   Basic Information
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={6} sm={4}>
-                    <Typography variant="caption" color="text.secondary">Events</Typography>
+                  <Grid
+                    size={{
+                      xs: 6,
+                      sm: 4
+                    }}>
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>Events</Typography>
                     <Typography variant="body1">{formatNumber(selectedEventListDetails.n_events)}</Typography>
                   </Grid>
-                  <Grid item xs={6} sm={4}>
-                    <Typography variant="caption" color="text.secondary">Duration</Typography>
+                  <Grid
+                    size={{
+                      xs: 6,
+                      sm: 4
+                    }}>
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>Duration</Typography>
                     <Typography variant="body1">{selectedEventListDetails.duration.toFixed(6)}s</Typography>
                   </Grid>
-                  <Grid item xs={6} sm={4}>
-                    <Typography variant="caption" color="text.secondary">Mean Count Rate</Typography>
+                  <Grid
+                    size={{
+                      xs: 6,
+                      sm: 4
+                    }}>
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>Mean Count Rate</Typography>
                     <Typography variant="body1">
                       {selectedEventListDetails.mean_count_rate?.toFixed(6) || 'N/A'} cts/s
                     </Typography>
                   </Grid>
-                  <Grid item xs={6} sm={4}>
-                    <Typography variant="caption" color="text.secondary">MJDREF</Typography>
+                  <Grid
+                    size={{
+                      xs: 6,
+                      sm: 4
+                    }}>
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>MJDREF</Typography>
                     <Typography variant="body1">{selectedEventListDetails.mjdref || 'N/A'}</Typography>
                   </Grid>
                   {selectedEventListDetails.mission && (
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Mission</Typography>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Mission</Typography>
                       <Typography variant="body1">{selectedEventListDetails.mission}</Typography>
                     </Grid>
                   )}
                   {selectedEventListDetails.instrument && (
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Instrument</Typography>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Instrument</Typography>
                       <Typography variant="body1">{selectedEventListDetails.instrument}</Typography>
                     </Grid>
                   )}
@@ -2374,17 +2553,35 @@ const DataIngestionPage: React.FC = () => {
                   Time Information
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={6} sm={4}>
-                    <Typography variant="caption" color="text.secondary">Start Time</Typography>
+                  <Grid
+                    size={{
+                      xs: 6,
+                      sm: 4
+                    }}>
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>Start Time</Typography>
                     <Typography variant="body1">{selectedEventListDetails.time_range[0].toFixed(6)}</Typography>
                   </Grid>
-                  <Grid item xs={6} sm={4}>
-                    <Typography variant="caption" color="text.secondary">End Time</Typography>
+                  <Grid
+                    size={{
+                      xs: 6,
+                      sm: 4
+                    }}>
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>End Time</Typography>
                     <Typography variant="body1">{selectedEventListDetails.time_range[1].toFixed(6)}</Typography>
                   </Grid>
                   {selectedEventListDetails.min_time_diff !== undefined && (
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Min Time Diff</Typography>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Min Time Diff</Typography>
                       <Typography variant="body1">{selectedEventListDetails.min_time_diff.toExponential(6)}s</Typography>
                     </Grid>
                   )}
@@ -2425,7 +2622,13 @@ const DataIngestionPage: React.FC = () => {
                     <Typography variant="subtitle2" color="primary" gutterBottom>
                       Good Time Intervals ({selectedEventListDetails.gti_count} GTI{selectedEventListDetails.gti_count !== 1 ? 's' : ''})
                       {selectedEventListDetails.total_gti_time && (
-                        <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary",
+                            ml: 1
+                          }}>
                           Total: {selectedEventListDetails.total_gti_time.toFixed(6)}s
                         </Typography>
                       )}
@@ -2457,7 +2660,9 @@ const DataIngestionPage: React.FC = () => {
               )}
             </Box>
           ) : (
-            <Typography color="text.secondary">No details available</Typography>
+            <Typography sx={{
+              color: "text.secondary"
+            }}>No details available</Typography>
           )}
         </DialogContent>
         <DialogActions>
@@ -2511,36 +2716,64 @@ const DataIngestionPage: React.FC = () => {
               {previewTabValue === 0 && (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Grid container spacing={2}>
-                    <Grid item xs={6} sm={3}>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 3
+                      }}>
                       <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
                         <Typography variant="h4" color="primary">
                           {formatNumber(fullPreviewData.n_events)}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">Total Events</Typography>
+                        <Typography variant="caption" sx={{
+                          color: "text.secondary"
+                        }}>Total Events</Typography>
                       </Paper>
                     </Grid>
-                    <Grid item xs={6} sm={3}>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 3
+                      }}>
                       <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
                         <Typography variant="h4" color="secondary">
                           {fullPreviewData.duration.toFixed(6)}s
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">Duration</Typography>
+                        <Typography variant="caption" sx={{
+                          color: "text.secondary"
+                        }}>Duration</Typography>
                       </Paper>
                     </Grid>
-                    <Grid item xs={6} sm={3}>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 3
+                      }}>
                       <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h4" color="success.main">
+                        <Typography variant="h4" sx={{
+                          color: "success.main"
+                        }}>
                           {fullPreviewData.mean_count_rate?.toFixed(6) || 'N/A'}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">Mean Count Rate (cts/s)</Typography>
+                        <Typography variant="caption" sx={{
+                          color: "text.secondary"
+                        }}>Mean Count Rate (cts/s)</Typography>
                       </Paper>
                     </Grid>
-                    <Grid item xs={6} sm={3}>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 3
+                      }}>
                       <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h4" color="info.main">
+                        <Typography variant="h4" sx={{
+                          color: "info.main"
+                        }}>
                           {fullPreviewData.gti_count}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">GTI Count</Typography>
+                        <Typography variant="caption" sx={{
+                          color: "text.secondary"
+                        }}>GTI Count</Typography>
                       </Paper>
                     </Grid>
                   </Grid>
@@ -2560,21 +2793,45 @@ const DataIngestionPage: React.FC = () => {
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Typography variant="subtitle2" color="primary">Time Range</Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Start Time</Typography>
-                      <Typography variant="body1" fontFamily="monospace">
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Start Time</Typography>
+                      <Typography variant="body1" sx={{
+                        fontFamily: "monospace"
+                      }}>
                         {fullPreviewData.time_range[0].toFixed(6)}
                       </Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">End Time</Typography>
-                      <Typography variant="body1" fontFamily="monospace">
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>End Time</Typography>
+                      <Typography variant="body1" sx={{
+                        fontFamily: "monospace"
+                      }}>
                         {fullPreviewData.time_range[1].toFixed(6)}
                       </Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">MJDREF</Typography>
-                      <Typography variant="body1" fontFamily="monospace">
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>MJDREF</Typography>
+                      <Typography variant="body1" sx={{
+                        fontFamily: "monospace"
+                      }}>
                         {fullPreviewData.mjdref || 'N/A'}
                       </Typography>
                     </Grid>
@@ -2584,33 +2841,73 @@ const DataIngestionPage: React.FC = () => {
 
                   <Typography variant="subtitle2" color="primary">Time Statistics</Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Min Time Diff</Typography>
-                      <Typography variant="body1" fontFamily="monospace">
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Min Time Diff</Typography>
+                      <Typography variant="body1" sx={{
+                        fontFamily: "monospace"
+                      }}>
                         {fullPreviewData.min_time_diff?.toExponential(6) || 'N/A'}s
                       </Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Max Time Diff</Typography>
-                      <Typography variant="body1" fontFamily="monospace">
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Max Time Diff</Typography>
+                      <Typography variant="body1" sx={{
+                        fontFamily: "monospace"
+                      }}>
                         {fullPreviewData.max_time_diff?.toExponential(6) || 'N/A'}s
                       </Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Mean Time Diff</Typography>
-                      <Typography variant="body1" fontFamily="monospace">
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Mean Time Diff</Typography>
+                      <Typography variant="body1" sx={{
+                        fontFamily: "monospace"
+                      }}>
                         {fullPreviewData.mean_time_diff?.toExponential(6) || 'N/A'}s
                       </Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Median Time Diff</Typography>
-                      <Typography variant="body1" fontFamily="monospace">
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Median Time Diff</Typography>
+                      <Typography variant="body1" sx={{
+                        fontFamily: "monospace"
+                      }}>
                         {fullPreviewData.median_time_diff?.toExponential(6) || 'N/A'}s
                       </Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Std Dev Time Diff</Typography>
-                      <Typography variant="body1" fontFamily="monospace">
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Std Dev Time Diff</Typography>
+                      <Typography variant="body1" sx={{
+                        fontFamily: "monospace"
+                      }}>
                         {fullPreviewData.std_time_diff?.toExponential(6) || 'N/A'}s
                       </Typography>
                     </Grid>
@@ -2686,9 +2983,13 @@ const DataIngestionPage: React.FC = () => {
                   {fullPreviewData.has_energy ? (
                     <>
                       <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                          <Typography variant="caption" color="text.secondary">Energy Range</Typography>
-                          <Typography variant="body1" fontFamily="monospace">
+                        <Grid size={6}>
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>Energy Range</Typography>
+                          <Typography variant="body1" sx={{
+                            fontFamily: "monospace"
+                          }}>
                             {fullPreviewData.energy_range
                               ? `${fullPreviewData.energy_range[0].toFixed(5)} - ${fullPreviewData.energy_range[1].toFixed(5)} keV`
                               : 'N/A'}
@@ -2697,7 +2998,9 @@ const DataIngestionPage: React.FC = () => {
                       </Grid>
                       {fullPreviewData.energy_preview && (
                         <>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>
                             Energy Preview (first {fullPreviewData.energy_preview.length} entries)
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
@@ -2725,9 +3028,13 @@ const DataIngestionPage: React.FC = () => {
                   {fullPreviewData.has_pi ? (
                     <>
                       <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                          <Typography variant="caption" color="text.secondary">PI Range</Typography>
-                          <Typography variant="body1" fontFamily="monospace">
+                        <Grid size={6}>
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>PI Range</Typography>
+                          <Typography variant="body1" sx={{
+                            fontFamily: "monospace"
+                          }}>
                             {fullPreviewData.pi_range
                               ? `${fullPreviewData.pi_range[0]} - ${fullPreviewData.pi_range[1]}`
                               : 'N/A'}
@@ -2736,7 +3043,9 @@ const DataIngestionPage: React.FC = () => {
                       </Grid>
                       {fullPreviewData.pi_preview && (
                         <>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>
                             PI Preview (first {fullPreviewData.pi_preview.length} entries)
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
@@ -2766,7 +3075,9 @@ const DataIngestionPage: React.FC = () => {
                     Good Time Intervals ({fullPreviewData.gti_count} GTI{fullPreviewData.gti_count !== 1 ? 's' : ''})
                   </Typography>
                   {fullPreviewData.total_gti_time && (
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{
+                      color: "text.secondary"
+                    }}>
                       Total GTI Time: {fullPreviewData.total_gti_time.toFixed(6)}s
                     </Typography>
                   )}
@@ -2804,16 +3115,34 @@ const DataIngestionPage: React.FC = () => {
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Typography variant="subtitle2" color="primary">Mission Metadata</Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Mission</Typography>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Mission</Typography>
                       <Typography variant="body1">{fullPreviewData.mission || 'N/A'}</Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Instrument</Typography>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Instrument</Typography>
                       <Typography variant="body1">{fullPreviewData.instrument || 'N/A'}</Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Detector ID</Typography>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Detector ID</Typography>
                       <Typography variant="body1">{fullPreviewData.detector_id || 'N/A'}</Typography>
                     </Grid>
                   </Grid>
@@ -2822,16 +3151,34 @@ const DataIngestionPage: React.FC = () => {
 
                   <Typography variant="subtitle2" color="primary">Time System</Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Time Reference</Typography>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Time Reference</Typography>
                       <Typography variant="body1">{fullPreviewData.timeref || 'N/A'}</Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Time System</Typography>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Time System</Typography>
                       <Typography variant="body1">{fullPreviewData.timesys || 'N/A'}</Typography>
                     </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <Typography variant="caption" color="text.secondary">Ephemeris</Typography>
+                    <Grid
+                      size={{
+                        xs: 6,
+                        sm: 4
+                      }}>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>Ephemeris</Typography>
                       <Typography variant="body1">{fullPreviewData.ephem || 'N/A'}</Typography>
                     </Grid>
                   </Grid>
@@ -2871,96 +3218,190 @@ const DataIngestionPage: React.FC = () => {
                       <Typography variant="subtitle2" color="primary">Key FITS Headers</Typography>
                       <Grid container spacing={2}>
                         {fullPreviewData.header_info.object && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Object</Typography>
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Object</Typography>
                             <Typography variant="body1">{fullPreviewData.header_info.object}</Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.obs_id && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">OBS_ID</Typography>
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>OBS_ID</Typography>
                             <Typography variant="body1">{fullPreviewData.header_info.obs_id}</Typography>
                           </Grid>
                         )}
                         {(fullPreviewData.header_info.ra_nom !== undefined || fullPreviewData.header_info.ra_obj !== undefined) && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">RA</Typography>
-                            <Typography variant="body1" fontFamily="monospace">
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>RA</Typography>
+                            <Typography variant="body1" sx={{
+                              fontFamily: "monospace"
+                            }}>
                               {(fullPreviewData.header_info.ra_nom ?? fullPreviewData.header_info.ra_obj)?.toFixed(7) || 'N/A'}°
                             </Typography>
                           </Grid>
                         )}
                         {(fullPreviewData.header_info.dec_nom !== undefined || fullPreviewData.header_info.dec_obj !== undefined) && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Dec</Typography>
-                            <Typography variant="body1" fontFamily="monospace">
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Dec</Typography>
+                            <Typography variant="body1" sx={{
+                              fontFamily: "monospace"
+                            }}>
                               {(fullPreviewData.header_info.dec_nom ?? fullPreviewData.header_info.dec_obj)?.toFixed(7) || 'N/A'}°
                             </Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.exposure !== undefined && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Exposure</Typography>
-                            <Typography variant="body1" fontFamily="monospace">
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Exposure</Typography>
+                            <Typography variant="body1" sx={{
+                              fontFamily: "monospace"
+                            }}>
                               {fullPreviewData.header_info.exposure?.toFixed(6) || 'N/A'}s
                             </Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.ontime !== undefined && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Ontime</Typography>
-                            <Typography variant="body1" fontFamily="monospace">
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Ontime</Typography>
+                            <Typography variant="body1" sx={{
+                              fontFamily: "monospace"
+                            }}>
                               {fullPreviewData.header_info.ontime?.toFixed(6) || 'N/A'}s
                             </Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.livetime !== undefined && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Livetime</Typography>
-                            <Typography variant="body1" fontFamily="monospace">
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Livetime</Typography>
+                            <Typography variant="body1" sx={{
+                              fontFamily: "monospace"
+                            }}>
                               {fullPreviewData.header_info.livetime?.toFixed(6) || 'N/A'}s
                             </Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.date_obs && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">DATE-OBS</Typography>
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>DATE-OBS</Typography>
                             <Typography variant="body1">{fullPreviewData.header_info.date_obs}</Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.date_end && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">DATE-END</Typography>
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>DATE-END</Typography>
                             <Typography variant="body1">{fullPreviewData.header_info.date_end}</Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.telescop && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Telescope</Typography>
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Telescope</Typography>
                             <Typography variant="body1">{fullPreviewData.header_info.telescop}</Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.instrume && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Instrument</Typography>
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Instrument</Typography>
                             <Typography variant="body1">{fullPreviewData.header_info.instrume}</Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.creator && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Creator</Typography>
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Creator</Typography>
                             <Typography variant="body1">{fullPreviewData.header_info.creator}</Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.observer && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Observer</Typography>
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Observer</Typography>
                             <Typography variant="body1">{fullPreviewData.header_info.observer}</Typography>
                           </Grid>
                         )}
                         {fullPreviewData.header_info.datamode && (
-                          <Grid item xs={6} sm={4}>
-                            <Typography variant="caption" color="text.secondary">Data Mode</Typography>
+                          <Grid
+                            size={{
+                              xs: 6,
+                              sm: 4
+                            }}>
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>Data Mode</Typography>
                             <Typography variant="body1">{fullPreviewData.header_info.datamode}</Typography>
                           </Grid>
                         )}
@@ -3088,11 +3529,18 @@ const DataIngestionPage: React.FC = () => {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  <Typography variant="body2" fontWeight="medium">
+                                  <Typography variant="body2" sx={{
+                                    fontWeight: "medium"
+                                  }}>
                                     {issue.name || issue.type}
                                   </Typography>
                                   {issue.description && (
-                                    <Typography variant="caption" color="text.secondary" display="block">
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        color: "text.secondary",
+                                        display: "block"
+                                      }}>
                                       {issue.description}
                                     </Typography>
                                   )}
@@ -3124,7 +3572,9 @@ const DataIngestionPage: React.FC = () => {
               )}
             </Box>
           ) : (
-            <Typography color="text.secondary">No preview data available</Typography>
+            <Typography sx={{
+              color: "text.secondary"
+            }}>No preview data available</Typography>
           )}
         </DialogContent>
         <DialogActions>
@@ -3143,7 +3593,12 @@ const DataIngestionPage: React.FC = () => {
           Choose Save Format
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 2
+            }}>
             Select a runtime-supported, reopen-verified format for &quot;{saveEventListName}&quot;:
           </Typography>
           {hdf5UnavailableReason && (
@@ -3162,10 +3617,14 @@ const DataIngestionPage: React.FC = () => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1" fontWeight="medium">
+                      <Typography variant="body1" sx={{
+                        fontWeight: "medium"
+                      }}>
                         HDF5 (Recommended)
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>
                         Versioned Stingray Explorer schema with scientific round-trip verification.
                       </Typography>
                     </Box>
@@ -3178,10 +3637,14 @@ const DataIngestionPage: React.FC = () => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1" fontWeight="medium">
+                      <Typography variant="body1" sx={{
+                        fontWeight: "medium"
+                      }}>
                         ASCII ECSV
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>
                         Human-readable table with metadata and reopen verification.
                       </Typography>
                     </Box>

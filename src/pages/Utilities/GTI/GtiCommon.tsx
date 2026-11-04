@@ -1,6 +1,6 @@
 import React, { useId } from 'react';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import {
@@ -190,7 +190,9 @@ export const GtiRowsField: React.FC<{
           ? error
           : 'One start, stop pair per line. Rows remain in the order entered.'
       }
-      inputProps={{ spellCheck: false }}
+      slotProps={{
+        htmlInput: { spellCheck: false }
+      }}
     />
     {editableRows ? (
       <Stack direction="row" spacing={1}>
@@ -217,7 +219,9 @@ export const GtiRowsField: React.FC<{
 
 export const MetricCard: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <Paper variant="outlined" sx={{ p: 1.5, height: '100%' }}>
-    <Typography variant="caption" color="text.secondary">
+    <Typography variant="caption" sx={{
+      color: "text.secondary"
+    }}>
       {label}
     </Typography>
     <Typography variant="h6" sx={{ fontFamily: '"IBM Plex Mono", monospace' }}>
@@ -259,16 +263,32 @@ export const IntervalResult: React.FC<{
       </Alert>
     ) : null}
     <Grid container spacing={1.5}>
-      <Grid item xs={6} md={3}>
+      <Grid
+        size={{
+          xs: 6,
+          md: 3
+        }}>
         <MetricCard label="Intervals" value={payload.interval_count.toLocaleString()} />
       </Grid>
-      <Grid item xs={6} md={3}>
+      <Grid
+        size={{
+          xs: 6,
+          md: 3
+        }}>
         <MetricCard label="Total exposure" value={formatMetric(payload.total_exposure_s, ' s')} />
       </Grid>
-      <Grid item xs={6} md={3}>
+      <Grid
+        size={{
+          xs: 6,
+          md: 3
+        }}>
         <MetricCard label="Overall span" value={formatMetric(payload.overall_time_span_s, ' s')} />
       </Grid>
-      <Grid item xs={6} md={3}>
+      <Grid
+        size={{
+          xs: 6,
+          md: 3
+        }}>
         <MetricCard
           label="Duty cycle"
           value={
@@ -298,7 +318,12 @@ export const IntervalResult: React.FC<{
             {title} — bounded plot preview
           </Typography>
           {payload.plot.stride > 1 ? (
-            <Typography variant="caption" color="text.secondary" sx={{ px: 1 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                px: 1
+              }}>
               Showing every {payload.plot.stride.toLocaleString()}th interval from{' '}
               {payload.plot.source_points.toLocaleString()} source intervals. The table above remains exact.
             </Typography>

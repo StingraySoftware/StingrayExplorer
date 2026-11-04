@@ -102,7 +102,9 @@ const IdentificationPanel: React.FC = () => {
         <CardContent>
           <Stack spacing={2}>
             <Typography variant="h6">Identify mission metadata</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               Inspect one loaded EventList or one explicitly selected FITS file. Every value is
               labelled with its origin; inferred aliases and user overrides remain visible.
             </Typography>
@@ -182,12 +184,16 @@ const IdentificationPanel: React.FC = () => {
                       <Stack key={key} spacing={0.25}>
                         <Typography variant="body2">
                           <strong>{key}:</strong> {preciseValue}{' '}
-                          <Typography component="span" variant="caption" color="text.secondary">
+                          <Typography component="span" variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>
                             from {entry.source ?? 'unknown source'}
                           </Typography>
                         </Typography>
                         {components ? (
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>
                             MJDREFI={components.integer.value} from{' '}
                             {components.integer.source ?? 'unknown source'}; MJDREFF=
                             {components.fraction.value} from{' '}

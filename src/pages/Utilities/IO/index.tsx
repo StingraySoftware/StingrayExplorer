@@ -74,9 +74,17 @@ interface SummaryDatum {
 const SummaryGrid: React.FC<{ values: SummaryDatum[] }> = ({ values }) => (
   <Grid container spacing={1.5}>
     {values.map((item) => (
-      <Grid item xs={12} sm={6} md={3} key={item.label}>
+      <Grid
+        key={item.label}
+        size={{
+          xs: 12,
+          sm: 6,
+          md: 3
+        }}>
         <Paper variant="outlined" sx={{ p: 1.5, height: '100%' }}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>
             {item.label}
           </Typography>
           <Typography component="div" variant="body2" sx={{ mt: 0.25, overflowWrap: 'anywhere' }}>
@@ -234,7 +242,9 @@ const ExportCapabilitySummary: React.FC<{ catalog: ExportableObjectsResult }> = 
         <strong>HDF5 unavailable:</strong> {catalog.excluded_formats.hdf5}
       </Alert>
     ) : null}
-    <Typography variant="caption" color="text.secondary">
+    <Typography variant="caption" sx={{
+      color: "text.secondary"
+    }}>
       Maximum export size: {catalog.row_cap.toLocaleString()} rows.{' '}
       {Object.entries(catalog.excluded_formats)
         .filter(([format]) => format !== 'hdf5')
@@ -275,7 +285,9 @@ const FileInspectorPanel: React.FC<FileInspectorPanelProps> = ({ selection, onSe
 
   return (
     <Stack spacing={2.5}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" sx={{
+        color: "text.secondary"
+      }}>
         Inspect an explicitly selected local file. FITS headers and HDU structure are read without
         materializing full event tables.
       </Typography>
@@ -503,7 +515,12 @@ const RmfPanel: React.FC<RmfPanelProps> = ({
         <Typography variant="h6" gutterBottom>
           Response matrix
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           RMF calibration maps exact integer PI channels to calibrated energy bounds. Unmatched
           channels are reported instead of silently receiving an energy.
         </Typography>
@@ -660,7 +677,12 @@ const RmfPanel: React.FC<RmfPanelProps> = ({
         <Typography variant="h6" gutterBottom>
           Convert a loaded EventList
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           The source stays unchanged. Conversion is saved atomically under a new, unique EventList
           name while preserving the original PI channels and RMF provenance.
         </Typography>
@@ -939,8 +961,12 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
 
   return (
     <Stack spacing={2.5}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1}>
-        <Typography variant="body2" color="text.secondary">
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{
+        justifyContent: "space-between"
+      }}>
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Export a compatible loaded object through an explicit native destination. Existing files
           are never overwritten, and the backend verifies the written artifact when supported.
         </Typography>
@@ -959,7 +985,11 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
       ) : (
         <Stack spacing={2}>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={7}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 7
+              }}>
               <FormControl fullWidth size="small">
                 <InputLabel id="export-object-label">Loaded object</InputLabel>
                 <Select
@@ -981,7 +1011,11 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={5}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 5
+              }}>
               <FormControl fullWidth size="small" disabled={formats.length === 0}>
                 <InputLabel id="export-format-label">Format</InputLabel>
                 <Select
@@ -1022,7 +1056,9 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
               )
             : null}
           {selectedObject?.result_id ? (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               {selectedObject.object_type === 'spectrum' ? 'Spectrum' : 'Source'} result: {selectedObject.result_id}
             </Typography>
           ) : null}
@@ -1033,7 +1069,9 @@ const ExportPanel: React.FC<ExportPanelProps> = ({
               label="Destination"
               value={destination?.path ?? ''}
               placeholder="Choose a new destination with the native dialog"
-              InputProps={{ readOnly: true }}
+              slotProps={{
+                input: { readOnly: true }
+              }}
             />
             <Button
               variant="outlined"

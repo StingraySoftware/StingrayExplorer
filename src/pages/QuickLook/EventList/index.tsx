@@ -54,7 +54,9 @@ const formatNum = (v: number | null | undefined, digits = 3): string =>
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, py: 0.5 }}>
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body2" sx={{
+      color: "text.secondary"
+    }}>
       {label}
     </Typography>
     <Typography variant="body2" sx={mono}>
@@ -130,7 +132,12 @@ const EventListPage: React.FC = () => {
       status="ready"
     >
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4} lg={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+            lg: 3
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -174,7 +181,9 @@ const EventListPage: React.FC = () => {
                       <ListItemText
                         primary={ev.name}
                         secondary={`${ev.n_events.toLocaleString()} events`}
-                        primaryTypographyProps={{ sx: mono }}
+                        slotProps={{
+                          primary: { sx: mono }
+                        }}
                       />
                     </ListItemButton>
                   </ListItem>
@@ -184,12 +193,19 @@ const EventListPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8} lg={9}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 8,
+            lg: 9
+          }}>
           <Card variant="outlined">
             <CardContent>
               {!selected && (
                 <Box sx={{ py: 8, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
+                  <Typography sx={{
+                    color: "text.secondary"
+                  }}>
                     Select an event list to inspect it.
                   </Typography>
                 </Box>
@@ -217,7 +233,11 @@ const EventListPage: React.FC = () => {
 
                   {tab === 0 && info && (
                     <Grid container spacing={3}>
-                      <Grid item xs={12} sm={6}>
+                      <Grid
+                        size={{
+                          xs: 12,
+                          sm: 6
+                        }}>
                         <InfoRow label="Events" value={formatNum(info.n_events, 0)} />
                         <InfoRow label="Duration (s)" value={formatNum(info.duration)} />
                         <InfoRow
@@ -237,7 +257,11 @@ const EventListPage: React.FC = () => {
                         <InfoRow label="GTI count" value={formatNum(info.gti_count, 0)} />
                         <InfoRow label="Total GTI time (s)" value={formatNum(info.total_gti_time)} />
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid
+                        size={{
+                          xs: 12,
+                          sm: 6
+                        }}>
                         {(info.validation_issues ?? [])
                           .filter((v) => v.severity === 'error' || v.severity === 'warning')
                           .map((v, i) => (
@@ -252,7 +276,7 @@ const EventListPage: React.FC = () => {
                         )}
                       </Grid>
                       {(info.gti_list?.length ?? 0) > 0 && (
-                        <Grid item xs={12}>
+                        <Grid size={12}>
                           <Divider sx={{ mb: 1 }} />
                           <Typography variant="subtitle2" gutterBottom>
                             Good Time Intervals

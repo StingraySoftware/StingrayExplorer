@@ -102,7 +102,11 @@ const MaskSavePanel: React.FC<MaskSavePanelProps> = ({ inspectedRows, rows, onRo
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={5}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 5
+        }}>
         <Card variant="outlined">
           <CardContent>
             <Stack spacing={2}>
@@ -186,7 +190,9 @@ const MaskSavePanel: React.FC<MaskSavePanelProps> = ({ inspectedRows, rows, onRo
                     Saved {saveRunner.result.retained_event_count.toLocaleString()} events as{' '}
                     <strong>{saveRunner.result.destination_name}</strong>.
                   </Alert>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     Time basis: {saveRunner.result.time_reference.replace(/_/g, ' ')} ({saveRunner.result.time_unit}).
                   </Typography>
                   <UtilityWarnings warnings={saveRunner.result.warnings} />
@@ -197,32 +203,52 @@ const MaskSavePanel: React.FC<MaskSavePanelProps> = ({ inspectedRows, rows, onRo
           </CardContent>
         </Card>
       </Grid>
-      <Grid item xs={12} md={7}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 7
+        }}>
         <Stack spacing={2}>
           <RunnerError error={previewRunner.error} warnings={previewRunner.warnings} />
           {previewRunner.result ? (
             <>
               <UtilityWarnings warnings={previewRunner.result.warnings} />
               <Grid container spacing={1.5}>
-                <Grid item xs={6} md={3}>
+                <Grid
+                  size={{
+                    xs: 6,
+                    md: 3
+                  }}>
                   <MetricCard
                     label="Source events"
                     value={previewRunner.result.source_event_count.toLocaleString()}
                   />
                 </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid
+                  size={{
+                    xs: 6,
+                    md: 3
+                  }}>
                   <MetricCard
                     label="Retained"
                     value={previewRunner.result.retained_event_count.toLocaleString()}
                   />
                 </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid
+                  size={{
+                    xs: 6,
+                    md: 3
+                  }}>
                   <MetricCard
                     label="Rejected"
                     value={previewRunner.result.rejected_event_count.toLocaleString()}
                   />
                 </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid
+                  size={{
+                    xs: 6,
+                    md: 3
+                  }}>
                   <MetricCard
                     label="Retained exposure"
                     value={formatMetric(previewRunner.result.retained_exposure_s, ' s')}

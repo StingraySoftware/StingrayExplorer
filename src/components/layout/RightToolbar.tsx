@@ -26,7 +26,7 @@ import {
 import TerminalIcon from '@mui/icons-material/Terminal';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -297,10 +297,17 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
       <Tooltip
         title={
           <Box>
-            <Typography variant="caption" display="block">
+            <Typography variant="caption" sx={{
+              display: "block"
+            }}>
               {isProcessing ? processingMessage || 'Processing...' : 'System idle'}
             </Typography>
-            <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                display: "block",
+                mt: 0.5
+              }}>
               Backend: {backendReady ? `Connected (port ${backendPort})` : 'Disconnected'}
             </Typography>
           </Box>
@@ -447,7 +454,9 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
         onClose={() => setResourcesAnchor(null)}
         anchorOrigin={{ vertical: 'center', horizontal: 'left' }}
         transformOrigin={{ vertical: 'center', horizontal: 'right' }}
-        PaperProps={{ sx: { width: 340, p: 2 } }}
+        slotProps={{
+          paper: { sx: { width: 340, p: 2 } }
+        }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="subtitle2">App Resources</Typography>
@@ -464,25 +473,48 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
           <Box sx={{ mb: 2 }}>
             {/* Total App Usage */}
             <Box sx={{ p: 1.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(0, 212, 170, 0.06)' : 'rgba(13, 155, 122, 0.05)', borderRadius: 1, mb: 1.5, border: '1px solid', borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(0, 212, 170, 0.15)' : 'rgba(13, 155, 122, 0.15)' }}>
-              <Typography variant="caption" color="primary.main" fontWeight="bold" sx={{ display: 'block', mb: 1 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "primary.main",
+                  fontWeight: "bold",
+                  display: 'block',
+                  mb: 1
+                }}>
                 TOTAL APP USAGE
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="body2">Memory</Typography>
-                <Typography variant="body2" fontWeight="medium">
+                <Typography variant="body2" sx={{
+                  fontWeight: "medium"
+                }}>
                   {appResources.totalMemoryMb >= 1024
                     ? `${(appResources.totalMemoryMb / 1024).toFixed(2)} GB`
                     : `${appResources.totalMemoryMb.toFixed(0)} MB`}
-                  <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      ml: 0.5
+                    }}>
                     ({appResources.appMemoryPercent.toFixed(1)}% of system)
                   </Typography>
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="body2">CPU</Typography>
-                <Typography variant="body2" fontWeight="medium">
+                <Typography variant="body2" sx={{
+                  fontWeight: "medium"
+                }}>
                   {appResources.appCpuPercent.toFixed(1)}%
-                  <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      ml: 0.5
+                    }}>
                     ({appResources.systemCpuCount} cores)
                   </Typography>
                 </Typography>
@@ -490,14 +522,24 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
             </Box>
 
             {/* Breakdown by Process */}
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: 'block',
+                mb: 1
+              }}>
               Breakdown by Process
             </Typography>
             <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
               {/* Python Backend */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="caption" color="text.secondary">Python Backend</Typography>
-                <Typography variant="caption" fontWeight="medium">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>Python Backend</Typography>
+                <Typography variant="caption" sx={{
+                  fontWeight: "medium"
+                }}>
                   {appResources.backend
                     ? `${appResources.backend.memoryMb.toFixed(0)} MB | ${(appResources.backend.cpuPercent / appResources.systemCpuCount).toFixed(1)}%`
                     : 'N/A'}
@@ -505,8 +547,12 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
               </Box>
               {/* Electron Main */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="caption" color="text.secondary">Electron Main</Typography>
-                <Typography variant="caption" fontWeight="medium">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>Electron Main</Typography>
+                <Typography variant="caption" sx={{
+                  fontWeight: "medium"
+                }}>
                   {appResources.electronMain
                     ? `${appResources.electronMain.memoryMb.toFixed(0)} MB | ${(appResources.electronMain.cpuPercent / appResources.systemCpuCount).toFixed(1)}%`
                     : 'N/A'}
@@ -514,8 +560,12 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
               </Box>
               {/* Electron Renderer */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" color="text.secondary">Electron Renderer</Typography>
-                <Typography variant="caption" fontWeight="medium">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>Electron Renderer</Typography>
+                <Typography variant="caption" sx={{
+                  fontWeight: "medium"
+                }}>
                   {appResources.electronRenderer
                     ? `${appResources.electronRenderer.memoryMb.toFixed(0)} MB | ${(appResources.electronRenderer.cpuPercent / appResources.systemCpuCount).toFixed(1)}%`
                     : 'N/A'}
@@ -524,14 +574,22 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
             </Box>
 
             {/* System Info */}
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: 'block',
+                mt: 1.5
+              }}>
               System: {(appResources.systemMemoryTotalMb / 1024).toFixed(0)} GB total |{' '}
               {(appResources.systemMemoryAvailableMb / 1024).toFixed(1)} GB available
             </Typography>
           </Box>
         ) : (
           <Box sx={{ mb: 2, p: 1.5, bgcolor: 'action.hover', borderRadius: 1, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               {monitoringActive ? 'Loading...' : 'Click "Paused" to start monitoring'}
             </Typography>
           </Box>
@@ -546,7 +604,7 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
         onClose={() => setNotificationsAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{ sx: { width: 320, maxHeight: 400 } }}
+        slotProps={{ paper: { sx: { width: 320, maxHeight: 400 } } }}
       >
         <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="subtitle2">Notifications</Typography>
@@ -559,7 +617,9 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
         <Divider />
         {notifications.length === 0 ? (
           <Box sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               No notifications
             </Typography>
           </Box>
@@ -580,9 +640,10 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
                   <ListItemText
                     primary={notification.title}
                     secondary={notification.message}
-                    primaryTypographyProps={{ variant: 'body2', fontWeight: notification.read ? 400 : 600 }}
-                    secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-                  />
+                    slotProps={{
+                      primary: { variant: 'body2', sx: { fontWeight: notification.read ? 400 : 600 } },
+                      secondary: { variant: 'caption', noWrap: true }
+                    }} />
                 </ListItemButton>
               </ListItem>
             ))}
@@ -683,14 +744,18 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
             />
             <Box>
               <Typography variant="h6" sx={{ fontFamily: '"JetBrains Mono", monospace' }}>Stingray Explorer</Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 {version ? `Version ${version}` : 'Desktop Application'} | © {new Date().getFullYear()} Kartik Mandar
               </Typography>
             </Box>
           </Box>
         </DialogTitle>
         <DialogContent dividers>
-          <Typography variant="body2" paragraph>
+          <Typography variant="body2" sx={{
+            marginBottom: "16px"
+          }}>
             Stingray Explorer is a comprehensive data analysis and visualization dashboard for X-ray astronomy
             time series data. Built on top of the{' '}
             <Link component="button" onClick={() => handleOpenExternal('https://github.com/StingraySoftware/stingray')}>
@@ -791,7 +856,13 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
               <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                 {selectedNotification.message}
               </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  display: 'block',
+                  mt: 2
+                }}>
                 {new Date(selectedNotification.timestamp).toLocaleString()}
               </Typography>
             </DialogContent>

@@ -304,7 +304,12 @@ const DeadTimeCorrectionsPage: React.FC = () => {
       status="ready"
     >
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4} lg={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+            lg: 3
+          }}>
           <Stack spacing={3}>
             <Card variant="outlined">
               <CardContent>
@@ -466,14 +471,21 @@ const DeadTimeCorrectionsPage: React.FC = () => {
           </Stack>
         </Grid>
 
-        <Grid item xs={12} md={8} lg={9}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 8,
+            lg: 9
+          }}>
           <Stack spacing={3}>
             {/* (a) Rate calculator — no backend involved */}
             <Card variant="outlined">
               <CardContent>
                 <Stack spacing={2}>
                   <Typography variant="subtitle2">Rate calculator</Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     Non-paralyzable detector: r_det = r_in / (1 + r_in · τ) and r_in = r_det /
                     (1 − r_det · τ). Computed in the browser, no analysis is run.
                   </Typography>
@@ -583,7 +595,9 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                     label="log axes"
                   />
                 </Box>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   Normalization fixed to Leahy (required by the Zhang+95 correction). The dashed
                   line marks the Leahy white-noise level of 2.
                 </Typography>
@@ -637,7 +651,9 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                   />
                 ) : (
                   <Box sx={{ py: 8, textAlign: 'center' }}>
-                    <Typography color="text.secondary">
+                    <Typography sx={{
+                      color: "text.secondary"
+                    }}>
                       Choose an event list and compute the dead-time-corrected power spectrum.
                     </Typography>
                   </Box>
@@ -678,7 +694,9 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                     label="signed cospectrum"
                   />
                 </Box>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {showCospectrum
                     ? 'Re[CS] is signed, so the y axis is linear with a zero line while it is shown.'
                     : 'Corrected power spectra of each detector and of their sum, on log axes.'}
@@ -746,7 +764,9 @@ const DeadTimeCorrectionsPage: React.FC = () => {
                   />
                 ) : (
                   <Box sx={{ py: 8, textAlign: 'center' }}>
-                    <Typography color="text.secondary">
+                    <Typography sx={{
+                      color: "text.secondary"
+                    }}>
                       Choose two simultaneous detector event lists and compute the FAD-corrected
                       spectra.
                     </Typography>

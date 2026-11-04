@@ -51,8 +51,14 @@ const InspectionPanel: React.FC<InspectionPanelProps> = ({ onInspectedRowsChange
         does not infer good time from the first and last event, and mission-clock seconds must be
         interpreted with MJDREF.
       </Alert>
-      <Grid container spacing={2} alignItems="flex-start">
-        <Grid item xs={12} md={8}>
+      <Grid container spacing={2} sx={{
+        alignItems: "flex-start"
+      }}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 8
+          }}>
           <EventListSelector
             label="Event list to inspect"
             value={eventListName}
@@ -60,7 +66,11 @@ const InspectionPanel: React.FC<InspectionPanelProps> = ({ onInspectedRowsChange
             disabled={runner.running}
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4
+          }}>
           <RunButton
             label="Inspect effective GTIs"
             running={runner.running}
@@ -80,10 +90,18 @@ const InspectionPanel: React.FC<InspectionPanelProps> = ({ onInspectedRowsChange
             </Alert>
           ) : null}
           <Grid container spacing={1.5}>
-            <Grid item xs={6} md={3}>
+            <Grid
+              size={{
+                xs: 6,
+                md: 3
+              }}>
               <MetricCard label="Events" value={result.event_count.toLocaleString()} />
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid
+              size={{
+                xs: 6,
+                md: 3
+              }}>
               <MetricCard label="MJDREF" value={formatMetric(result.mjdref)} />
             </Grid>
           </Grid>

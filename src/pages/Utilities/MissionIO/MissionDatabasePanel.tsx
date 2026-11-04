@@ -88,9 +88,16 @@ const MissionDatabasePanel: React.FC = () => {
 
   if (capabilities.isLoading) {
     return (
-      <Stack alignItems="center" spacing={1.5} sx={{ py: 5 }}>
+      <Stack
+        spacing={1.5}
+        sx={{
+          alignItems: "center",
+          py: 5
+        }}>
         <CircularProgress aria-label="Loading mission capabilities" />
-        <Typography color="text.secondary">Reading the runtime mission database…</Typography>
+        <Typography sx={{
+          color: "text.secondary"
+        }}>Reading the runtime mission database…</Typography>
       </Stack>
     );
   }
@@ -120,10 +127,14 @@ const MissionDatabasePanel: React.FC = () => {
         {data.precise_calibration.location}.
       </Alert>
       <UtilityWarnings warnings={data.warnings} />
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{
+        alignItems: { sm: 'center' }
+      }}>
         <Chip label={`${data.mission_count} unique mission mappings`} />
         <Chip label={`${data.raw_database_entry_count} raw database entries`} />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" sx={{
+          color: "text.secondary"
+        }}>
           Source: {data.database_source}
         </Typography>
       </Stack>
@@ -147,26 +158,38 @@ const MissionDatabasePanel: React.FC = () => {
                   {row.mission}
                 </TableCell>
                 <TableCell>
-                  <Typography variant="caption" display="block">
+                  <Typography variant="caption" sx={{
+                    display: "block"
+                  }}>
                     Event HDU: {displayValue(row.mapping.event_hdu)}
                   </Typography>
-                  <Typography variant="caption" display="block">
+                  <Typography variant="caption" sx={{
+                    display: "block"
+                  }}>
                     Time: {displayValue(row.mapping.time_column)}
                   </Typography>
-                  <Typography variant="caption" display="block">
+                  <Typography variant="caption" sx={{
+                    display: "block"
+                  }}>
                     Energy/channel: {displayValue(row.mapping.energy_or_channel_column)}
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="caption" display="block">
+                  <Typography variant="caption" sx={{
+                    display: "block"
+                  }}>
                     Instruments: {displayValue(row.instruments)}
                   </Typography>
-                  <Typography variant="caption" display="block">
+                  <Typography variant="caption" sx={{
+                    display: "block"
+                  }}>
                     Modes: {displayValue(row.modes)}
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Stack spacing={0.5} alignItems="flex-start">
+                  <Stack spacing={0.5} sx={{
+                    alignItems: "flex-start"
+                  }}>
                     <Chip
                       size="small"
                       color={capabilityColor(row.rough_pi_to_energy.status)}
@@ -176,7 +199,9 @@ const MissionDatabasePanel: React.FC = () => {
                       {row.rough_pi_to_energy.message ?? 'No additional details'}
                     </Typography>
                     {row.rough_pi_to_energy.dependencies.length > 0 ? (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>
                         Dependencies: {row.rough_pi_to_energy.dependencies.join(', ')}
                       </Typography>
                     ) : null}
@@ -189,7 +214,12 @@ const MissionDatabasePanel: React.FC = () => {
                     label={row.specialized_interpretation.supported ? 'Supported' : 'Not available'}
                   />
                   {row.specialized_interpretation.scope ? (
-                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: "block",
+                        mt: 0.5
+                      }}>
                       {row.specialized_interpretation.scope}
                     </Typography>
                   ) : null}
@@ -205,7 +235,11 @@ const MissionDatabasePanel: React.FC = () => {
           <Stack spacing={2}>
             <Typography variant="h6">Inspect one runtime mapping</Typography>
             <Grid container spacing={1.5}>
-              <Grid item xs={12} md={4}>
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 4
+                }}>
                 <FormControl fullWidth size="small">
                   <InputLabel id="mission-info-name-label">Mission</InputLabel>
                   <Select
@@ -224,7 +258,11 @@ const MissionDatabasePanel: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 4
+                }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -234,10 +272,16 @@ const MissionDatabasePanel: React.FC = () => {
                   disabled={running}
                   error={instrumentError !== null}
                   helperText={instrumentError}
-                  inputProps={{ maxLength: 128 }}
+                  slotProps={{
+                    htmlInput: { maxLength: 128 }
+                  }}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 4
+                }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -247,7 +291,9 @@ const MissionDatabasePanel: React.FC = () => {
                   disabled={running}
                   error={modeError !== null}
                   helperText={modeError}
-                  inputProps={{ maxLength: 256 }}
+                  slotProps={{
+                    htmlInput: { maxLength: 256 }
+                  }}
                 />
               </Grid>
             </Grid>
@@ -269,7 +315,9 @@ const MissionDatabasePanel: React.FC = () => {
       {result ? (
         <ResultSection title={`Mapping for ${result.mission}`}>
           <MappingTable mapping={result.mapping} />
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+          <Stack direction="row" spacing={1} useFlexGap sx={{
+            flexWrap: "wrap"
+          }}>
             <Chip
               color={capabilityColor(result.capabilities.rough_pi_to_energy.status)}
               label={`Rough conversion: ${result.capabilities.rough_pi_to_energy.status}`}

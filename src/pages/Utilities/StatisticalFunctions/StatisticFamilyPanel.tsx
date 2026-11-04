@@ -13,10 +13,20 @@ export function StatisticFamilyPanel({ config }: StatisticFamilyPanelProps) {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={5} lg={4}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 5,
+          lg: 4
+        }}>
         <StatisticFamilyForm config={config} model={model} />
       </Grid>
-      <Grid item xs={12} md={7} lg={8}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 7,
+          lg: 8
+        }}>
         <ResultFrame
           title={
             model.operation === 'evaluate'

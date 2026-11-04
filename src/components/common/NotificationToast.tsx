@@ -47,7 +47,7 @@ const NotificationToast: React.FC = () => {
     setOpen(true);
   }
 
-  const handleClose = (_event?: React.SyntheticEvent | Event, reason?: string): void => {
+  const handleClose = (_event?: React.SyntheticEvent | Event | null, reason?: string): void => {
     // Don't close on clickaway - only on explicit close or timeout
     if (reason === 'clickaway') {
       return;
@@ -71,14 +71,18 @@ const NotificationToast: React.FC = () => {
       open={open}
       autoHideDuration={AUTO_HIDE_DURATION[currentNotification.type]}
       onClose={handleClose}
-      TransitionComponent={SlideTransition}
-      TransitionProps={{
-        onExited: handleExited,
-      }}
       anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       sx={{
         mt: 8, // Below header
         mr: 7, // Account for right toolbar
+      }}
+      slots={{
+        transition: SlideTransition
+      }}
+      slotProps={{
+        transition: {
+          onExited: handleExited,
+        }
       }}
     >
       <Alert

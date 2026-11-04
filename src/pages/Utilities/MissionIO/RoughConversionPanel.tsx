@@ -332,7 +332,11 @@ const RoughConversionPanel: React.FC = () => {
             />
 
             <Grid container spacing={1.5}>
-              <Grid item xs={12} md={6}>
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 6
+                }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -344,7 +348,11 @@ const RoughConversionPanel: React.FC = () => {
                   helperText={epochError ?? 'Required by RXTE PCA; may be derived from EventList timing metadata'}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid
+                size={{
+                  xs: 12,
+                  md: 6
+                }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -439,7 +447,9 @@ const RoughConversionPanel: React.FC = () => {
             instrument={result.instrument}
             mode={result.mode}
           />
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+          <Stack direction="row" spacing={1} useFlexGap sx={{
+            flexWrap: "wrap"
+          }}>
             <Chip color="warning" label={`${result.count.toLocaleString()} channels converted`} />
             <Chip label={`Energy unit: ${result.energy_unit}`} />
             {Object.entries(result.dependencies).map(([name, dependency]) => (

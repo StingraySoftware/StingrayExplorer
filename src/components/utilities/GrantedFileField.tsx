@@ -71,7 +71,9 @@ const GrantedFileField: React.FC<GrantedFileFieldProps> = ({
           label={label}
           value={value?.path ?? ''}
           placeholder="Choose a file with the native dialog"
-          InputProps={{ readOnly: true }}
+          slotProps={{
+            input: { readOnly: true }
+          }}
         />
         <Button variant="outlined" startIcon={<FolderOpenIcon />} onClick={() => void choose()} disabled={disabled}>
           Choose

@@ -99,7 +99,9 @@ export function ResultFrame({
               ) : (
                 <CalculateOutlinedIcon sx={{ fontSize: 42, color: 'text.disabled', mb: 1 }} />
               )}
-              <Typography color="text.secondary">
+              <Typography sx={{
+                color: "text.secondary"
+              }}>
                 {running ? 'Running the calculation…' : emptyText}
               </Typography>
             </Box>

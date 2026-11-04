@@ -79,14 +79,21 @@ const CrossCorrelationPage: React.FC = () => {
       status="ready"
     >
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4} lg={3}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 4,
+            lg: 3
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="subtitle2">Parameters</Typography>
                 <EventListSelector label="Event list 1" value={eventList1} onChange={setEventList1} />
                 <EventListSelector label="Event list 2" value={eventList2} onChange={setEventList2} />
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   Requires compatible timing references and one continuous common good-time interval.
                   For observations with gaps, use GTI Utilities to select a continuous interval first.
                 </Typography>
@@ -141,7 +148,12 @@ const CrossCorrelationPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8} lg={9}>
+        <Grid
+          size={{
+            xs: 12,
+            md: 8,
+            lg: 9
+          }}>
           <Card variant="outlined">
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
@@ -203,13 +215,21 @@ const CrossCorrelationPage: React.FC = () => {
                         : [],
                     }}
                   />
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      display: 'block',
+                      mt: 1
+                    }}>
                     Positive shift means the first list lags the second.
                   </Typography>
                 </>
               ) : (
                 <Box sx={{ py: 10, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
+                  <Typography sx={{
+                    color: "text.secondary"
+                  }}>
                     Choose two event lists and compute their cross-correlation.
                   </Typography>
                 </Box>

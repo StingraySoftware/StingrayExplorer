@@ -233,7 +233,13 @@ const HomePage: React.FC = () => {
       {/* Quick Access Cards */}
       <Grid container spacing={3} className="stagger-reveal">
         {quickAccessCards.map((card) => (
-          <Grid item xs={12} sm={6} md={4} key={card.title}>
+          <Grid
+            key={card.title}
+            size={{
+              xs: 12,
+              sm: 6,
+              md: 4
+            }}>
             <Card
               elevation={0}
               sx={{
@@ -285,7 +291,12 @@ const HomePage: React.FC = () => {
                       {card.title}
                     </Typography>
                   </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "text.secondary",
+                      lineHeight: 1.5
+                    }}>
                     {card.description}
                   </Typography>
                 </CardContent>

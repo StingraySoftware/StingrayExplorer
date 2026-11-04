@@ -53,12 +53,18 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} md={5}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 5
+        }}>
         <Card variant="outlined">
           <CardContent>
             <Stack spacing={2}>
               <Typography variant="h6">Manual GTI rows</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 Paste or edit ordered start/stop pairs. Validation never silently sorts, merges,
                 or changes an interval.
               </Typography>
@@ -90,7 +96,11 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({
           </CardContent>
         </Card>
       </Grid>
-      <Grid item xs={12} md={7}>
+      <Grid
+        size={{
+          xs: 12,
+          md: 7
+        }}>
         <Stack spacing={2}>
           <RunnerError error={runner.error} warnings={runner.warnings} />
           {runner.result ? (

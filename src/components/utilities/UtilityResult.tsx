@@ -57,7 +57,9 @@ export const UtilityWarnings: React.FC<{ warnings?: string[] }> = ({ warnings = 
 export const ProvenancePanel: React.FC<{ provenance?: Record<string, unknown> }> = ({ provenance }) =>
   provenance ? (
     <Paper variant="outlined" sx={{ p: 1.5 }}>
-      <Typography variant="overline" color="text.secondary">
+      <Typography variant="overline" sx={{
+        color: "text.secondary"
+      }}>
         Provenance
       </Typography>
       <Box
