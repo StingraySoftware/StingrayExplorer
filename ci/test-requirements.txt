@@ -1,0 +1,8 @@
+-r ../python-backend/requirements.txt
+pytest==9.0.2
+pytest-asyncio==1.3.0
+beautifulsoup4>=4.12
+lxml>=5.0
+numba
+h5py
+ruff==0.14.10

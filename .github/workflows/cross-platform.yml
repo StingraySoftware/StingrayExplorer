@@ -1,0 +1,134 @@
+name: Cross-platform compatibility
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      include_windows:
+        description: Include deferred Windows validation (known FITS cleanup failures)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-platform-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend / ${{ matrix.os }} / Stingray ${{ matrix.stingray }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.include_windows && '["ubuntu-24.04", "windows-2025"]' || '["ubuntu-24.04"]') }}
+        stingray: ['2.2', '2.2.1', '2.2.2', '2.2.3', '2.2.4', '2.2.5', '2.2.6', '2.2.7', '2.2.9', '2.2.10', '2.3.0', '2.3.1', '2.3.2']
+    env:
+      MPLBACKEND: Agg
+      STINGRAY_REQUIRE_WINDOWS_SECURE_EXPORT: ${{ matrix.os == 'windows-2025' && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            python-backend/requirements.txt
+            ci/*.txt
+      - name: Install scientific and test dependencies
+        run: python -m pip install -r ci/test-requirements.txt -c ci/scientific-constraints.txt "stingray==${{ matrix.stingray }}"
+      - name: Require native runner and optional scientific I/O
+        run: python scripts/check_platform.py --expected "${{ runner.os }}"
+      - name: Lint portability adapters and regression tests
+        if: matrix.stingray == '2.2.10'
+        run: >-
+          python -m ruff check
+          scripts/check_platform.py scripts/project_platform_fixture.py scripts/scientific_compatibility.py
+          python-backend/services/gti_service.py python-backend/services/data_service.py
+          python-backend/services/project_archive.py python-backend/tests/file_grants.py
+          python-backend/tests/test_platform_compatibility.py
+          python-backend/tests/test_project_numeric_platforms.py
+      - name: Run the complete backend suite
+        run: python scripts/scientific_compatibility.py --runtime "${{ matrix.stingray }}=" --jobs 1 --output test-results/backend
+      - name: Write an actual project interchange fixture
+        if: matrix.stingray == '2.2.10'
+        run: python scripts/project_platform_fixture.py write test-results/project-fixture
+      - name: Upload project interchange fixture
+        if: matrix.stingray == '2.2.10'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: project-fixture-${{ matrix.os }}
+          path: test-results/project-fixture/
+          if-no-files-found: error
+      - name: Upload full suite evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: backend-${{ matrix.os }}-${{ matrix.stingray }}
+          path: test-results/backend/
+          if-no-files-found: error
+
+  desktop:
+    name: Renderer and build / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.include_windows && '["ubuntu-24.04", "windows-2025"]' || '["ubuntu-24.04"]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Run all renderer and Electron unit tests
+        run: npx vitest run --maxWorkers=1 --reporter=default --reporter=junit --outputFile.junit=test-results/renderer.xml
+      - run: npm run build
+      - name: Upload renderer evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: desktop-${{ matrix.os }}
+          path: test-results/renderer.xml
+          if-no-files-found: error
+
+  project-interchange:
+    name: Reopen projects from available operating systems / ${{ matrix.os }}
+    needs: backend
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.include_windows && '["ubuntu-24.04", "windows-2025"]' || '["ubuntu-24.04"]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            python-backend/requirements.txt
+            ci/*.txt
+      - run: python -m pip install -r ci/test-requirements.txt -c ci/scientific-constraints.txt "stingray==2.2.10"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: project-fixture-*
+          path: test-results/interchange
+      - name: Verify saved data, identity, provenance and source file hashes
+        run: python scripts/project_platform_fixture.py read test-results/interchange
