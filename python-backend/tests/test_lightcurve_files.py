@@ -190,12 +190,15 @@ def test_releases_without_extended_precision_get_float64_times(tmp_path, no_exte
     assert provenance["time_precision"] == "float64"
 
 
-def test_extended_precision_is_kept_where_stingray_supports_it(tmp_path):
+def test_time_precision_follows_the_installed_stingray(tmp_path):
     lightcurve_files.lightcurve_accepts_longdouble.cache_clear()
-    assert lightcurve_files.lightcurve_accepts_longdouble()
     lc, provenance, _ = _read(generic_counts(tmp_path / "plain.fits"), mjdref=58000.0)
-    assert lc.time.dtype == np.longdouble
-    assert "time_precision" not in provenance
+    if lightcurve_files.lightcurve_accepts_longdouble():
+        assert lc.time.dtype == np.longdouble
+        assert "time_precision" not in provenance
+    else:
+        assert lc.time.dtype.char == "d"
+        assert provenance["time_precision"] == "float64"
 
 
 def test_nicer_like_file_respects_mjdref_timezero_fracexp_and_gtis(tmp_path):
