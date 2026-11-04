@@ -6,6 +6,7 @@ import {
   FormControl,
   IconButton,
   InputLabel,
+  inputLabelClasses,
   Link,
   MenuItem,
   Select,
@@ -162,7 +163,14 @@ const EventListSelector: React.FC<EventListSelectorProps> = ({
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <FormControl fullWidth size="small" disabled={disabled || isLoading}>
-        <InputLabel id={labelId}>{label}</InputLabel>
+        <InputLabel
+          id={labelId}
+          // The resting outlined label stops 24px from the edge, but the select
+          // arrow needs ~32px; keep long labels ellipsized clear of it.
+          sx={{ [`&:not(.${inputLabelClasses.shrink})`]: { maxWidth: 'calc(100% - 46px)' } }}
+        >
+          {label}
+        </InputLabel>
         <Select
           labelId={labelId}
           value={value}

@@ -1,4 +1,5 @@
 import SaveProjectButton from '@/components/analysis/SaveProjectButton';
+import logoUrl from '../../../assets/images/stingray_explorer.png';
 import React, { useContext, useEffect, useState } from 'react';
 import {
   AppBar,
@@ -145,7 +146,7 @@ const Header: React.FC<HeaderProps> = ({
         {/* Logo and title */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <img
-            src="/assets/images/stingray_explorer.png"
+            src={logoUrl}
             alt="Stingray Explorer"
             style={{ width: 32, height: 32 }}
           />

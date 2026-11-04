@@ -42,6 +42,7 @@ import ForumIcon from '@mui/icons-material/Forum';
 import { useUIStore, Notification, AppResources } from '@/store/uiStore';
 import { useLogStore } from '@/store/logStore';
 import { useBackendContext } from '@/context/BackendContext';
+import logoUrl from '../../../assets/images/stingray_explorer.png';
 
 const TOOLBAR_WIDTH = 52;
 const HEADER_HEIGHT = 64;
@@ -737,7 +738,7 @@ const RightToolbar: React.FC<RightToolbarProps> = ({ visible = true }) => {
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <img
-              src="/assets/images/stingray_explorer.png"
+              src={logoUrl}
               alt="Stingray Explorer"
               style={{ width: 32, height: 32 }}
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
