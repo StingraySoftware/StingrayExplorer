@@ -8,8 +8,8 @@ an Electron and React interface with a loopback FastAPI service backed by
 > The original Panel, public Docker, and Hugging Face Spaces runtime has been
 > retired. It accepted browser-controlled local paths, arbitrary download URLs,
 > and unsafe serialization formats that do not belong at a public web boundary.
-> The files still under `modules/`, root `services/`, and `utils/` are migration
-> reference code; they are not a supported application entrypoint.
+> Its source has been removed from the tree; the last commit containing it is
+> tagged `panel-final`.
 
 ## Current application
 
@@ -68,10 +68,6 @@ files/             Small sample data used for development
 resources/         Desktop application icons and packaging resources
 docs/              Implementation plans and engineering notes
 ```
-
-The historical Panel implementation remains in the legacy root Python folders
-while migration work is completed. It has no executable `explorer.py`, Docker
-image, or deployment workflow.
 
 ## Data and exports
 

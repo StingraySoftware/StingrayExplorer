@@ -55,3 +55,23 @@ def test_legacy_panel_server_has_no_executable_or_deployment_entrypoint():
     assert "panel serve" not in launch_configuration
     assert "allow-websocket-origin" not in launch_configuration
     assert "huggingface.co/spaces" not in launch_configuration
+
+
+def test_panel_reference_app_is_removed_from_the_tree():
+    # The Panel app survives only at the `panel-final` tag.
+    retired_paths = (
+        "modules",
+        "services",
+        "utils",
+        "logs",
+        "setup.py",
+        "environment.yml",
+        "assets/stylesheets",
+        "assets/icons",
+    )
+
+    assert [
+        relative_path
+        for relative_path in retired_paths
+        if (PROJECT_ROOT / relative_path).exists()
+    ] == []
