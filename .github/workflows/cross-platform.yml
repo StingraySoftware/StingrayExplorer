@@ -19,6 +19,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repository-hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Refuse tracked AI_DOCS/ or .claude/ paths
+        run: python scripts/check_repository_hygiene.py
+
   backend:
     name: Backend / ${{ matrix.os }} / Stingray ${{ matrix.stingray }}
     runs-on: ${{ matrix.os }}
