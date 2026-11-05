@@ -1,46 +1,27 @@
-# Configuration file for the Sphinx documentation builder.
+# Sphinx configuration for the Stingray Explorer documentation.
 #
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+# The documentation is prose only. It does not import the application, so
+# Read the Docs installs nothing but docs/requirements.txt.
 
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+import json
+from pathlib import Path
 
-import os
-import sys
-sys.path.insert(0, os.path.abspath('../../'))
+ROOT = Path(__file__).resolve().parents[2]
 
-project = 'Stingray Explorer'
-copyright = '2024, Kartik Mandar'
-author = 'Kartik Mandar'
-release = '0.1'
+project = "Stingray Explorer"
+author = "Kartik Mandar"
+copyright = "2024–2026, Kartik Mandar"
+# package.json is the application's only version source.
+release = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
+version = ".".join(release.split(".")[:2])
 
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
-
-extensions = [
-    'sphinx.ext.autodoc',           # Main extension for auto-documentation
-    'sphinx.ext.napoleon',          # Supports Google/NumPy style docstrings
-    'sphinx.ext.autosummary',       # Generates summary tables for modules/classes
-    'sphinx.ext.viewcode',          # Adds links to highlighted source code
-    'sphinx.ext.intersphinx',       # Links to documentation of external libraries
-]
-
-autosummary_generate = True      # Enables automatic summary generation
+extensions = ["sphinx.ext.intersphinx"]
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+    "python": ("https://docs.python.org/3", None),
+    "stingray": ("https://docs.stingray.science/en/stable/", None),
 }
 
-templates_path = ['_templates']
 exclude_patterns = []
 
-
-
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
-html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
+html_theme = "sphinx_rtd_theme"

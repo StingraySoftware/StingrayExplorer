@@ -1,28 +1,40 @@
-.. StingrayExplorer documentation master file, created by
-   sphinx-quickstart on Fri Nov  8 15:00:39 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Stingray Explorer
+=================
 
-StingrayExplorer documentation
-==============================
+Stingray Explorer is a desktop application for X-ray spectral-timing analysis.
+It puts a graphical interface on `Stingray <https://docs.stingray.science/>`_:
+you load event lists or light curves, choose photons by energy, detector and
+time, and compute power spectra, cross spectra, lags, coherence, dead-time
+corrections, power colours and variability-versus-energy spectra. Every result
+carries a full record of how it was made, and can be saved to a project file,
+reopened later and exported.
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+The application is built from three parts:
 
+* an Electron desktop shell, which owns native file dialogs and starts the
+  scientific service;
+* a React renderer, which draws the pages and plots;
+* a FastAPI service on a private loopback port, which runs Stingray.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Using the application
 
-   modules
-   DataLoading
-   Home
-   QuickLook
+   installation
+   data
+   analysis
+   utilities
+   projects
 
-Indices and tables
-==================
+.. toctree::
+   :maxdepth: 2
+   :caption: Reference
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   science
+   compatibility
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contributing
+
+   development
