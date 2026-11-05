@@ -5,6 +5,7 @@ FastAPI server providing REST API endpoints for X-ray timing analysis
 using the Stingray library.
 """
 
+import json
 import logging
 import os
 import secrets
@@ -13,6 +14,7 @@ import socket
 import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -58,6 +60,24 @@ MIN_BACKEND_SESSION_SECRET_BYTES = 32
 ALLOWED_RENDERER_ORIGINS = ("http://localhost:5173", "null")
 ALLOWED_CORS_METHODS = ("GET", "POST", "DELETE", "OPTIONS")
 ALLOWED_CORS_HEADERS = ("Accept", "Content-Type", "X-Stingray-Session")
+APPLICATION_VERSION_ENV = "STINGRAY_EXPLORER_VERSION"
+PACKAGE_JSON = Path(__file__).resolve().parents[1] / "package.json"
+
+
+def application_version() -> str:
+    """Return the package.json version, the application's only version source.
+
+    Electron passes it in the environment because a packaged backend has no
+    package.json beside it; development runs read the file directly.
+    """
+
+    passed = os.environ.get(APPLICATION_VERSION_ENV)
+    if passed:
+        return passed
+    try:
+        return json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))["version"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return "0+unknown"
 
 
 def _scope_header_values(scope: Scope, header_name: bytes) -> list[bytes]:
@@ -405,7 +425,7 @@ def create_app(
     app = FastAPI(
         title="Stingray Explorer API",
         description="REST API for X-ray timing analysis using the Stingray library",
-        version="1.0.0",
+        version=application_version(),
         lifespan=lifespan,
     )
     # This value is consumed only by the hidden main-process issuance route.

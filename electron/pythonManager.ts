@@ -148,6 +148,8 @@ export class PythonManager {
         PYTHON_CONTEXT_AWARE_WARNINGS: '1',
         STINGRAY_BACKEND_SESSION_SECRET: this.backendSessionSecret,
         STINGRAY_FILE_GRANT_SECRET: this.fileGrantSecret,
+        // package.json is the only version source; a packaged backend cannot read it.
+        STINGRAY_EXPLORER_VERSION: app.getVersion(),
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });

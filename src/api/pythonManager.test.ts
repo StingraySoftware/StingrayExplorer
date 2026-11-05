@@ -10,6 +10,7 @@ vi.mock('electron', () => ({
   app: {
     isPackaged: false,
     getAppPath: () => '/test-app',
+    getVersion: () => '9.8.7',
   },
 }));
 vi.mock('child_process', () => ({
@@ -126,6 +127,24 @@ describe('PythonManager backend announcement protocol', () => {
     expect(authenticated?.headers).toHaveProperty('X-Stingray-Session');
     expect(manager.getPort()).toBe(54321);
     expect(manager.getIsRunning()).toBe(true);
+  });
+
+  it('passes the package.json application version to the backend', async () => {
+    const child = new FakeChild();
+    installHttpResponses((options) => (options.path === '/health' ? 404 : 200));
+    mocks.spawn.mockImplementation(() => {
+      setTimeout(() => child.stdout.emit('data', Buffer.from('BACKEND_PORT:54321\n')), 0);
+      return child;
+    });
+
+    await new PythonManager().start();
+
+    const [, , spawnOptions] = mocks.spawn.mock.calls[0] as [
+      string,
+      string[],
+      { env: Record<string, string> },
+    ];
+    expect(spawnOptions.env.STINGRAY_EXPLORER_VERSION).toBe('9.8.7');
   });
 
   it('rejects an external backend on the default port without spawning', async () => {
