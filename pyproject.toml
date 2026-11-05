@@ -1,19 +1,7 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+# Tool configuration only. Stingray Explorer is distributed as an Electron
+# application, not a Python package: its version is declared once, in
+# package.json, and its Python dependencies are declared in pixi.toml.
 
-[project]
-name = "StingrayExplorer"
-version = "0.1"
-description = "A package for analyzing astronomical data."
-authors = [{name = "Kartik Mandar", email = "your.email@example.com"}]
-dependencies = [
-    "sphinx",
-    "sphinx-rtd-theme",
-    "sphinx-autodoc-typehints",
-    "stingray",
-    # Add other dependencies here if needed
-]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["python-backend/tests"]

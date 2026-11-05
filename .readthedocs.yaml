@@ -5,11 +5,10 @@ build:
   tools:
     python: "3.11"
 
+# The documentation is prose only; it does not import the application.
 python:
   install:
     - requirements: docs/requirements.txt
-    - method: pip
-      path: .
 
 sphinx:
   configuration: docs/source/conf.py
